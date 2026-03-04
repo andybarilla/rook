@@ -254,6 +254,41 @@ func TestPluginsIncludesDatabases(t *testing.T) {
 	}
 }
 
+func TestExternalPluginsRegistered(t *testing.T) {
+	cfg, _, _, _, _ := testConfig(t)
+
+	// Create a plugins directory with a fake plugin manifest
+	pluginsDir := filepath.Join(t.TempDir(), "plugins")
+	os.MkdirAll(filepath.Join(pluginsDir, "test-ext"), 0o755)
+
+	manifest := `{"id":"test-ext","name":"Test External","version":"0.1.0","executable":"test-ext","capabilities":["runtime"]}`
+	os.WriteFile(filepath.Join(pluginsDir, "test-ext", "plugin.json"), []byte(manifest), 0o644)
+
+	// Create a fake executable (won't be called since we won't start)
+	os.WriteFile(filepath.Join(pluginsDir, "test-ext", "test-ext"), []byte("#!/bin/sh\n"), 0o755)
+
+	cfg.PluginsDir = pluginsDir
+
+	c := core.NewCore(cfg)
+	plugins := c.Plugins()
+
+	// 3 built-in + 1 external
+	if len(plugins) != 4 {
+		t.Fatalf("expected 4 plugins, got %d: %v", len(plugins), plugins)
+	}
+
+	found := false
+	for _, p := range plugins {
+		if p.ID == "test-ext" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("external plugin 'test-ext' not found in plugins list")
+	}
+}
+
 func TestStartErrorOnCaddyFailure(t *testing.T) {
 	cfg, runner, _, _, _ := testConfig(t)
 	runner.runErr = fmt.Errorf("caddy failed")

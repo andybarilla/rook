@@ -45,6 +45,7 @@ func (a *App) startup(ctx context.Context) {
 		DBRunner:     databases.NewProcessRunner(),
 		DBConfigPath: filepath.Join(config.ConfigDir(), "databases.json"),
 		DBDataRoot:   filepath.Join(config.DataDir(), "databases"),
+		PluginsDir:   config.PluginsDir(),
 	}
 
 	a.core = core.NewCore(cfg)

@@ -6,6 +6,8 @@ import (
 
 	"github.com/andybarilla/flock/internal/caddy"
 	"github.com/andybarilla/flock/internal/databases"
+	"github.com/andybarilla/flock/internal/discovery"
+	"github.com/andybarilla/flock/internal/external"
 	"github.com/andybarilla/flock/internal/php"
 	"github.com/andybarilla/flock/internal/plugin"
 	"github.com/andybarilla/flock/internal/registry"
@@ -21,6 +23,7 @@ type Config struct {
 	DBRunner     databases.DBRunner
 	DBConfigPath string
 	DBDataRoot   string
+	PluginsDir   string
 }
 
 type Core struct {
@@ -43,6 +46,15 @@ func NewCore(cfg Config) *Core {
 	pluginMgr.Register(sslPlugin)
 	pluginMgr.Register(phpPlugin)
 	pluginMgr.Register(dbPlugin)
+
+	manifests, scanErrs := discovery.Scan(cfg.PluginsDir)
+	for _, err := range scanErrs {
+		cfg.Logger.Printf("plugin discovery: %v", err)
+	}
+	for _, m := range manifests {
+		ext := external.NewPlugin(m, external.ExecProcessStarter)
+		pluginMgr.Register(ext)
+	}
 
 	caddyMgr := caddy.NewManager(cfg.CaddyRunner, pluginMgr, sslPlugin)
 
