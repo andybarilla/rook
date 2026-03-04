@@ -43,7 +43,7 @@ Architecture design: `docs/plans/2026-03-03-flock-core-design.md`
 - [x] Plugin interfaces + host — See: docs/tasks/003-plugin-host.md
 - [x] Caddy manager (embedded) — See: docs/tasks/004-caddy-manager.md
 - [x] flock-ssl plugin (mkcert) — See: docs/tasks/005-flock-ssl.md
-- [ ] flock-php plugin (FPM pools)
+- [x] flock-php plugin (FPM pools) — See: docs/tasks/006-flock-php.md
 - [ ] Core wiring
 - [ ] GUI: system tray + site list
 
