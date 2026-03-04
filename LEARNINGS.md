@@ -43,3 +43,20 @@
 ### Tool / command tips
 - `--head` flag on `gh pr create` still required from worktrees.
 - `go test ./internal/... -v` now runs 27 tests across four packages (caddy, config, plugin, registry).
+
+## 2026-03-04 — Task 005: flock-ssl Plugin
+
+### Surprises / gotchas
+- Modifying `BuildConfig` signature (adding `CertProvider` parameter) required updating all existing test call sites — plan accounted for this correctly.
+- Go's `crypto/x509` stdlib is sufficient for local CA + cert generation — no need for external mkcert dependency. ECDSA P-256 keys generate fast enough for tests.
+- The `Write` tool requires reading the file first in worktrees, even when doing a full rewrite. Must `Read` before `Write` for existing files.
+
+### Pattern confirmations
+- Interface-based testability continues to scale well: `CertStore` for SSL mirrors `CaddyRunner`/`UpstreamResolver` pattern.
+- `ServicePlugin` interface fits SSL well — it manages certs (a service concern), not request routing.
+- Separating mock-based plugin tests from real cert generation tests (two test files) keeps test concerns clean.
+- `map[string]any` Caddy config approach extends naturally for TLS blocks (`tls.certificates.load_files` + `tls_connection_policies`).
+
+### Tool / command tips
+- `--head` flag on `gh pr create` still required from worktrees.
+- `go test ./internal/... -v` now runs 34 tests across five packages (caddy, config, plugin, registry, ssl).

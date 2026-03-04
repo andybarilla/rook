@@ -2,6 +2,7 @@ package caddy_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	flockCaddy "github.com/andybarilla/flock/internal/caddy"
@@ -37,6 +38,20 @@ type mockResolver struct {
 
 func (m *mockResolver) ResolveUpstream(site registry.Site) (string, error) {
 	return m.upstreams[site.Domain], nil
+}
+
+// --- Mock CertProvider ---
+
+type mockCertProvider struct {
+	certs map[string][2]string
+}
+
+func (m *mockCertProvider) CertPair(domain string) (string, string, error) {
+	pair, ok := m.certs[domain]
+	if !ok {
+		return "", "", fmt.Errorf("no cert for %s", domain)
+	}
+	return pair[0], pair[1], nil
 }
 
 // --- Helper to dig into generated JSON ---
@@ -83,7 +98,7 @@ func TestBuildConfigStaticSite(t *testing.T) {
 		{Path: "/home/user/static", Domain: "static.test", TLS: false},
 	}
 
-	cfgJSON, err := flockCaddy.BuildConfig(sites, resolver)
+	cfgJSON, err := flockCaddy.BuildConfig(sites, resolver, nil)
 	if err != nil {
 		t.Fatalf("BuildConfig: %v", err)
 	}
@@ -116,7 +131,7 @@ func TestBuildConfigProxiedSite(t *testing.T) {
 		{Path: "/home/user/myapp", Domain: "myapp.test", TLS: true},
 	}
 
-	cfgJSON, err := flockCaddy.BuildConfig(sites, resolver)
+	cfgJSON, err := flockCaddy.BuildConfig(sites, resolver, nil)
 	if err != nil {
 		t.Fatalf("BuildConfig: %v", err)
 	}
@@ -147,7 +162,7 @@ func TestBuildConfigMixedSites(t *testing.T) {
 		{Path: "/home/user/docs", Domain: "docs.test", TLS: false},
 	}
 
-	cfgJSON, err := flockCaddy.BuildConfig(sites, resolver)
+	cfgJSON, err := flockCaddy.BuildConfig(sites, resolver, nil)
 	if err != nil {
 		t.Fatalf("BuildConfig: %v", err)
 	}
@@ -158,13 +173,11 @@ func TestBuildConfigMixedSites(t *testing.T) {
 		t.Fatalf("expected 2 routes, got %d", len(routes))
 	}
 
-	// First route: proxied
 	h0 := getRouteHandler(t, routes[0])
 	if h0["handler"] != "reverse_proxy" {
 		t.Errorf("route[0] handler = %q, want reverse_proxy", h0["handler"])
 	}
 
-	// Second route: static
 	h1 := getRouteHandler(t, routes[1])
 	if h1["handler"] != "file_server" {
 		t.Errorf("route[1] handler = %q, want file_server", h1["handler"])
@@ -173,7 +186,7 @@ func TestBuildConfigMixedSites(t *testing.T) {
 
 func TestBuildConfigAdminDisabled(t *testing.T) {
 	resolver := &mockResolver{upstreams: map[string]string{}}
-	cfgJSON, err := flockCaddy.BuildConfig(nil, resolver)
+	cfgJSON, err := flockCaddy.BuildConfig(nil, resolver, nil)
 	if err != nil {
 		t.Fatalf("BuildConfig: %v", err)
 	}
@@ -185,10 +198,68 @@ func TestBuildConfigAdminDisabled(t *testing.T) {
 	}
 }
 
+func TestBuildConfigTLSSite(t *testing.T) {
+	resolver := &mockResolver{upstreams: map[string]string{}}
+	certProvider := &mockCertProvider{certs: map[string][2]string{
+		"secure.test": {"/certs/secure.test.pem", "/certs/secure.test-key.pem"},
+	}}
+	sites := []registry.Site{
+		{Path: "/home/user/secure", Domain: "secure.test", TLS: true},
+	}
+
+	cfgJSON, err := flockCaddy.BuildConfig(sites, resolver, certProvider)
+	if err != nil {
+		t.Fatalf("BuildConfig: %v", err)
+	}
+
+	cfg := parseConfig(t, cfgJSON)
+	apps := cfg["apps"].(map[string]any)
+	tls := apps["tls"].(map[string]any)
+	certs := tls["certificates"].(map[string]any)
+	loadFiles := certs["load_files"].([]any)
+	if len(loadFiles) != 1 {
+		t.Fatalf("expected 1 load_files entry, got %d", len(loadFiles))
+	}
+	entry := loadFiles[0].(map[string]any)
+	if entry["certificate"] != "/certs/secure.test.pem" {
+		t.Errorf("certificate = %q, want /certs/secure.test.pem", entry["certificate"])
+	}
+	if entry["key"] != "/certs/secure.test-key.pem" {
+		t.Errorf("key = %q, want /certs/secure.test-key.pem", entry["key"])
+	}
+
+	// Server should have tls_connection_policies
+	http := apps["http"].(map[string]any)
+	servers := http["servers"].(map[string]any)
+	flock := servers["flock"].(map[string]any)
+	policies := flock["tls_connection_policies"].([]any)
+	if len(policies) != 1 {
+		t.Fatalf("expected 1 tls_connection_policy, got %d", len(policies))
+	}
+}
+
+func TestBuildConfigTLSSiteNoCertProvider(t *testing.T) {
+	resolver := &mockResolver{upstreams: map[string]string{}}
+	sites := []registry.Site{
+		{Path: "/home/user/secure", Domain: "secure.test", TLS: true},
+	}
+
+	cfgJSON, err := flockCaddy.BuildConfig(sites, resolver, nil)
+	if err != nil {
+		t.Fatalf("BuildConfig: %v", err)
+	}
+
+	cfg := parseConfig(t, cfgJSON)
+	apps := cfg["apps"].(map[string]any)
+	if _, ok := apps["tls"]; ok {
+		t.Error("expected no tls config when certProvider is nil")
+	}
+}
+
 func TestStartCallsRunnerRun(t *testing.T) {
 	runner := &mockRunner{}
 	resolver := &mockResolver{upstreams: map[string]string{}}
-	m := flockCaddy.NewManager(runner, resolver)
+	m := flockCaddy.NewManager(runner, resolver, nil)
 
 	sites := []registry.Site{
 		{Path: "/tmp/app", Domain: "app.test", TLS: false},
@@ -208,7 +279,7 @@ func TestStartCallsRunnerRun(t *testing.T) {
 func TestReloadCallsRunnerRunAgain(t *testing.T) {
 	runner := &mockRunner{}
 	resolver := &mockResolver{upstreams: map[string]string{}}
-	m := flockCaddy.NewManager(runner, resolver)
+	m := flockCaddy.NewManager(runner, resolver, nil)
 
 	sites := []registry.Site{
 		{Path: "/tmp/app", Domain: "app.test", TLS: false},
@@ -224,7 +295,7 @@ func TestReloadCallsRunnerRunAgain(t *testing.T) {
 func TestStopCallsRunnerStop(t *testing.T) {
 	runner := &mockRunner{}
 	resolver := &mockResolver{upstreams: map[string]string{}}
-	m := flockCaddy.NewManager(runner, resolver)
+	m := flockCaddy.NewManager(runner, resolver, nil)
 
 	_ = m.Start([]registry.Site{{Path: "/tmp/app", Domain: "app.test", TLS: false}})
 	if err := m.Stop(); err != nil {

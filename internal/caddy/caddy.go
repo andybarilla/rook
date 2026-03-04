@@ -16,18 +16,23 @@ type UpstreamResolver interface {
 	ResolveUpstream(site registry.Site) (string, error)
 }
 
-type Manager struct {
-	runner   CaddyRunner
-	resolver UpstreamResolver
-	running  bool
+type CertProvider interface {
+	CertPair(domain string) (certFile, keyFile string, err error)
 }
 
-func NewManager(runner CaddyRunner, resolver UpstreamResolver) *Manager {
-	return &Manager{runner: runner, resolver: resolver}
+type Manager struct {
+	runner       CaddyRunner
+	resolver     UpstreamResolver
+	certProvider CertProvider
+	running      bool
+}
+
+func NewManager(runner CaddyRunner, resolver UpstreamResolver, certProvider CertProvider) *Manager {
+	return &Manager{runner: runner, resolver: resolver, certProvider: certProvider}
 }
 
 func (m *Manager) Start(sites []registry.Site) error {
-	cfgJSON, err := BuildConfig(sites, m.resolver)
+	cfgJSON, err := BuildConfig(sites, m.resolver, m.certProvider)
 	if err != nil {
 		return fmt.Errorf("build config: %w", err)
 	}
@@ -50,8 +55,9 @@ func (m *Manager) Stop() error {
 	return nil
 }
 
-func BuildConfig(sites []registry.Site, resolver UpstreamResolver) ([]byte, error) {
+func BuildConfig(sites []registry.Site, resolver UpstreamResolver, certProvider CertProvider) ([]byte, error) {
 	routes := make([]map[string]any, 0, len(sites))
+	var loadFiles []map[string]any
 
 	for _, site := range sites {
 		upstream, err := resolver.ResolveUpstream(site)
@@ -81,20 +87,44 @@ func BuildConfig(sites []registry.Site, resolver UpstreamResolver) ([]byte, erro
 			"handle": []map[string]any{handler},
 		}
 		routes = append(routes, route)
+
+		if site.TLS && certProvider != nil {
+			certFile, keyFile, err := certProvider.CertPair(site.Domain)
+			if err == nil {
+				loadFiles = append(loadFiles, map[string]any{
+					"certificate": certFile,
+					"key":         keyFile,
+				})
+			}
+		}
+	}
+
+	server := map[string]any{
+		"listen": []string{":80", ":443"},
+		"routes": routes,
+	}
+	if len(loadFiles) > 0 {
+		server["tls_connection_policies"] = []map[string]any{{}}
+	}
+
+	apps := map[string]any{
+		"http": map[string]any{
+			"servers": map[string]any{
+				"flock": server,
+			},
+		},
+	}
+	if len(loadFiles) > 0 {
+		apps["tls"] = map[string]any{
+			"certificates": map[string]any{
+				"load_files": loadFiles,
+			},
+		}
 	}
 
 	cfg := map[string]any{
 		"admin": map[string]any{"disabled": true},
-		"apps": map[string]any{
-			"http": map[string]any{
-				"servers": map[string]any{
-					"flock": map[string]any{
-						"listen": []string{":80", ":443"},
-						"routes": routes,
-					},
-				},
-			},
-		},
+		"apps":  apps,
 	}
 
 	return json.MarshalIndent(cfg, "", "  ")
