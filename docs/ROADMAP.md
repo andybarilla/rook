@@ -54,7 +54,7 @@ Architecture design: `docs/plans/2026-03-03-flock-core-design.md`
 ### Phase 3 — External Plugins
 
 - [x] Plugin discovery and loading API — See: docs/tasks/010-plugin-discovery.md
-- [ ] flock-node plugin
+- [x] flock-node plugin — See: docs/tasks/011-flock-node.md
 
 ### Future — Potential
 
