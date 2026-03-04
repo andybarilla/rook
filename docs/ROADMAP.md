@@ -40,7 +40,7 @@ Architecture design: `docs/plans/2026-03-03-flock-core-design.md`
 
 - [x] Project scaffold (Go + Wails + CI) — See: docs/tasks/001-scaffold.md
 - [x] Site registry — See: docs/tasks/002-site-registry.md
-- [ ] Plugin interfaces + host
+- [x] Plugin interfaces + host — See: docs/tasks/003-plugin-host.md
 - [ ] Caddy manager (embedded)
 - [ ] flock-ssl plugin (mkcert)
 - [ ] flock-php plugin (FPM pools)
