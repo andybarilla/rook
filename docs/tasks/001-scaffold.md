@@ -2,11 +2,11 @@
 
 ## Progress Summary
 
-**Status**: Not Started
+**Status**: Complete
 
-- [ ] Step 1: Initialize Wails project
-- [ ] Step 2: Implement config paths with TDD
-- [ ] Step 3: Set up GitHub Actions CI
+- [x] Step 1: Initialize Wails project (Svelte template, `wails build` succeeds)
+- [x] Step 2: Implement config paths with TDD (4 tests passing)
+- [x] Step 3: Set up GitHub Actions CI
 
 ## Overview
 
@@ -37,7 +37,7 @@ Run `wails init` to generate the project scaffold, then verify it builds.
 - `main.go` — Entry point wiring Wails options
 - `app.go` — App struct with `startup`/`shutdown` hooks
 - `wails.json` — Wails project config
-- `frontend/` — Webview frontend (vanilla JS default)
+- `frontend/` — Webview frontend (Svelte + Vite)
 
 ### Step 2: Implement config paths (TDD)
 
