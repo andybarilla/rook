@@ -1,20 +1,25 @@
 <script>
   import { onMount } from 'svelte';
   import { ListSites, AddSite, RemoveSite, DatabaseServices, StartDatabase, StopDatabase } from '../wailsjs/go/main/App.js';
+  import { notifySuccess, notifyError } from './lib/notifications.js';
+  import { friendlyError } from './lib/errorMessages.js';
   import SiteList from './SiteList.svelte';
   import AddSiteForm from './AddSiteForm.svelte';
   import ServiceList from './ServiceList.svelte';
+  import ToastContainer from './lib/ToastContainer.svelte';
 
   let sites = [];
   let services = [];
-  let error = '';
+  let sitesLoaded = false;
+  let servicesLoaded = false;
 
   async function refreshSites() {
     try {
       sites = await ListSites() || [];
-      error = '';
     } catch (e) {
-      error = 'Failed to load sites: ' + (e.message || String(e));
+      notifyError(friendlyError(e.message || String(e)));
+    } finally {
+      sitesLoaded = true;
     }
   }
 
@@ -27,8 +32,9 @@
     try {
       await RemoveSite(domain);
       await refreshSites();
+      notifySuccess(`Site "${domain}" removed.`);
     } catch (e) {
-      error = 'Failed to remove site: ' + (e.message || String(e));
+      notifyError(friendlyError(e.message || String(e)));
     }
   }
 
@@ -36,7 +42,9 @@
     try {
       services = await DatabaseServices() || [];
     } catch (e) {
-      error = 'Failed to load services: ' + (e.message || String(e));
+      notifyError(friendlyError(e.message || String(e)));
+    } finally {
+      servicesLoaded = true;
     }
   }
 
@@ -44,8 +52,9 @@
     try {
       await StartDatabase(svc);
       await refreshServices();
+      notifySuccess(`${svc} started.`);
     } catch (e) {
-      error = 'Failed to start service: ' + (e.message || String(e));
+      notifyError(friendlyError(e.message || String(e)));
     }
   }
 
@@ -53,8 +62,9 @@
     try {
       await StopDatabase(svc);
       await refreshServices();
+      notifySuccess(`${svc} stopped.`);
     } catch (e) {
-      error = 'Failed to stop service: ' + (e.message || String(e));
+      notifyError(friendlyError(e.message || String(e)));
     }
   }
 
@@ -70,18 +80,16 @@
     <p class="text-base-content/50 mt-1 text-sm">Local Development Environment</p>
   </header>
 
-  {#if error}
-    <div class="alert alert-error mb-4 text-sm">{error}</div>
-  {/if}
-
   <section class="card bg-base-200 p-6">
     <h2 class="text-sm text-base-content/60 uppercase tracking-wide mb-4 font-semibold">Sites</h2>
-    <SiteList {sites} onRemove={handleRemove} />
+    <SiteList {sites} loaded={sitesLoaded} onRemove={handleRemove} />
     <AddSiteForm onAdd={handleAdd} />
   </section>
 
   <section class="card bg-base-200 p-6 mt-6">
     <h2 class="text-sm text-base-content/60 uppercase tracking-wide mb-4 font-semibold">Services</h2>
-    <ServiceList {services} onStart={handleStartService} onStop={handleStopService} />
+    <ServiceList {services} loaded={servicesLoaded} onStart={handleStartService} onStop={handleStopService} />
   </section>
 </main>
+
+<ToastContainer />
