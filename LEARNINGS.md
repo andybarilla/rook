@@ -92,3 +92,19 @@
 ### Tool / command tips
 - `--head` flag on `gh pr create` still required from worktrees.
 - `go test ./internal/... -v` now runs 54 tests across seven packages (caddy, config, core, php, plugin, registry, ssl).
+
+## 2026-03-04 — Task 008: GUI Site List
+
+### Surprises / gotchas
+- Wails auto-generates JS bindings from Go methods, but only when running `wails dev` or `wails build` — neither works in worktrees (missing `frontend/dist`). Had to manually update `App.js` and `App.d.ts` to match the Go methods.
+- `Greet` method was already removed in Core wiring (task 007) — no cleanup needed.
+- Frontend can't be build-tested in worktrees without the full Wails environment. Verification is limited to Go internal tests; Svelte components need manual `wails dev` testing.
+
+### Pattern confirmations
+- Svelte 3 component structure is clean for CRUD UIs — props + callbacks pattern works well for SiteList and AddSiteForm.
+- Wails JS binding format is simple and predictable: `window['go']['main']['App']['MethodName'](args)`.
+- Separating Go backend (fully tested via `internal/core`) from frontend (manual testing) keeps CI reliable.
+
+### Tool / command tips
+- `--head` flag on `gh pr create` still required from worktrees.
+- Wails JS bindings live at `frontend/wailsjs/go/main/App.js` — update manually when adding new Go methods in worktrees.

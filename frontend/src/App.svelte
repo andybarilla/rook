@@ -1,79 +1,99 @@
 <script>
-  import logo from './assets/images/logo-universal.png'
-  import {Greet} from '../wailsjs/go/main/App.js'
+  import { onMount } from 'svelte';
+  import { ListSites, AddSite, RemoveSite } from '../wailsjs/go/main/App.js';
+  import SiteList from './SiteList.svelte';
+  import AddSiteForm from './AddSiteForm.svelte';
 
-  let resultText = "Please enter your name below 👇"
-  let name
+  let sites = [];
+  let error = '';
 
-  function greet() {
-    Greet(name).then(result => resultText = result)
+  async function refreshSites() {
+    try {
+      sites = await ListSites() || [];
+      error = '';
+    } catch (e) {
+      error = 'Failed to load sites: ' + (e.message || String(e));
+    }
   }
+
+  async function handleAdd(path, domain, phpVersion, tls) {
+    await AddSite(path, domain, phpVersion, tls);
+    await refreshSites();
+  }
+
+  async function handleRemove(domain) {
+    try {
+      await RemoveSite(domain);
+      await refreshSites();
+    } catch (e) {
+      error = 'Failed to remove site: ' + (e.message || String(e));
+    }
+  }
+
+  onMount(refreshSites);
 </script>
 
 <main>
-  <img alt="Wails logo" id="logo" src="{logo}">
-  <div class="result" id="result">{resultText}</div>
-  <div class="input-box" id="input">
-    <input autocomplete="off" bind:value={name} class="input" id="name" type="text"/>
-    <button class="btn" on:click={greet}>Greet</button>
-  </div>
+  <header>
+    <h1>Flock</h1>
+    <p class="subtitle">Local Development Environment</p>
+  </header>
+
+  {#if error}
+    <p class="global-error">{error}</p>
+  {/if}
+
+  <section class="content">
+    <h2>Sites</h2>
+    <SiteList {sites} onRemove={handleRemove} />
+    <AddSiteForm onAdd={handleAdd} />
+  </section>
 </main>
 
 <style>
-
-  #logo {
-    display: block;
-    width: 50%;
-    height: 50%;
-    margin: auto;
-    padding: 10% 0 0;
-    background-position: center;
-    background-repeat: no-repeat;
-    background-size: 100% 100%;
-    background-origin: content-box;
+  main {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+    text-align: left;
   }
 
-  .result {
-    height: 20px;
-    line-height: 20px;
-    margin: 1.5rem auto;
+  header {
+    margin-bottom: 2rem;
   }
 
-  .input-box .btn {
-    width: 60px;
-    height: 30px;
-    line-height: 30px;
-    border-radius: 3px;
-    border: none;
-    margin: 0 0 0 20px;
-    padding: 0 8px;
-    cursor: pointer;
+  h1 {
+    margin: 0;
+    font-size: 1.5rem;
   }
 
-  .input-box .btn:hover {
-    background-image: linear-gradient(to top, #cfd9df 0%, #e2ebf0 100%);
-    color: #333333;
+  .subtitle {
+    color: #888;
+    margin: 0.25rem 0 0;
+    font-size: 0.85rem;
   }
 
-  .input-box .input {
-    border: none;
-    border-radius: 3px;
-    outline: none;
-    height: 30px;
-    line-height: 30px;
-    padding: 0 10px;
-    background-color: rgba(240, 240, 240, 1);
-    -webkit-font-smoothing: antialiased;
+  h2 {
+    font-size: 1rem;
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 0 0 1rem;
   }
 
-  .input-box .input:hover {
-    border: none;
-    background-color: rgba(255, 255, 255, 1);
+  .global-error {
+    background: rgba(231, 76, 60, 0.15);
+    border: 1px solid #e74c3c;
+    border-radius: 4px;
+    padding: 0.5rem 0.75rem;
+    color: #e74c3c;
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
   }
 
-  .input-box .input:focus {
-    border: none;
-    background-color: rgba(255, 255, 255, 1);
+  .content {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    padding: 1.5rem;
   }
-
 </style>
