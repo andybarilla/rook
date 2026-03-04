@@ -8,6 +8,7 @@ import (
 
 	"github.com/andybarilla/flock/internal/config"
 	"github.com/andybarilla/flock/internal/core"
+	"github.com/andybarilla/flock/internal/databases"
 	"github.com/andybarilla/flock/internal/registry"
 )
 
@@ -36,11 +37,14 @@ func (a *App) startup(ctx context.Context) {
 	logger := log.New(logFile, "[flock] ", log.LstdFlags)
 
 	cfg := core.Config{
-		SitesFile:   config.SitesFile(),
-		Logger:      logger,
-		CaddyRunner: &loggingCaddyRunner{logger: logger},
-		FPMRunner:   &loggingFPMRunner{logger: logger},
-		CertStore:   &loggingCertStore{logger: logger, certsDir: filepath.Join(config.DataDir(), "certs")},
+		SitesFile:    config.SitesFile(),
+		Logger:       logger,
+		CaddyRunner:  &loggingCaddyRunner{logger: logger},
+		FPMRunner:    &loggingFPMRunner{logger: logger},
+		CertStore:    &loggingCertStore{logger: logger, certsDir: filepath.Join(config.DataDir(), "certs")},
+		DBRunner:     databases.NewProcessRunner(),
+		DBConfigPath: filepath.Join(config.ConfigDir(), "databases.json"),
+		DBDataRoot:   filepath.Join(config.DataDir(), "databases"),
 	}
 
 	a.core = core.NewCore(cfg)
@@ -74,4 +78,19 @@ func (a *App) AddSite(path, domain, phpVersion string, tls bool) error {
 // RemoveSite removes a registered site
 func (a *App) RemoveSite(domain string) error {
 	return a.core.RemoveSite(domain)
+}
+
+// DatabaseServices returns status of all database services
+func (a *App) DatabaseServices() []databases.ServiceInfo {
+	return a.core.DatabaseServices()
+}
+
+// StartDatabase starts a specific database service
+func (a *App) StartDatabase(svc string) error {
+	return a.core.StartDatabase(svc)
+}
+
+// StopDatabase stops a specific database service
+func (a *App) StopDatabase(svc string) error {
+	return a.core.StopDatabase(svc)
 }

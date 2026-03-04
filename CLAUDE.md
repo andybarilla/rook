@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Overview
 
-Service to provide title abstractor capabilities via LLM including checking chain of title and liens.
+Flock — a cross-platform, open-source local development environment manager. Inspired by Laravel Herd, extensible via plugins to any language stack.
 
 ## Architecture Overview
 
@@ -25,3 +25,9 @@ Service to provide title abstractor capabilities via LLM including checking chai
 - **Branch from `main`**: `git checkout -b task/XXX-description main`
 - **Commit often** with clear messages describing what changed and why
 - **Create a PR** when the task is complete and all tests pass
+
+## Post-Merge Checklist
+
+After a task's PR is merged:
+- **Update `docs/ROADMAP.md`**: Mark the completed item with `[x]` and add a task file reference (e.g., `— See: docs/tasks/004-caddy-manager.md`)
+- Commit the roadmap update to the working branch (e.g., `agent-1`) and push
