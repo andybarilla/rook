@@ -49,7 +49,7 @@ Architecture design: `docs/plans/2026-03-03-flock-core-design.md`
 
 ### Phase 2 — Services
 
-- [ ] flock-databases plugin (MySQL, PostgreSQL, Redis)
+- [x] flock-databases plugin (MySQL, PostgreSQL, Redis) — See: docs/tasks/009-flock-databases.md
 
 ### Phase 3 — External Plugins
 
