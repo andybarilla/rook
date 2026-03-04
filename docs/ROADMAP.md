@@ -56,6 +56,15 @@ Architecture design: `docs/plans/2026-03-03-flock-core-design.md`
 - [x] Plugin discovery and loading API — See: docs/tasks/010-plugin-discovery.md
 - [x] flock-node plugin — See: docs/tasks/011-flock-node.md
 
+### Phase 4 — UI/UX Polish
+
+- [ ] Integrate DaisyUI + Tailwind CSS (framework-agnostic component classes + dark theme)
+- [ ] Error UX (dismissable banners, friendly messages, loading states)
+- [ ] Add Site form improvements (collapsible form, better layout, confirmation on remove)
+- [ ] Site table: show Node Version column
+- [ ] Empty state improvements (actionable guidance for sites and services)
+- [ ] Accessibility (color contrast, keyboard shortcuts)
+
 ### Future — Potential
 
 - [ ] flock-sdk (Go library for plugin authors — handles JSON-RPC boilerplate)
