@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/andybarilla/flock/internal/caddy"
+	"github.com/andybarilla/flock/internal/databases"
 	"github.com/andybarilla/flock/internal/php"
 	"github.com/andybarilla/flock/internal/plugin"
 	"github.com/andybarilla/flock/internal/registry"
@@ -12,11 +13,14 @@ import (
 )
 
 type Config struct {
-	SitesFile   string
-	Logger      *log.Logger
-	CaddyRunner caddy.CaddyRunner
-	FPMRunner   php.FPMRunner
-	CertStore   ssl.CertStore
+	SitesFile    string
+	Logger       *log.Logger
+	CaddyRunner  caddy.CaddyRunner
+	FPMRunner    php.FPMRunner
+	CertStore    ssl.CertStore
+	DBRunner     databases.DBRunner
+	DBConfigPath string
+	DBDataRoot   string
 }
 
 type Core struct {
@@ -25,6 +29,7 @@ type Core struct {
 	caddyMgr  *caddy.Manager
 	sslPlugin *ssl.Plugin
 	phpPlugin *php.Plugin
+	dbPlugin  *databases.Plugin
 	logger    *log.Logger
 }
 
@@ -34,8 +39,10 @@ func NewCore(cfg Config) *Core {
 
 	sslPlugin := ssl.NewPlugin(cfg.CertStore)
 	phpPlugin := php.NewPlugin(cfg.FPMRunner)
+	dbPlugin := databases.NewPlugin(cfg.DBRunner, cfg.DBConfigPath, cfg.DBDataRoot)
 	pluginMgr.Register(sslPlugin)
 	pluginMgr.Register(phpPlugin)
+	pluginMgr.Register(dbPlugin)
 
 	caddyMgr := caddy.NewManager(cfg.CaddyRunner, pluginMgr, sslPlugin)
 
@@ -45,6 +52,7 @@ func NewCore(cfg Config) *Core {
 		caddyMgr:  caddyMgr,
 		sslPlugin: sslPlugin,
 		phpPlugin: phpPlugin,
+		dbPlugin:  dbPlugin,
 		logger:    cfg.Logger,
 	}
 
@@ -94,4 +102,16 @@ func (c *Core) RemoveSite(domain string) error {
 
 func (c *Core) Plugins() []plugin.PluginInfo {
 	return c.pluginMgr.Plugins()
+}
+
+func (c *Core) DatabaseServices() []databases.ServiceInfo {
+	return c.dbPlugin.ServiceStatuses()
+}
+
+func (c *Core) StartDatabase(svc string) error {
+	return c.dbPlugin.StartSvc(databases.ServiceType(svc))
+}
+
+func (c *Core) StopDatabase(svc string) error {
+	return c.dbPlugin.StopSvc(databases.ServiceType(svc))
 }

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/andybarilla/flock/internal/core"
+	"github.com/andybarilla/flock/internal/databases"
 	"github.com/andybarilla/flock/internal/registry"
 )
 
@@ -85,6 +86,37 @@ func (s *stubCertStore) HasCert(domain string) bool {
 	return s.certs[domain]
 }
 
+type stubDBRunner struct {
+	started map[databases.ServiceType]databases.ServiceConfig
+	stopped map[databases.ServiceType]bool
+}
+
+func newStubDBRunner() *stubDBRunner {
+	return &stubDBRunner{
+		started: map[databases.ServiceType]databases.ServiceConfig{},
+		stopped: map[databases.ServiceType]bool{},
+	}
+}
+
+func (s *stubDBRunner) Start(svc databases.ServiceType, cfg databases.ServiceConfig) error {
+	s.started[svc] = cfg
+	return nil
+}
+
+func (s *stubDBRunner) Stop(svc databases.ServiceType) error {
+	s.stopped[svc] = true
+	return nil
+}
+
+func (s *stubDBRunner) Status(svc databases.ServiceType) databases.ServiceStatus {
+	if _, ok := s.started[svc]; ok {
+		if !s.stopped[svc] {
+			return databases.StatusRunning
+		}
+	}
+	return databases.StatusStopped
+}
+
 // --- Helpers ---
 
 func tmpSitesFile(t *testing.T) string {
@@ -93,25 +125,30 @@ func tmpSitesFile(t *testing.T) string {
 	return filepath.Join(dir, "sites.json")
 }
 
-func testConfig(t *testing.T) (core.Config, *stubCaddyRunner, *stubFPMRunner, *stubCertStore) {
+func testConfig(t *testing.T) (core.Config, *stubCaddyRunner, *stubFPMRunner, *stubCertStore, *stubDBRunner) {
 	t.Helper()
 	runner := &stubCaddyRunner{}
 	fpm := newStubFPMRunner()
 	certs := newStubCertStore()
+	db := newStubDBRunner()
+	dir := t.TempDir()
 	cfg := core.Config{
-		SitesFile:   tmpSitesFile(t),
-		Logger:      log.New(os.Stderr, "", 0),
-		CaddyRunner: runner,
-		FPMRunner:   fpm,
-		CertStore:   certs,
+		SitesFile:    tmpSitesFile(t),
+		Logger:       log.New(os.Stderr, "", 0),
+		CaddyRunner:  runner,
+		FPMRunner:    fpm,
+		CertStore:    certs,
+		DBRunner:     db,
+		DBConfigPath: filepath.Join(dir, "databases.json"),
+		DBDataRoot:   filepath.Join(dir, "db-data"),
 	}
-	return cfg, runner, fpm, certs
+	return cfg, runner, fpm, certs, db
 }
 
 // --- Tests ---
 
 func TestNewCoreAndStartStop(t *testing.T) {
-	cfg, runner, _, _ := testConfig(t)
+	cfg, runner, _, _, _ := testConfig(t)
 
 	c := core.NewCore(cfg)
 	if err := c.Start(); err != nil {
@@ -132,7 +169,7 @@ func TestNewCoreAndStartStop(t *testing.T) {
 }
 
 func TestStartLoadsSitesAndStartsPlugins(t *testing.T) {
-	cfg, _, fpm, certs := testConfig(t)
+	cfg, _, fpm, certs, _ := testConfig(t)
 
 	// Pre-populate sites file
 	sitesJSON := `[{"path":"/tmp","domain":"app.test","php_version":"8.3","tls":true}]`
@@ -160,7 +197,7 @@ func TestStartLoadsSitesAndStartsPlugins(t *testing.T) {
 }
 
 func TestSitesReturnsList(t *testing.T) {
-	cfg, _, _, _ := testConfig(t)
+	cfg, _, _, _, _ := testConfig(t)
 
 	sitesJSON := `[{"path":"/tmp","domain":"app.test"}]`
 	os.MkdirAll(filepath.Dir(cfg.SitesFile), 0o755)
@@ -180,14 +217,14 @@ func TestSitesReturnsList(t *testing.T) {
 }
 
 func TestPluginsReturnsInfo(t *testing.T) {
-	cfg, _, _, _ := testConfig(t)
+	cfg, _, _, _, _ := testConfig(t)
 	c := core.NewCore(cfg)
 	_ = c.Start()
 	defer c.Stop()
 
 	plugins := c.Plugins()
-	if len(plugins) != 2 {
-		t.Fatalf("Plugins() len = %d, want 2", len(plugins))
+	if len(plugins) != 3 {
+		t.Fatalf("Plugins() len = %d, want 3", len(plugins))
 	}
 
 	ids := map[string]bool{}
@@ -200,10 +237,25 @@ func TestPluginsReturnsInfo(t *testing.T) {
 	if !ids["flock-php"] {
 		t.Error("expected flock-php plugin")
 	}
+	if !ids["flock-databases"] {
+		t.Error("expected flock-databases plugin")
+	}
+}
+
+func TestPluginsIncludesDatabases(t *testing.T) {
+	cfg, _, _, _, _ := testConfig(t)
+	c := core.NewCore(cfg)
+	_ = c.Start()
+	defer c.Stop()
+
+	services := c.DatabaseServices()
+	if len(services) != 3 {
+		t.Fatalf("DatabaseServices() len = %d, want 3", len(services))
+	}
 }
 
 func TestStartErrorOnCaddyFailure(t *testing.T) {
-	cfg, runner, _, _ := testConfig(t)
+	cfg, runner, _, _, _ := testConfig(t)
 	runner.runErr = fmt.Errorf("caddy failed")
 
 	c := core.NewCore(cfg)
@@ -214,7 +266,7 @@ func TestStartErrorOnCaddyFailure(t *testing.T) {
 }
 
 func TestAddSiteReloadsCaddy(t *testing.T) {
-	cfg, runner, _, _ := testConfig(t)
+	cfg, runner, _, _, _ := testConfig(t)
 	c := core.NewCore(cfg)
 	_ = c.Start()
 	defer c.Stop()
@@ -233,7 +285,7 @@ func TestAddSiteReloadsCaddy(t *testing.T) {
 }
 
 func TestRemoveSiteReloadsCaddy(t *testing.T) {
-	cfg, runner, _, _ := testConfig(t)
+	cfg, runner, _, _, _ := testConfig(t)
 
 	dir := t.TempDir()
 	sitesJSON := fmt.Sprintf(`[{"path":%q,"domain":"app.test"}]`, dir)
