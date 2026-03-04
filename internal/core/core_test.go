@@ -1,0 +1,257 @@
+package core_test
+
+import (
+	"fmt"
+	"log"
+	"os"
+	"path/filepath"
+	"testing"
+
+	"github.com/andybarilla/flock/internal/core"
+	"github.com/andybarilla/flock/internal/registry"
+)
+
+// --- Stubs ---
+
+type stubCaddyRunner struct {
+	runCalls  int
+	stopCalls int
+	lastCfg   []byte
+	runErr    error
+}
+
+func (s *stubCaddyRunner) Run(cfgJSON []byte) error {
+	s.runCalls++
+	s.lastCfg = cfgJSON
+	return s.runErr
+}
+
+func (s *stubCaddyRunner) Stop() error {
+	s.stopCalls++
+	return nil
+}
+
+type stubFPMRunner struct {
+	started map[string]bool
+	stopped map[string]bool
+}
+
+func newStubFPMRunner() *stubFPMRunner {
+	return &stubFPMRunner{started: map[string]bool{}, stopped: map[string]bool{}}
+}
+
+func (s *stubFPMRunner) StartPool(version string) error {
+	s.started[version] = true
+	return nil
+}
+
+func (s *stubFPMRunner) StopPool(version string) error {
+	s.stopped[version] = true
+	return nil
+}
+
+func (s *stubFPMRunner) PoolSocket(version string) string {
+	return fmt.Sprintf("/tmp/php-fpm-%s.sock", version)
+}
+
+type stubCertStore struct {
+	caInstalled bool
+	certs       map[string]bool
+}
+
+func newStubCertStore() *stubCertStore {
+	return &stubCertStore{certs: map[string]bool{}}
+}
+
+func (s *stubCertStore) InstallCA() error {
+	s.caInstalled = true
+	return nil
+}
+
+func (s *stubCertStore) GenerateCert(domain string) error {
+	s.certs[domain] = true
+	return nil
+}
+
+func (s *stubCertStore) CertPath(domain string) string {
+	return "/tmp/certs/" + domain + ".pem"
+}
+
+func (s *stubCertStore) KeyPath(domain string) string {
+	return "/tmp/certs/" + domain + "-key.pem"
+}
+
+func (s *stubCertStore) HasCert(domain string) bool {
+	return s.certs[domain]
+}
+
+// --- Helpers ---
+
+func tmpSitesFile(t *testing.T) string {
+	t.Helper()
+	dir := t.TempDir()
+	return filepath.Join(dir, "sites.json")
+}
+
+func testConfig(t *testing.T) (core.Config, *stubCaddyRunner, *stubFPMRunner, *stubCertStore) {
+	t.Helper()
+	runner := &stubCaddyRunner{}
+	fpm := newStubFPMRunner()
+	certs := newStubCertStore()
+	cfg := core.Config{
+		SitesFile:   tmpSitesFile(t),
+		Logger:      log.New(os.Stderr, "", 0),
+		CaddyRunner: runner,
+		FPMRunner:   fpm,
+		CertStore:   certs,
+	}
+	return cfg, runner, fpm, certs
+}
+
+// --- Tests ---
+
+func TestNewCoreAndStartStop(t *testing.T) {
+	cfg, runner, _, _ := testConfig(t)
+
+	c := core.NewCore(cfg)
+	if err := c.Start(); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+
+	if runner.runCalls != 1 {
+		t.Errorf("caddy runCalls = %d, want 1", runner.runCalls)
+	}
+
+	if err := c.Stop(); err != nil {
+		t.Fatalf("Stop: %v", err)
+	}
+
+	if runner.stopCalls != 1 {
+		t.Errorf("caddy stopCalls = %d, want 1", runner.stopCalls)
+	}
+}
+
+func TestStartLoadsSitesAndStartsPlugins(t *testing.T) {
+	cfg, _, fpm, certs := testConfig(t)
+
+	// Pre-populate sites file
+	sitesJSON := `[{"path":"/tmp","domain":"app.test","php_version":"8.3","tls":true}]`
+	os.MkdirAll(filepath.Dir(cfg.SitesFile), 0o755)
+	os.WriteFile(cfg.SitesFile, []byte(sitesJSON), 0o644)
+
+	c := core.NewCore(cfg)
+	if err := c.Start(); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	defer c.Stop()
+
+	// PHP plugin should have started pool for 8.3
+	if !fpm.started["8.3"] {
+		t.Error("expected FPM pool 8.3 to be started")
+	}
+
+	// SSL plugin should have installed CA and generated cert
+	if !certs.caInstalled {
+		t.Error("expected CA to be installed")
+	}
+	if !certs.certs["app.test"] {
+		t.Error("expected cert for app.test to be generated")
+	}
+}
+
+func TestSitesReturnsList(t *testing.T) {
+	cfg, _, _, _ := testConfig(t)
+
+	sitesJSON := `[{"path":"/tmp","domain":"app.test"}]`
+	os.MkdirAll(filepath.Dir(cfg.SitesFile), 0o755)
+	os.WriteFile(cfg.SitesFile, []byte(sitesJSON), 0o644)
+
+	c := core.NewCore(cfg)
+	_ = c.Start()
+	defer c.Stop()
+
+	sites := c.Sites()
+	if len(sites) != 1 {
+		t.Fatalf("Sites() len = %d, want 1", len(sites))
+	}
+	if sites[0].Domain != "app.test" {
+		t.Errorf("domain = %q, want app.test", sites[0].Domain)
+	}
+}
+
+func TestPluginsReturnsInfo(t *testing.T) {
+	cfg, _, _, _ := testConfig(t)
+	c := core.NewCore(cfg)
+	_ = c.Start()
+	defer c.Stop()
+
+	plugins := c.Plugins()
+	if len(plugins) != 2 {
+		t.Fatalf("Plugins() len = %d, want 2", len(plugins))
+	}
+
+	ids := map[string]bool{}
+	for _, p := range plugins {
+		ids[p.ID] = true
+	}
+	if !ids["flock-ssl"] {
+		t.Error("expected flock-ssl plugin")
+	}
+	if !ids["flock-php"] {
+		t.Error("expected flock-php plugin")
+	}
+}
+
+func TestStartErrorOnCaddyFailure(t *testing.T) {
+	cfg, runner, _, _ := testConfig(t)
+	runner.runErr = fmt.Errorf("caddy failed")
+
+	c := core.NewCore(cfg)
+	err := c.Start()
+	if err == nil {
+		t.Error("expected error from Start when Caddy fails")
+	}
+}
+
+func TestAddSiteReloadsCaddy(t *testing.T) {
+	cfg, runner, _, _ := testConfig(t)
+	c := core.NewCore(cfg)
+	_ = c.Start()
+	defer c.Stop()
+
+	initialRuns := runner.runCalls
+
+	dir := t.TempDir()
+	err := c.AddSite(registry.Site{Path: dir, Domain: "new.test"})
+	if err != nil {
+		t.Fatalf("AddSite: %v", err)
+	}
+
+	if runner.runCalls != initialRuns+1 {
+		t.Errorf("caddy runCalls = %d, want %d (reload after AddSite)", runner.runCalls, initialRuns+1)
+	}
+}
+
+func TestRemoveSiteReloadsCaddy(t *testing.T) {
+	cfg, runner, _, _ := testConfig(t)
+
+	dir := t.TempDir()
+	sitesJSON := fmt.Sprintf(`[{"path":%q,"domain":"app.test"}]`, dir)
+	os.MkdirAll(filepath.Dir(cfg.SitesFile), 0o755)
+	os.WriteFile(cfg.SitesFile, []byte(sitesJSON), 0o644)
+
+	c := core.NewCore(cfg)
+	_ = c.Start()
+	defer c.Stop()
+
+	initialRuns := runner.runCalls
+
+	err := c.RemoveSite("app.test")
+	if err != nil {
+		t.Fatalf("RemoveSite: %v", err)
+	}
+
+	if runner.runCalls != initialRuns+1 {
+		t.Errorf("caddy runCalls = %d, want %d (reload after RemoveSite)", runner.runCalls, initialRuns+1)
+	}
+}
