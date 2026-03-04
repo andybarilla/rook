@@ -6,3 +6,9 @@ export function AddSite(arg1:string, arg2:string, arg3:string, arg4:boolean):Pro
 export function ListSites():Promise<Array<any>>;
 
 export function RemoveSite(arg1:string):Promise<void>;
+
+export function DatabaseServices():Promise<Array<any>>;
+
+export function StartDatabase(arg1:string):Promise<void>;
+
+export function StopDatabase(arg1:string):Promise<void>;

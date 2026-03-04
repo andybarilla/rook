@@ -1,10 +1,12 @@
 <script>
   import { onMount } from 'svelte';
-  import { ListSites, AddSite, RemoveSite } from '../wailsjs/go/main/App.js';
+  import { ListSites, AddSite, RemoveSite, DatabaseServices, StartDatabase, StopDatabase } from '../wailsjs/go/main/App.js';
   import SiteList from './SiteList.svelte';
   import AddSiteForm from './AddSiteForm.svelte';
+  import ServiceList from './ServiceList.svelte';
 
   let sites = [];
+  let services = [];
   let error = '';
 
   async function refreshSites() {
@@ -30,7 +32,36 @@
     }
   }
 
-  onMount(refreshSites);
+  async function refreshServices() {
+    try {
+      services = await DatabaseServices() || [];
+    } catch (e) {
+      error = 'Failed to load services: ' + (e.message || String(e));
+    }
+  }
+
+  async function handleStartService(svc) {
+    try {
+      await StartDatabase(svc);
+      await refreshServices();
+    } catch (e) {
+      error = 'Failed to start service: ' + (e.message || String(e));
+    }
+  }
+
+  async function handleStopService(svc) {
+    try {
+      await StopDatabase(svc);
+      await refreshServices();
+    } catch (e) {
+      error = 'Failed to stop service: ' + (e.message || String(e));
+    }
+  }
+
+  onMount(() => {
+    refreshSites();
+    refreshServices();
+  });
 </script>
 
 <main>
@@ -47,6 +78,11 @@
     <h2>Sites</h2>
     <SiteList {sites} onRemove={handleRemove} />
     <AddSiteForm onAdd={handleAdd} />
+  </section>
+
+  <section class="content" style="margin-top: 1.5rem;">
+    <h2>Services</h2>
+    <ServiceList {services} onStart={handleStartService} onStop={handleStopService} />
   </section>
 </main>
 

@@ -13,3 +13,15 @@ export function ListSites() {
 export function RemoveSite(arg1) {
   return window['go']['main']['App']['RemoveSite'](arg1);
 }
+
+export function DatabaseServices() {
+  return window['go']['main']['App']['DatabaseServices']();
+}
+
+export function StartDatabase(arg1) {
+  return window['go']['main']['App']['StartDatabase'](arg1);
+}
+
+export function StopDatabase(arg1) {
+  return window['go']['main']['App']['StopDatabase'](arg1);
+}
