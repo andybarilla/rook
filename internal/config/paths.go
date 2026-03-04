@@ -24,6 +24,10 @@ func DataDir() string {
 	return filepath.Join(home, ".local", "share", appName)
 }
 
+func PluginsDir() string {
+	return filepath.Join(ConfigDir(), "plugins")
+}
+
 func SitesFile() string {
 	return filepath.Join(ConfigDir(), "sites.json")
 }

@@ -38,20 +38,24 @@ A cross-platform, open-source local development environment manager. Inspired by
 
 Architecture design: `docs/plans/2026-03-03-flock-core-design.md`
 
-- [ ] Project scaffold (Go + Wails + CI) — See: docs/tasks/001-scaffold.md
-- [ ] Site registry
-- [ ] Plugin interfaces + host
-- [ ] Caddy manager (embedded)
-- [ ] flock-ssl plugin (mkcert)
-- [ ] flock-php plugin (FPM pools)
-- [ ] Core wiring
-- [ ] GUI: system tray + site list
+- [x] Project scaffold (Go + Wails + CI) — See: docs/tasks/001-scaffold.md
+- [x] Site registry — See: docs/tasks/002-site-registry.md
+- [x] Plugin interfaces + host — See: docs/tasks/003-plugin-host.md
+- [x] Caddy manager (embedded) — See: docs/tasks/004-caddy-manager.md
+- [x] flock-ssl plugin (mkcert) — See: docs/tasks/005-flock-ssl.md
+- [x] flock-php plugin (FPM pools) — See: docs/tasks/006-flock-php.md
+- [x] Core wiring — See: docs/tasks/007-core-wiring.md
+- [x] GUI: system tray + site list — See: docs/tasks/008-gui-site-list.md
 
 ### Phase 2 — Services
 
-- [ ] flock-databases plugin (MySQL, PostgreSQL, Redis)
+- [x] flock-databases plugin (MySQL, PostgreSQL, Redis) — See: docs/tasks/009-flock-databases.md
 
 ### Phase 3 — External Plugins
 
-- [ ] Plugin discovery and loading API
+- [x] Plugin discovery and loading API — See: docs/tasks/010-plugin-discovery.md
 - [ ] flock-node plugin
+
+### Future — Potential
+
+- [ ] flock-sdk (Go library for plugin authors — handles JSON-RPC boilerplate)

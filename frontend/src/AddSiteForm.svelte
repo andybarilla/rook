@@ -4,6 +4,7 @@
   let path = '';
   let domain = '';
   let phpVersion = '';
+  let nodeVersion = '';
   let tls = false;
   let error = '';
 
@@ -26,10 +27,11 @@
       return;
     }
     try {
-      await onAdd(path, domain, phpVersion, tls);
+      await onAdd(path, domain, phpVersion, nodeVersion, tls);
       path = '';
       domain = '';
       phpVersion = '';
+      nodeVersion = '';
       tls = false;
     } catch (e) {
       error = e.message || String(e);
@@ -52,6 +54,10 @@
     <label class="flex flex-col flex-1 text-left">
       <span class="text-xs text-base-content/50 uppercase tracking-wide mb-1">PHP Version</span>
       <input type="text" class="input input-bordered input-sm" bind:value={phpVersion} placeholder="8.3 (optional)" />
+    </label>
+    <label class="flex flex-col flex-1 text-left">
+      <span class="text-xs text-base-content/50 uppercase tracking-wide mb-1">Node Version</span>
+      <input type="text" class="input input-bordered input-sm" bind:value={nodeVersion} placeholder="system (optional)" />
     </label>
     <label class="flex flex-row items-center gap-2 flex-none whitespace-nowrap">
       <input type="checkbox" class="checkbox checkbox-sm" bind:checked={tls} />

@@ -80,6 +80,13 @@ func TestSitesFile(t *testing.T) {
 	}
 }
 
+func TestPluginsDir(t *testing.T) {
+	dir := config.PluginsDir()
+	if !strings.HasSuffix(dir, filepath.Join("flock", "plugins")) {
+		t.Fatalf("PluginsDir() = %q, want suffix flock/plugins", dir)
+	}
+}
+
 func TestLogFile(t *testing.T) {
 	f := config.LogFile()
 	if f == "" {

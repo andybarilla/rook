@@ -5,6 +5,10 @@ import (
 	"log"
 
 	"github.com/andybarilla/flock/internal/caddy"
+	"github.com/andybarilla/flock/internal/databases"
+	"github.com/andybarilla/flock/internal/discovery"
+	"github.com/andybarilla/flock/internal/external"
+	"github.com/andybarilla/flock/internal/node"
 	"github.com/andybarilla/flock/internal/php"
 	"github.com/andybarilla/flock/internal/plugin"
 	"github.com/andybarilla/flock/internal/registry"
@@ -12,11 +16,16 @@ import (
 )
 
 type Config struct {
-	SitesFile   string
-	Logger      *log.Logger
-	CaddyRunner caddy.CaddyRunner
-	FPMRunner   php.FPMRunner
-	CertStore   ssl.CertStore
+	SitesFile    string
+	Logger       *log.Logger
+	CaddyRunner  caddy.CaddyRunner
+	FPMRunner    php.FPMRunner
+	CertStore    ssl.CertStore
+	DBRunner     databases.DBRunner
+	DBConfigPath string
+	DBDataRoot   string
+	NodeRunner   node.NodeRunner
+	PluginsDir   string
 }
 
 type Core struct {
@@ -24,8 +33,10 @@ type Core struct {
 	pluginMgr *plugin.Manager
 	caddyMgr  *caddy.Manager
 	sslPlugin *ssl.Plugin
-	phpPlugin *php.Plugin
-	logger    *log.Logger
+	phpPlugin  *php.Plugin
+	nodePlugin *node.Plugin
+	dbPlugin   *databases.Plugin
+	logger     *log.Logger
 }
 
 func NewCore(cfg Config) *Core {
@@ -34,8 +45,21 @@ func NewCore(cfg Config) *Core {
 
 	sslPlugin := ssl.NewPlugin(cfg.CertStore)
 	phpPlugin := php.NewPlugin(cfg.FPMRunner)
+	nodePlugin := node.NewPlugin(cfg.NodeRunner)
+	dbPlugin := databases.NewPlugin(cfg.DBRunner, cfg.DBConfigPath, cfg.DBDataRoot)
 	pluginMgr.Register(sslPlugin)
 	pluginMgr.Register(phpPlugin)
+	pluginMgr.Register(nodePlugin)
+	pluginMgr.Register(dbPlugin)
+
+	manifests, scanErrs := discovery.Scan(cfg.PluginsDir)
+	for _, err := range scanErrs {
+		cfg.Logger.Printf("plugin discovery: %v", err)
+	}
+	for _, m := range manifests {
+		ext := external.NewPlugin(m, external.ExecProcessStarter)
+		pluginMgr.Register(ext)
+	}
 
 	caddyMgr := caddy.NewManager(cfg.CaddyRunner, pluginMgr, sslPlugin)
 
@@ -44,7 +68,9 @@ func NewCore(cfg Config) *Core {
 		pluginMgr: pluginMgr,
 		caddyMgr:  caddyMgr,
 		sslPlugin: sslPlugin,
-		phpPlugin: phpPlugin,
+		phpPlugin:  phpPlugin,
+		nodePlugin: nodePlugin,
+		dbPlugin:   dbPlugin,
 		logger:    cfg.Logger,
 	}
 
@@ -94,4 +120,16 @@ func (c *Core) RemoveSite(domain string) error {
 
 func (c *Core) Plugins() []plugin.PluginInfo {
 	return c.pluginMgr.Plugins()
+}
+
+func (c *Core) DatabaseServices() []databases.ServiceInfo {
+	return c.dbPlugin.ServiceStatuses()
+}
+
+func (c *Core) StartDatabase(svc string) error {
+	return c.dbPlugin.StartSvc(databases.ServiceType(svc))
+}
+
+func (c *Core) StopDatabase(svc string) error {
+	return c.dbPlugin.StopSvc(databases.ServiceType(svc))
 }
