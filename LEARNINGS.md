@@ -13,3 +13,18 @@
 ### Tool / command tips
 - `go test ./internal/registry/... -v` to run only the registry package tests.
 - `go test ./internal/... -v` to run all internal package tests without hitting the Wails embed issue at root.
+
+## 2026-03-03 — Task 003: Plugin Interfaces + Host
+
+### Surprises / gotchas
+- No surprises — the plan was precise and implementation matched 1:1. Clean TDD cycle with zero adjustments needed.
+- `mockRuntimePlugin` embedding `mockPlugin` works well for composing mock types that satisfy extended interfaces.
+
+### Pattern confirmations
+- `SiteSource` interface decoupling works cleanly — `registry.Registry` satisfies it without any adapter code since `List()` and `Get()` already exist.
+- External test package convention (`package plugin_test`) continues to work well for testing exported API surface.
+- Non-fatal plugin error handling (log + mark degraded) keeps the lifecycle simple — no need for complex recovery logic.
+
+### Tool / command tips
+- `--head` flag on `gh pr create` is still needed from worktrees.
+- `go test ./internal/... -v` now runs 24 tests across three packages (config, plugin, registry).
