@@ -76,3 +76,19 @@
 ### Tool / command tips
 - `--head` flag on `gh pr create` still required from worktrees.
 - `go test ./internal/... -v` now runs 47 tests across six packages (caddy, config, php, plugin, registry, ssl).
+
+## 2026-03-04 — Task 007: Core Wiring
+
+### Surprises / gotchas
+- Plan had an unused `plugin` import in the test file — Go's strict unused import rules caught it immediately. Minor fix (remove import).
+- Root package (`app.go`, `stubs.go`, `main.go`) can't be tested with `go test` in worktrees due to missing `frontend/dist` embed. Core logic is fully testable via `internal/core` tests instead.
+
+### Pattern confirmations
+- Interface-based dependency injection pays off hugely at the wiring layer — `Core` accepts `CaddyRunner`, `FPMRunner`, `CertStore` and tests use simple stubs.
+- Registry `OnChange` listener wired in `NewCore` triggers Caddy reload automatically — no manual reload calls needed in `AddSite`/`RemoveSite`.
+- Separating `Core` (testable) from `App` (Wails binding, untestable without frontend) keeps the architecture clean.
+- All existing components composed without any modifications — the interfaces designed in earlier tasks fit together perfectly.
+
+### Tool / command tips
+- `--head` flag on `gh pr create` still required from worktrees.
+- `go test ./internal/... -v` now runs 54 tests across seven packages (caddy, config, core, php, plugin, registry, ssl).
