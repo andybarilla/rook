@@ -55,3 +55,7 @@ Architecture design: `docs/plans/2026-03-03-flock-core-design.md`
 
 - [ ] Plugin discovery and loading API
 - [ ] flock-node plugin
+
+### Future — Potential
+
+- [ ] flock-sdk (Go library for plugin authors — handles JSON-RPC boilerplate)
