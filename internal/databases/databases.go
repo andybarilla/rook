@@ -6,22 +6,29 @@ import (
 
 // Plugin manages MySQL, PostgreSQL, and Redis services.
 type Plugin struct {
-	runner     DBRunner
-	host       plugin.Host
-	configPath string
-	dataRoot   string
-	config     Config
-	running    map[ServiceType]bool
+	runner        DBRunner
+	host          plugin.Host
+	configPath    string
+	dataRoot      string
+	config        Config
+	running       map[ServiceType]bool
+	binaryChecker func(string) bool
 }
 
 // NewPlugin creates a databases plugin.
 func NewPlugin(runner DBRunner, configPath, dataRoot string) *Plugin {
 	return &Plugin{
-		runner:     runner,
-		configPath: configPath,
-		dataRoot:   dataRoot,
-		running:    map[ServiceType]bool{},
+		runner:        runner,
+		configPath:    configPath,
+		dataRoot:      dataRoot,
+		running:       map[ServiceType]bool{},
+		binaryChecker: CheckBinary,
 	}
+}
+
+// SetBinaryChecker overrides the default binary detection function.
+func (p *Plugin) SetBinaryChecker(fn func(string) bool) {
+	p.binaryChecker = fn
 }
 
 func (p *Plugin) ID() string   { return "flock-databases" }
@@ -34,6 +41,12 @@ func (p *Plugin) Init(host plugin.Host) error {
 		return err
 	}
 	p.config = cfg
+	for _, svc := range AllServiceTypes {
+		if !p.binaryChecker(BinaryFor(svc)) {
+			p.config.SetEnabled(svc, false)
+			p.host.Log(p.ID(), "%s binary not found on PATH", svc)
+		}
+	}
 	return nil
 }
 

@@ -84,6 +84,12 @@ func tmpConfigDir(t *testing.T) (configPath, dataDir string) {
 	return filepath.Join(dir, "databases.json"), filepath.Join(dir, "data")
 }
 
+func newTestPlugin(runner databases.DBRunner, configPath, dataDir string) *databases.Plugin {
+	p := databases.NewPlugin(runner, configPath, dataDir)
+	p.SetBinaryChecker(func(string) bool { return true })
+	return p
+}
+
 // --- Tests ---
 
 func TestPluginIDAndName(t *testing.T) {
@@ -102,7 +108,7 @@ func TestPluginIDAndName(t *testing.T) {
 func TestInitLoadsConfig(t *testing.T) {
 	runner := newMockDBRunner()
 	configPath, dataDir := tmpConfigDir(t)
-	p := databases.NewPlugin(runner, configPath, dataDir)
+	p := newTestPlugin(runner, configPath, dataDir)
 
 	host := &mockHost{}
 	if err := p.Init(host); err != nil {
@@ -127,7 +133,7 @@ func TestStartAutostartServices(t *testing.T) {
 	}`
 	os.WriteFile(configPath, []byte(content), 0o644)
 
-	p := databases.NewPlugin(runner, configPath, dataDir)
+	p := newTestPlugin(runner, configPath, dataDir)
 	_ = p.Init(&mockHost{})
 
 	if err := p.Start(); err != nil {
@@ -157,7 +163,7 @@ func TestStartSkipsDisabledServices(t *testing.T) {
 	}`
 	os.WriteFile(configPath, []byte(content), 0o644)
 
-	p := databases.NewPlugin(runner, configPath, dataDir)
+	p := newTestPlugin(runner, configPath, dataDir)
 	_ = p.Init(&mockHost{})
 	_ = p.Start()
 
@@ -177,7 +183,7 @@ func TestStopStopsAllRunning(t *testing.T) {
 	}`
 	os.WriteFile(configPath, []byte(content), 0o644)
 
-	p := databases.NewPlugin(runner, configPath, dataDir)
+	p := newTestPlugin(runner, configPath, dataDir)
 	_ = p.Init(&mockHost{})
 	_ = p.Start()
 	_ = p.Stop()
@@ -193,7 +199,7 @@ func TestStopStopsAllRunning(t *testing.T) {
 func TestServiceStatusReflectsRunning(t *testing.T) {
 	runner := newMockDBRunner()
 	configPath, dataDir := tmpConfigDir(t)
-	p := databases.NewPlugin(runner, configPath, dataDir)
+	p := newTestPlugin(runner, configPath, dataDir)
 	_ = p.Init(&mockHost{})
 
 	if p.ServiceStatus() != plugin.ServiceStopped {
@@ -226,7 +232,7 @@ func TestServiceStatusReflectsRunning(t *testing.T) {
 func TestStartSvcAndStopSvc(t *testing.T) {
 	runner := newMockDBRunner()
 	configPath, dataDir := tmpConfigDir(t)
-	p := databases.NewPlugin(runner, configPath, dataDir)
+	p := newTestPlugin(runner, configPath, dataDir)
 	_ = p.Init(&mockHost{})
 
 	if err := p.StartSvc(databases.MySQL); err != nil {
@@ -247,7 +253,7 @@ func TestStartSvcAndStopSvc(t *testing.T) {
 func TestServiceStatuses(t *testing.T) {
 	runner := newMockDBRunner()
 	configPath, dataDir := tmpConfigDir(t)
-	p := databases.NewPlugin(runner, configPath, dataDir)
+	p := newTestPlugin(runner, configPath, dataDir)
 	_ = p.Init(&mockHost{})
 
 	infos := p.ServiceStatuses()
@@ -270,7 +276,7 @@ func TestStartSvcLogsFailure(t *testing.T) {
 	runner := newMockDBRunner()
 	runner.startErr = fmt.Errorf("mysqld not found")
 	configPath, dataDir := tmpConfigDir(t)
-	p := databases.NewPlugin(runner, configPath, dataDir)
+	p := newTestPlugin(runner, configPath, dataDir)
 
 	host := &loggingHost{}
 	_ = p.Init(host)
@@ -279,6 +285,24 @@ func TestStartSvcLogsFailure(t *testing.T) {
 	err := p.StartSvc(databases.MySQL)
 	if err == nil {
 		t.Error("expected error from StartSvc when runner fails")
+	}
+}
+
+func TestInitDetectsDisabledBinaries(t *testing.T) {
+	runner := newMockDBRunner()
+	configPath, dataDir := tmpConfigDir(t)
+
+	// Use a custom BinaryChecker that says nothing is installed
+	p := databases.NewPlugin(runner, configPath, dataDir)
+	p.SetBinaryChecker(func(name string) bool { return false })
+
+	_ = p.Init(&mockHost{})
+
+	infos := p.ServiceStatuses()
+	for _, info := range infos {
+		if info.Enabled {
+			t.Errorf("%s should be disabled when binary not found", info.Type)
+		}
 	}
 }
 
@@ -295,7 +319,7 @@ func TestStartLogsAutostartFailure(t *testing.T) {
 	os.WriteFile(configPath, []byte(content), 0o644)
 
 	host := &loggingHost{}
-	p := databases.NewPlugin(runner, configPath, dataDir)
+	p := newTestPlugin(runner, configPath, dataDir)
 	_ = p.Init(host)
 
 	// Start should not return error — it logs and continues
