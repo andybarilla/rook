@@ -6,16 +6,16 @@ export function AddSite(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['main']['App']['AddSite'](arg1, arg2, arg3, arg4, arg5);
 }
 
+export function DatabaseServices() {
+  return window['go']['main']['App']['DatabaseServices']();
+}
+
 export function ListSites() {
   return window['go']['main']['App']['ListSites']();
 }
 
 export function RemoveSite(arg1) {
   return window['go']['main']['App']['RemoveSite'](arg1);
-}
-
-export function DatabaseServices() {
-  return window['go']['main']['App']['DatabaseServices']();
 }
 
 export function StartDatabase(arg1) {

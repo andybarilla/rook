@@ -1,11 +1,24 @@
 <script>
+  import ConfirmModal from './lib/ConfirmModal.svelte';
+
   export let sites = [];
   export let loaded = true;
   export let onRemove = () => {};
 
   let removingDomain = null;
+  let pendingRemoveDomain = null;
 
-  async function handleRemove(domain) {
+  function requestRemove(domain) {
+    pendingRemoveDomain = domain;
+  }
+
+  function cancelRemove() {
+    pendingRemoveDomain = null;
+  }
+
+  async function confirmRemove() {
+    const domain = pendingRemoveDomain;
+    pendingRemoveDomain = null;
     removingDomain = domain;
     try {
       await onRemove(domain);
@@ -66,7 +79,7 @@
             <button
               class="btn btn-ghost btn-sm hover:btn-error"
               disabled={removingDomain === site.domain}
-              on:click={() => handleRemove(site.domain)}
+              on:click={() => requestRemove(site.domain)}
             >
               {#if removingDomain === site.domain}
                 <span class="loading loading-spinner loading-xs"></span>
@@ -80,3 +93,13 @@
     </tbody>
   </table>
 {/if}
+
+<ConfirmModal
+  open={pendingRemoveDomain !== null}
+  title="Remove Site"
+  message={'Are you sure you want to remove "' + (pendingRemoveDomain || '') + '"?'}
+  confirmLabel="Yes, Remove"
+  confirmClass="btn-error"
+  onConfirm={confirmRemove}
+  onCancel={cancelRemove}
+/>

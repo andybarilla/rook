@@ -8,6 +8,42 @@ const fakeSites = [
 ];
 
 describe('SiteList', () => {
+  it('clicking Remove opens confirmation modal instead of removing immediately', async () => {
+    const onRemove = vi.fn();
+    const { getByText, getAllByText } = render(SiteList, {
+      props: { sites: fakeSites, loaded: true, onRemove },
+    });
+    const removeButtons = getAllByText('Remove');
+    await fireEvent.click(removeButtons[0]);
+    // onRemove should NOT have been called yet
+    expect(onRemove).not.toHaveBeenCalled();
+    // Confirmation modal should be visible with domain name
+    expect(getByText('Remove Site')).toBeTruthy();
+    expect(getByText(/Are you sure you want to remove "app\.test"/)).toBeTruthy();
+  });
+
+  it('confirming the modal calls onRemove with the domain', async () => {
+    const onRemove = vi.fn().mockResolvedValue(undefined);
+    const { getAllByText, getByText } = render(SiteList, {
+      props: { sites: fakeSites, loaded: true, onRemove },
+    });
+    await fireEvent.click(getAllByText('Remove')[0]);
+    // Click the confirm button in the modal
+    const confirmBtn = getByText('Yes, Remove');
+    await fireEvent.click(confirmBtn);
+    expect(onRemove).toHaveBeenCalledWith('app.test');
+  });
+
+  it('cancelling the modal does not call onRemove', async () => {
+    const onRemove = vi.fn();
+    const { getAllByText, getByText } = render(SiteList, {
+      props: { sites: fakeSites, loaded: true, onRemove },
+    });
+    await fireEvent.click(getAllByText('Remove')[0]);
+    await fireEvent.click(getByText('Cancel'));
+    expect(onRemove).not.toHaveBeenCalled();
+  });
+
   it('shows skeleton when not loaded', () => {
     const { container } = render(SiteList, {
       props: { sites: [], loaded: false, onRemove: vi.fn() },
