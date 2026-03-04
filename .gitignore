@@ -35,3 +35,8 @@ go.work.sum
 .worktrees/
 
 .claude/settings.local.json
+
+# Wails
+build/bin
+node_modules
+frontend/dist
