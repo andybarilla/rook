@@ -60,3 +60,19 @@
 ### Tool / command tips
 - `--head` flag on `gh pr create` still required from worktrees.
 - `go test ./internal/... -v` now runs 34 tests across five packages (caddy, config, plugin, registry, ssl).
+
+## 2026-03-04 — Task 006: flock-php Plugin
+
+### Surprises / gotchas
+- No surprises — plan was exact, implementation matched 1:1. Simplest task so far: single package, no modifications to existing code.
+- Deleting from a map during `range` iteration (in `Stop()`) works fine in Go — each key is visited at most once.
+
+### Pattern confirmations
+- `FPMRunner` interface follows the same testability pattern as `CaddyRunner`, `UpstreamResolver`, and `CertStore`.
+- Dual interface implementation (`RuntimePlugin` + `ServicePlugin`) works cleanly — `Start()`/`Stop()` manage pools while `Handles()`/`UpstreamFor()` route requests.
+- Non-fatal error handling pattern (log + continue) from plugin manager applied at the pool level too — one failed pool doesn't block others.
+- External test package convention (`package php_test`) continues across all packages.
+
+### Tool / command tips
+- `--head` flag on `gh pr create` still required from worktrees.
+- `go test ./internal/... -v` now runs 47 tests across six packages (caddy, config, php, plugin, registry, ssl).
