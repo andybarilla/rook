@@ -44,6 +44,20 @@ describe('SiteList', () => {
     expect(onRemove).not.toHaveBeenCalled();
   });
 
+  it('returns focus to Remove button after modal cancel', async () => {
+    const { getAllByText, getByText } = render(SiteList, {
+      props: { sites: fakeSites, loaded: true, onRemove: vi.fn() },
+    });
+    const removeBtn = getAllByText('Remove')[0];
+    removeBtn.focus();
+    await fireEvent.click(removeBtn);
+    // Modal is open, cancel it
+    await fireEvent.click(getByText('Cancel'));
+    await vi.waitFor(() => {
+      expect(document.activeElement).toBe(removeBtn);
+    });
+  });
+
   it('shows skeleton when not loaded', () => {
     const { container } = render(SiteList, {
       props: { sites: [], loaded: false, onRemove: vi.fn() },
