@@ -1,4 +1,6 @@
 <script>
+  import EmptyState from './lib/EmptyState.svelte';
+
   export let services = [];
   export let loaded = true;
   export let onStart = () => {};
@@ -53,7 +55,13 @@
     </tbody>
   </table>
 {:else if services.length === 0}
-  <p class="text-base-content/50 py-8">No database services configured.</p>
+  <EmptyState
+    icon='<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3"/></svg>'
+    message="No services available"
+    subtitle="Install database plugins to manage MySQL, PostgreSQL, and Redis."
+    actionLabel="Setup Guide"
+    on:action={() => window.open('https://github.com/andybarilla/flock#services', '_blank')}
+  />
 {:else}
   <table class="table table-zebra">
     <thead>
