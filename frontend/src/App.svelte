@@ -22,6 +22,13 @@
       setTimeout(() => addSiteForm?.focusPathInput(), 0);
       return;
     }
+    if (e.ctrlKey && e.key === 'Enter') {
+      if (addFormOpen) {
+        e.preventDefault();
+        addSiteForm?.handleSubmit();
+      }
+      return;
+    }
     if (e.key === 'Escape') {
       if (addFormOpen) {
         addFormOpen = false;

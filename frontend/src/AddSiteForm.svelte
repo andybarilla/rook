@@ -29,7 +29,7 @@
     }
   }
 
-  async function handleSubmit() {
+  export async function handleSubmit() {
     if (!path || !domain) {
       notifyError('Path and domain are required.');
       return;

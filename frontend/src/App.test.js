@@ -49,4 +49,31 @@ describe('App keyboard shortcuts', () => {
     });
     vi.useRealTimers();
   });
+
+  it('Ctrl+Enter submits the add site form when open', async () => {
+    vi.useFakeTimers();
+    const { AddSite } = await import('../wailsjs/go/main/App.js');
+    const { container } = render(App);
+    await vi.waitFor(() => {
+      expect(container.querySelector('.collapse')).toBeTruthy();
+    });
+    // Open form
+    await fireEvent.keyDown(window, { key: 'n', ctrlKey: true });
+    vi.runAllTimers();
+    await vi.waitFor(() => {
+      const checkbox = container.querySelector('.collapse input[type="checkbox"]');
+      expect(checkbox.checked).toBe(true);
+    });
+    // Fill in fields
+    const pathInput = container.querySelector('input[placeholder="/home/user/projects/myapp"]');
+    const domainInput = container.querySelector('input[placeholder="myapp.test"]');
+    await fireEvent.input(pathInput, { target: { value: '/tmp/myapp' } });
+    await fireEvent.input(domainInput, { target: { value: 'myapp.test' } });
+    // Ctrl+Enter
+    await fireEvent.keyDown(window, { key: 'Enter', ctrlKey: true });
+    await vi.waitFor(() => {
+      expect(AddSite).toHaveBeenCalledWith('/tmp/myapp', 'myapp.test', '', '', false);
+    });
+    vi.useRealTimers();
+  });
 });
