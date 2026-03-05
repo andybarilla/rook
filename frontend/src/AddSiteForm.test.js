@@ -86,4 +86,13 @@ describe('AddSiteForm', () => {
     const checkbox = container.querySelector('.collapse input[type="checkbox"]');
     expect(checkbox.checked).toBe(true);
   });
+
+  it('exposes focusPathInput method that focuses the path input', async () => {
+    const { container, component } = render(AddSiteForm, {
+      props: { collapseOpen: true },
+    });
+    component.focusPathInput();
+    const pathInput = container.querySelector('input[placeholder="/home/user/projects/myapp"]');
+    expect(document.activeElement).toBe(pathInput);
+  });
 });

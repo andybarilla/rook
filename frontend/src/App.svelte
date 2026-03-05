@@ -13,6 +13,15 @@
   let sitesLoaded = false;
   let servicesLoaded = false;
   let addFormOpen = false;
+  let addSiteForm;
+
+  function handleKeydown(e) {
+    if (e.ctrlKey && e.key === 'n') {
+      e.preventDefault();
+      addFormOpen = true;
+      setTimeout(() => addSiteForm?.focusPathInput(), 0);
+    }
+  }
 
   async function refreshSites() {
     try {
@@ -75,6 +84,8 @@
   });
 </script>
 
+<svelte:window on:keydown={handleKeydown} />
+
 <main class="max-w-3xl mx-auto px-6 py-8 text-left">
   <header class="mb-8">
     <h1 class="text-2xl font-bold m-0">Flock</h1>
@@ -84,7 +95,7 @@
   <section class="card bg-base-200 p-6">
     <h2 class="text-sm text-base-content/70 uppercase tracking-wide mb-4 font-semibold">Sites</h2>
     <SiteList {sites} loaded={sitesLoaded} onRemove={handleRemove} on:addsite={() => { addFormOpen = true; }} />
-    <AddSiteForm onAdd={handleAdd} bind:collapseOpen={addFormOpen} />
+    <AddSiteForm bind:this={addSiteForm} onAdd={handleAdd} bind:collapseOpen={addFormOpen} />
   </section>
 
   <section class="card bg-base-200 p-6 mt-6">

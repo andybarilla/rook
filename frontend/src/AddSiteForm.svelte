@@ -11,6 +11,11 @@
   let tls = false;
   let submitting = false;
   export let collapseOpen = false;
+  let pathInput;
+
+  export function focusPathInput() {
+    if (pathInput) pathInput.focus();
+  }
 
   function inferDomain(p) {
     if (!p) return '';
@@ -58,7 +63,7 @@
         <div class="form-row flex gap-4 items-end mb-3">
           <label class="flex flex-col flex-[2] text-left">
             <span class="text-xs text-base-content/70 uppercase tracking-wide mb-1">Path</span>
-            <input type="text" class="input input-bordered input-md" bind:value={path} on:input={handlePathInput} placeholder="/home/user/projects/myapp" disabled={submitting} />
+            <input type="text" class="input input-bordered input-md" bind:value={path} bind:this={pathInput} on:input={handlePathInput} placeholder="/home/user/projects/myapp" disabled={submitting} />
           </label>
           <label class="flex flex-col flex-1 text-left">
             <span class="text-xs text-base-content/70 uppercase tracking-wide mb-1">Domain</span>
