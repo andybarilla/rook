@@ -78,4 +78,12 @@ describe('AddSiteForm', () => {
       expect(checkbox.checked).toBe(false);
     });
   });
+
+  it('can be opened externally via collapseOpen prop', () => {
+    const { container } = render(AddSiteForm, {
+      props: { collapseOpen: true },
+    });
+    const checkbox = container.querySelector('.collapse input[type="checkbox"]');
+    expect(checkbox.checked).toBe(true);
+  });
 });

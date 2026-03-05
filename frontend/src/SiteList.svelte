@@ -1,9 +1,13 @@
 <script>
   import ConfirmModal from './lib/ConfirmModal.svelte';
+  import EmptyState from './lib/EmptyState.svelte';
+  import { createEventDispatcher } from 'svelte';
 
   export let sites = [];
   export let loaded = true;
   export let onRemove = () => {};
+
+  const dispatch = createEventDispatcher();
 
   let removingDomain = null;
   let pendingRemoveDomain = null;
@@ -54,7 +58,13 @@
     </tbody>
   </table>
 {:else if sites.length === 0}
-  <p class="text-base-content/50 py-8">No sites registered. Add one below.</p>
+  <EmptyState
+    icon='<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>'
+    message="No sites yet"
+    subtitle="Add your first site to start developing locally."
+    actionLabel="Add Site"
+    on:action={() => dispatch('addsite')}
+  />
 {:else}
   <table class="table table-zebra">
     <thead>

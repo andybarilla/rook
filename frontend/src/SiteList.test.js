@@ -51,11 +51,14 @@ describe('SiteList', () => {
     expect(container.querySelectorAll('.skeleton').length).toBeGreaterThan(0);
   });
 
-  it('shows empty message when no sites', () => {
-    const { getByText } = render(SiteList, {
+  it('shows empty state with icon and action when no sites', () => {
+    const { getByText, container } = render(SiteList, {
       props: { sites: [], loaded: true, onRemove: vi.fn() },
     });
-    expect(getByText(/No sites registered/)).toBeTruthy();
+    expect(getByText('No sites yet')).toBeTruthy();
+    expect(getByText('Add your first site to start developing locally.')).toBeTruthy();
+    expect(getByText('Add Site')).toBeTruthy();
+    expect(container.querySelector('[data-testid="empty-icon"]')).toBeTruthy();
   });
 
   it('shows Node column header', () => {

@@ -10,7 +10,7 @@
   let nodeVersion = '';
   let tls = false;
   let submitting = false;
-  let collapseOpen = false;
+  export let collapseOpen = false;
 
   function inferDomain(p) {
     if (!p) return '';
