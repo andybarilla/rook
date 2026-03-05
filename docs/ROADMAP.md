@@ -63,7 +63,7 @@ Architecture design: `docs/plans/2026-03-03-flock-core-design.md`
 - [x] Add Site form improvements (collapsible form, better layout, confirmation on remove) — See: docs/plans/2026-03-04-add-site-form-improvements-design.md
 - [x] Site table: show Node Version column — See: docs/plans/2026-03-04-add-site-form-improvements-design.md
 - [x] Empty state improvements (actionable guidance for sites and services) — See: docs/plans/2026-03-04-empty-state-improvements-design.md
-- [ ] Accessibility (color contrast, keyboard shortcuts)
+- [x] Accessibility (color contrast, keyboard shortcuts) — See: docs/plans/2026-03-05-accessibility-design.md
 
 ### Future — Potential
 
