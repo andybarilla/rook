@@ -12,6 +12,7 @@
   let services = [];
   let sitesLoaded = false;
   let servicesLoaded = false;
+  let addFormOpen = false;
 
   async function refreshSites() {
     try {
@@ -82,8 +83,8 @@
 
   <section class="card bg-base-200 p-6">
     <h2 class="text-sm text-base-content/60 uppercase tracking-wide mb-4 font-semibold">Sites</h2>
-    <SiteList {sites} loaded={sitesLoaded} onRemove={handleRemove} />
-    <AddSiteForm onAdd={handleAdd} />
+    <SiteList {sites} loaded={sitesLoaded} onRemove={handleRemove} on:addsite={() => { addFormOpen = true; }} />
+    <AddSiteForm onAdd={handleAdd} bind:collapseOpen={addFormOpen} />
   </section>
 
   <section class="card bg-base-200 p-6 mt-6">
