@@ -27,4 +27,26 @@ describe('App keyboard shortcuts', () => {
     });
     vi.useRealTimers();
   });
+
+  it('Escape closes add site form when open', async () => {
+    vi.useFakeTimers();
+    const { container } = render(App);
+    await vi.waitFor(() => {
+      expect(container.querySelector('.collapse')).toBeTruthy();
+    });
+    // Open the form first
+    await fireEvent.keyDown(window, { key: 'n', ctrlKey: true });
+    vi.runAllTimers();
+    await vi.waitFor(() => {
+      const checkbox = container.querySelector('.collapse input[type="checkbox"]');
+      expect(checkbox.checked).toBe(true);
+    });
+    // Press Escape
+    await fireEvent.keyDown(window, { key: 'Escape' });
+    await vi.waitFor(() => {
+      const checkbox = container.querySelector('.collapse input[type="checkbox"]');
+      expect(checkbox.checked).toBe(false);
+    });
+    vi.useRealTimers();
+  });
 });

@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { ListSites, AddSite, RemoveSite, DatabaseServices, StartDatabase, StopDatabase } from '../wailsjs/go/main/App.js';
-  import { notifySuccess, notifyError } from './lib/notifications.js';
+  import { notifySuccess, notifyError, dismissLatest } from './lib/notifications.js';
   import { friendlyError } from './lib/errorMessages.js';
   import SiteList from './SiteList.svelte';
   import AddSiteForm from './AddSiteForm.svelte';
@@ -20,6 +20,14 @@
       e.preventDefault();
       addFormOpen = true;
       setTimeout(() => addSiteForm?.focusPathInput(), 0);
+      return;
+    }
+    if (e.key === 'Escape') {
+      if (addFormOpen) {
+        addFormOpen = false;
+        return;
+      }
+      dismissLatest();
     }
   }
 

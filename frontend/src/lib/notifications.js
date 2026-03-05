@@ -25,3 +25,13 @@ export function notifyInfo(message) {
 export function dismiss(id) {
   notifications.update(n => n.filter(item => item.id !== id));
 }
+
+export function dismissLatest() {
+  let dismissed = false;
+  notifications.update(items => {
+    if (items.length === 0) return items;
+    dismissed = true;
+    return items.slice(0, -1);
+  });
+  return dismissed;
+}
