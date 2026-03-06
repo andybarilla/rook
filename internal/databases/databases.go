@@ -75,9 +75,22 @@ func (p *Plugin) Stop() error {
 	return nil
 }
 
+// isRunning checks whether a service is actually running by querying the
+// runner and reconciling the in-memory map with real process state.
+func (p *Plugin) isRunning(svc ServiceType) bool {
+	if !p.running[svc] {
+		return false
+	}
+	if p.runner.Status(svc) != StatusRunning {
+		delete(p.running, svc)
+		return false
+	}
+	return true
+}
+
 func (p *Plugin) ServiceStatus() plugin.ServiceStatus {
-	for _, running := range p.running {
-		if running {
+	for _, svc := range AllServiceTypes {
+		if p.isRunning(svc) {
 			return plugin.ServiceRunning
 		}
 	}
@@ -114,7 +127,7 @@ func (p *Plugin) ServiceStatuses() []ServiceInfo {
 		infos = append(infos, ServiceInfo{
 			Type:      svc,
 			Enabled:   svcCfg.Enabled,
-			Running:   p.running[svc],
+			Running:   p.isRunning(svc),
 			Autostart: svcCfg.Autostart,
 			Port:      svcCfg.Port,
 		})

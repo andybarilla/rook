@@ -306,6 +306,42 @@ func TestInitDetectsDisabledBinaries(t *testing.T) {
 	}
 }
 
+func TestServiceStatusesDetectsCrashedProcess(t *testing.T) {
+	runner := newMockDBRunner()
+	configPath, dataDir := tmpConfigDir(t)
+	p := newTestPlugin(runner, configPath, dataDir)
+	_ = p.Init(&mockHost{})
+
+	// Start MySQL
+	if err := p.StartSvc(databases.MySQL); err != nil {
+		t.Fatalf("StartSvc: %v", err)
+	}
+
+	// Verify it shows as running
+	infos := p.ServiceStatuses()
+	for _, info := range infos {
+		if info.Type == databases.MySQL && !info.Running {
+			t.Fatal("MySQL should be running after StartSvc")
+		}
+	}
+
+	// Simulate the process dying externally
+	runner.statuses[databases.MySQL] = databases.StatusStopped
+
+	// ServiceStatuses should now detect it as stopped
+	infos = p.ServiceStatuses()
+	for _, info := range infos {
+		if info.Type == databases.MySQL && info.Running {
+			t.Error("MySQL should show as stopped after process died")
+		}
+	}
+
+	// ServiceStatus (aggregate) should also reflect stopped
+	if p.ServiceStatus() != plugin.ServiceStopped {
+		t.Error("aggregate ServiceStatus should be Stopped when process crashed")
+	}
+}
+
 func TestStartLogsAutostartFailure(t *testing.T) {
 	runner := newMockDBRunner()
 	runner.startErr = fmt.Errorf("mysqld not found")
