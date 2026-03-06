@@ -1,0 +1,85 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            archive_name: flock-linux-amd64.tar.gz
+          - os: macos-latest
+            platform: darwin
+            archive_name: flock-darwin-arm64.tar.gz
+          - os: windows-latest
+            platform: windows
+            archive_name: flock-windows-amd64.zip
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Install Wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+
+      - name: Install Linux dependencies
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
+
+      - name: Build (Linux)
+        if: matrix.platform == 'linux'
+        run: wails build -tags webkit2_41
+
+      - name: Build (macOS/Windows)
+        if: matrix.platform != 'linux'
+        run: wails build
+
+      - name: Archive (Linux/macOS)
+        if: matrix.platform != 'windows'
+        working-directory: build/bin
+        run: tar czf ${{ matrix.archive_name }} *
+
+      - name: Archive (Windows)
+        if: matrix.platform == 'windows'
+        working-directory: build/bin
+        run: Compress-Archive -Path * -DestinationPath ${{ matrix.archive_name }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.archive_name }}
+          path: build/bin/${{ matrix.archive_name }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: artifacts/*
