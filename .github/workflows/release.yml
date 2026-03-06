@@ -11,6 +11,7 @@ permissions:
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
@@ -18,7 +19,7 @@ jobs:
             archive_name: flock-linux-amd64.tar.gz
           - os: macos-latest
             platform: darwin
-            archive_name: flock-darwin-amd64.tar.gz
+            archive_name: flock-darwin-arm64.tar.gz
           - os: windows-latest
             platform: windows
             archive_name: flock-windows-amd64.zip
