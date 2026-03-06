@@ -11,10 +11,10 @@ type execProcess struct {
 	stdout io.ReadCloser
 }
 
-func (p *execProcess) Stdin() io.WriteCloser  { return p.stdin }
-func (p *execProcess) Stdout() io.ReadCloser  { return p.stdout }
-func (p *execProcess) Kill() error             { return p.cmd.Process.Kill() }
-func (p *execProcess) Wait() error             { return p.cmd.Wait() }
+func (p *execProcess) Stdin() io.WriteCloser { return p.stdin }
+func (p *execProcess) Stdout() io.ReadCloser { return p.stdout }
+func (p *execProcess) Kill() error           { return p.cmd.Process.Kill() }
+func (p *execProcess) Wait() error           { return p.cmd.Wait() }
 
 func ExecProcessStarter(exePath string) (Process, error) {
 	cmd := exec.Command(exePath)

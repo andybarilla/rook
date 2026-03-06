@@ -118,7 +118,7 @@ func (s *stubDBRunner) Status(svc databases.ServiceType) databases.ServiceStatus
 }
 
 type stubNodeRunner struct {
-	started map[string]int  // siteDir -> port
+	started map[string]int // siteDir -> port
 	stopped map[string]bool
 }
 

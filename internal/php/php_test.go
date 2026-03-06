@@ -100,7 +100,7 @@ func TestStartStartsPoolsForPHPSites(t *testing.T) {
 		{Path: "/app1", Domain: "app1.test", PHPVersion: "8.3"},
 		{Path: "/app2", Domain: "app2.test", PHPVersion: "8.2"},
 		{Path: "/app3", Domain: "app3.test", PHPVersion: "8.3"}, // duplicate version
-		{Path: "/docs", Domain: "docs.test"},                     // no PHP
+		{Path: "/docs", Domain: "docs.test"},                    // no PHP
 	}}
 	_ = p.Init(host)
 	if err := p.Start(); err != nil {

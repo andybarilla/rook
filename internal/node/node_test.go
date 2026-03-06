@@ -13,8 +13,8 @@ import (
 // --- Mock NodeRunner ---
 
 type mockNodeRunner struct {
-	startCalls map[string]int    // siteDir -> port
-	stopCalls  map[string]int    // siteDir -> count
+	startCalls map[string]int // siteDir -> port
+	stopCalls  map[string]int // siteDir -> count
 	running    map[string]bool
 	startErr   error
 }
@@ -104,8 +104,8 @@ func TestStartStartsAppsForNodeSites(t *testing.T) {
 	host := &mockHost{sites: []registry.Site{
 		{Path: "/app1", Domain: "app1.test", NodeVersion: "system"},
 		{Path: "/app2", Domain: "app2.test", NodeVersion: "system"},
-		{Path: "/docs", Domain: "docs.test"},                          // no Node
-		{Path: "/php", Domain: "php.test", PHPVersion: "8.3"},         // PHP only
+		{Path: "/docs", Domain: "docs.test"},                  // no Node
+		{Path: "/php", Domain: "php.test", PHPVersion: "8.3"}, // PHP only
 	}}
 	_ = p.Init(host)
 	if err := p.Start(); err != nil {

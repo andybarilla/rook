@@ -29,10 +29,10 @@ type Config struct {
 }
 
 type Core struct {
-	registry  *registry.Registry
-	pluginMgr *plugin.Manager
-	caddyMgr  *caddy.Manager
-	sslPlugin *ssl.Plugin
+	registry   *registry.Registry
+	pluginMgr  *plugin.Manager
+	caddyMgr   *caddy.Manager
+	sslPlugin  *ssl.Plugin
 	phpPlugin  *php.Plugin
 	nodePlugin *node.Plugin
 	dbPlugin   *databases.Plugin
@@ -64,14 +64,14 @@ func NewCore(cfg Config) *Core {
 	caddyMgr := caddy.NewManager(cfg.CaddyRunner, pluginMgr, sslPlugin)
 
 	c := &Core{
-		registry:  reg,
-		pluginMgr: pluginMgr,
-		caddyMgr:  caddyMgr,
-		sslPlugin: sslPlugin,
+		registry:   reg,
+		pluginMgr:  pluginMgr,
+		caddyMgr:   caddyMgr,
+		sslPlugin:  sslPlugin,
 		phpPlugin:  phpPlugin,
 		nodePlugin: nodePlugin,
 		dbPlugin:   dbPlugin,
-		logger:    cfg.Logger,
+		logger:     cfg.Logger,
 	}
 
 	reg.OnChange(func(e registry.ChangeEvent) {

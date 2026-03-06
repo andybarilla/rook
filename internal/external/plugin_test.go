@@ -21,10 +21,10 @@ type pipeProcess struct {
 	stdoutR *io.PipeReader
 }
 
-func (p *pipeProcess) Stdin() io.WriteCloser  { return p.stdinW }
-func (p *pipeProcess) Stdout() io.ReadCloser  { return p.stdoutR }
-func (p *pipeProcess) Kill() error             { p.stdinW.Close(); p.stdoutR.Close(); return nil }
-func (p *pipeProcess) Wait() error             { return nil }
+func (p *pipeProcess) Stdin() io.WriteCloser { return p.stdinW }
+func (p *pipeProcess) Stdout() io.ReadCloser { return p.stdoutR }
+func (p *pipeProcess) Kill() error           { p.stdinW.Close(); p.stdoutR.Close(); return nil }
+func (p *pipeProcess) Wait() error           { return nil }
 
 // fakeProcessStarter returns a ProcessStarter that simulates a plugin subprocess
 func fakeProcessStarter(handler func(method string, params json.RawMessage) (any, error)) ProcessStarter {
