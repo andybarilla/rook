@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { ListSites, AddSite, RemoveSite, DatabaseServices, StartDatabase, StopDatabase } from '../wailsjs/go/main/App.js';
-  import { notifySuccess, notifyError } from './lib/notifications.js';
+  import { notifySuccess, notifyError, dismissLatest } from './lib/notifications.js';
   import { friendlyError } from './lib/errorMessages.js';
   import SiteList from './SiteList.svelte';
   import AddSiteForm from './AddSiteForm.svelte';
@@ -13,6 +13,30 @@
   let sitesLoaded = false;
   let servicesLoaded = false;
   let addFormOpen = false;
+  let addSiteForm;
+
+  function handleKeydown(e) {
+    if (e.ctrlKey && e.key === 'n') {
+      e.preventDefault();
+      addFormOpen = true;
+      setTimeout(() => addSiteForm?.focusPathInput(), 0);
+      return;
+    }
+    if (e.ctrlKey && e.key === 'Enter') {
+      if (addFormOpen) {
+        e.preventDefault();
+        addSiteForm?.handleSubmit();
+      }
+      return;
+    }
+    if (e.key === 'Escape') {
+      if (addFormOpen) {
+        addFormOpen = false;
+        return;
+      }
+      dismissLatest();
+    }
+  }
 
   async function refreshSites() {
     try {
@@ -75,20 +99,22 @@
   });
 </script>
 
+<svelte:window on:keydown={handleKeydown} />
+
 <main class="max-w-3xl mx-auto px-6 py-8 text-left">
   <header class="mb-8">
     <h1 class="text-2xl font-bold m-0">Flock</h1>
-    <p class="text-base-content/50 mt-1 text-sm">Local Development Environment</p>
+    <p class="text-base-content/70 mt-1 text-sm">Local Development Environment</p>
   </header>
 
   <section class="card bg-base-200 p-6">
-    <h2 class="text-sm text-base-content/60 uppercase tracking-wide mb-4 font-semibold">Sites</h2>
+    <h2 class="text-sm text-base-content/70 uppercase tracking-wide mb-4 font-semibold">Sites</h2>
     <SiteList {sites} loaded={sitesLoaded} onRemove={handleRemove} on:addsite={() => { addFormOpen = true; }} />
-    <AddSiteForm onAdd={handleAdd} bind:collapseOpen={addFormOpen} />
+    <AddSiteForm bind:this={addSiteForm} onAdd={handleAdd} bind:collapseOpen={addFormOpen} />
   </section>
 
   <section class="card bg-base-200 p-6 mt-6">
-    <h2 class="text-sm text-base-content/60 uppercase tracking-wide mb-4 font-semibold">Services</h2>
+    <h2 class="text-sm text-base-content/70 uppercase tracking-wide mb-4 font-semibold">Services</h2>
     <ServiceList {services} loaded={servicesLoaded} onStart={handleStartService} onStop={handleStopService} />
   </section>
 </main>

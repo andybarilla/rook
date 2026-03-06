@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { notifications, notifySuccess, notifyError, notifyInfo, dismiss } from './notifications.js';
+import { notifications, notifySuccess, notifyError, notifyInfo, dismiss, dismissLatest } from './notifications.js';
 import { get } from 'svelte/store';
 
 beforeEach(() => {
@@ -52,5 +52,20 @@ describe('notifications store', () => {
     notifySuccess('b');
     const items = get(notifications);
     expect(items[0].id).not.toBe(items[1].id);
+  });
+
+  it('dismissLatest removes the most recent notification', () => {
+    notifySuccess('First');
+    notifySuccess('Second');
+    const result = dismissLatest();
+    expect(result).toBe(true);
+    const items = get(notifications);
+    expect(items).toHaveLength(1);
+    expect(items[0].message).toBe('First');
+  });
+
+  it('dismissLatest returns false when no notifications', () => {
+    const result = dismissLatest();
+    expect(result).toBe(false);
   });
 });

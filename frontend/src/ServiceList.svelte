@@ -76,7 +76,7 @@
       {#each services as svc}
         <tr class:opacity-50={!svc.enabled}>
           <td class="font-semibold">{displayName[svc.type] || svc.type}</td>
-          <td class="text-base-content/60 text-sm">{svc.port}</td>
+          <td class="text-base-content/70 text-sm">{svc.port}</td>
           <td>
             {#if !svc.enabled}
               <span class="badge badge-warning badge-sm">Not installed</span>

@@ -71,6 +71,31 @@ describe('ConfirmModal', () => {
     expect(onCancel).toHaveBeenCalledOnce();
   });
 
+  it('focuses cancel button when modal opens', async () => {
+    const { getByText } = render(ConfirmModal, {
+      props: { open: true, title: 'T', message: 'M', onConfirm: vi.fn(), onCancel: vi.fn() },
+    });
+    await vi.waitFor(() => {
+      expect(document.activeElement).toBe(getByText('Cancel'));
+    });
+  });
+
+  it('traps focus within modal on Tab', async () => {
+    const { getByText } = render(ConfirmModal, {
+      props: { open: true, title: 'T', message: 'M', onConfirm: vi.fn(), onCancel: vi.fn() },
+    });
+    const cancelBtn = getByText('Cancel');
+    const confirmBtn = getByText('Confirm');
+    await vi.waitFor(() => expect(document.activeElement).toBe(cancelBtn));
+    // Tab from Confirm (last) should wrap to Cancel (first)
+    confirmBtn.focus();
+    await fireEvent.keyDown(confirmBtn, { key: 'Tab' });
+    expect(document.activeElement).toBe(cancelBtn);
+    // Shift+Tab from Cancel (first) should wrap to Confirm (last)
+    await fireEvent.keyDown(cancelBtn, { key: 'Tab', shiftKey: true });
+    expect(document.activeElement).toBe(confirmBtn);
+  });
+
   it('defaults confirmLabel to "Confirm"', () => {
     const { getByText } = render(ConfirmModal, {
       props: { open: true, title: 'T', message: 'M', onConfirm: vi.fn(), onCancel: vi.fn() },

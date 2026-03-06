@@ -81,7 +81,7 @@
       {#each sites as site}
         <tr>
           <td class="font-semibold">{site.domain}</td>
-          <td class="text-base-content/60 text-sm">{site.path}</td>
+          <td class="text-base-content/70 text-sm">{site.path}</td>
           <td>{site.php_version || '—'}</td>
           <td>{site.node_version || '—'}</td>
           <td>{site.tls ? '✓' : '—'}</td>
