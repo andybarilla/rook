@@ -111,4 +111,4 @@ Check the [roadmap](docs/ROADMAP.md) for planned features and current status.
 
 ## License
 
-[MIT](LICENSE) — Andy Barilla
+[MIT](LICENSE) — [Andy Barilla](https://andybarilla.com)
