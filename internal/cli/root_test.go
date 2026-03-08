@@ -19,8 +19,8 @@ func TestRootCommandShowsHelp(t *testing.T) {
 	}
 
 	out := buf.String()
-	if !bytes.Contains([]byte(out), []byte("flock")) {
-		t.Errorf("help output missing 'flock': %s", out)
+	if !bytes.Contains([]byte(out), []byte("rook")) {
+		t.Errorf("help output missing 'rook': %s", out)
 	}
 }
 

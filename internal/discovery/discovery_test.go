@@ -29,20 +29,20 @@ func TestScanNonexistentDir(t *testing.T) {
 
 func TestScanValidPlugin(t *testing.T) {
 	dir := t.TempDir()
-	pluginDir := filepath.Join(dir, "flock-node")
+	pluginDir := filepath.Join(dir, "rook-node")
 	os.MkdirAll(pluginDir, 0o755)
 
 	manifest := `{
-		"id": "flock-node",
-		"name": "Flock Node",
+		"id": "rook-node",
+		"name": "Rook Node",
 		"version": "0.1.0",
-		"executable": "flock-node",
+		"executable": "rook-node",
 		"capabilities": ["runtime"]
 	}`
 	os.WriteFile(filepath.Join(pluginDir, "plugin.json"), []byte(manifest), 0o644)
 
 	// Create a fake executable
-	exePath := filepath.Join(pluginDir, "flock-node")
+	exePath := filepath.Join(pluginDir, "rook-node")
 	os.WriteFile(exePath, []byte("#!/bin/sh\n"), 0o755)
 
 	manifests, errs := Scan(dir)
@@ -53,11 +53,11 @@ func TestScanValidPlugin(t *testing.T) {
 		t.Fatalf("expected 1 manifest, got %d", len(manifests))
 	}
 	m := manifests[0]
-	if m.ID != "flock-node" {
-		t.Errorf("ID = %q, want flock-node", m.ID)
+	if m.ID != "rook-node" {
+		t.Errorf("ID = %q, want rook-node", m.ID)
 	}
-	if m.Name != "Flock Node" {
-		t.Errorf("Name = %q, want Flock Node", m.Name)
+	if m.Name != "Rook Node" {
+		t.Errorf("Name = %q, want Rook Node", m.Name)
 	}
 	if m.ExePath != exePath {
 		t.Errorf("ExePath = %q, want %q", m.ExePath, exePath)

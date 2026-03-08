@@ -6,7 +6,7 @@ import (
 	"runtime"
 )
 
-const appName = "flock"
+const appName = "rook"
 
 func ConfigDir() string {
 	if runtime.GOOS == "windows" {
@@ -33,5 +33,5 @@ func SitesFile() string {
 }
 
 func LogFile() string {
-	return filepath.Join(DataDir(), "flock.log")
+	return filepath.Join(DataDir(), "rook.log")
 }

@@ -78,16 +78,16 @@ func (h *mockHost) Log(pluginID string, msg string, args ...any) {}
 
 func TestExternalPluginIDAndName(t *testing.T) {
 	manifest := discovery.PluginManifest{
-		ID:           "flock-node",
-		Name:         "Flock Node",
+		ID:           "rook-node",
+		Name:         "Rook Node",
 		Capabilities: []string{"runtime"},
 	}
 	p := NewPlugin(manifest, nil)
-	if p.ID() != "flock-node" {
-		t.Errorf("ID() = %q, want flock-node", p.ID())
+	if p.ID() != "rook-node" {
+		t.Errorf("ID() = %q, want rook-node", p.ID())
 	}
-	if p.Name() != "Flock Node" {
-		t.Errorf("Name() = %q, want Flock Node", p.Name())
+	if p.Name() != "Rook Node" {
+		t.Errorf("Name() = %q, want Rook Node", p.Name())
 	}
 }
 

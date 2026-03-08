@@ -75,8 +75,8 @@ func (m *mockHost) Log(pluginID string, msg string, args ...any) {}
 
 func TestPluginIDAndName(t *testing.T) {
 	p := node.NewPlugin(newMockNodeRunner())
-	if p.ID() != "flock-node" {
-		t.Errorf("ID = %q, want flock-node", p.ID())
+	if p.ID() != "rook-node" {
+		t.Errorf("ID = %q, want rook-node", p.ID())
 	}
 	if p.Name() != "Flock Node" {
 		t.Errorf("Name = %q, want Flock Node", p.Name())

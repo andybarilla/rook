@@ -279,17 +279,17 @@ func TestPluginsReturnsInfo(t *testing.T) {
 	for _, p := range plugins {
 		ids[p.ID] = true
 	}
-	if !ids["flock-ssl"] {
-		t.Error("expected flock-ssl plugin")
+	if !ids["rook-ssl"] {
+		t.Error("expected rook-ssl plugin")
 	}
-	if !ids["flock-php"] {
-		t.Error("expected flock-php plugin")
+	if !ids["rook-php"] {
+		t.Error("expected rook-php plugin")
 	}
-	if !ids["flock-node"] {
-		t.Error("expected flock-node plugin")
+	if !ids["rook-node"] {
+		t.Error("expected rook-node plugin")
 	}
-	if !ids["flock-databases"] {
-		t.Error("expected flock-databases plugin")
+	if !ids["rook-databases"] {
+		t.Error("expected rook-databases plugin")
 	}
 }
 

@@ -31,7 +31,7 @@ func (p *Plugin) SetBinaryChecker(fn func(string) bool) {
 	p.binaryChecker = fn
 }
 
-func (p *Plugin) ID() string   { return "flock-databases" }
+func (p *Plugin) ID() string   { return "rook-databases" }
 func (p *Plugin) Name() string { return "Flock Databases" }
 
 func (p *Plugin) Init(host plugin.Host) error {

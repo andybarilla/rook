@@ -34,7 +34,7 @@ func NewPlugin(runner NodeRunner) *Plugin {
 	}
 }
 
-func (p *Plugin) ID() string   { return "flock-node" }
+func (p *Plugin) ID() string   { return "rook-node" }
 func (p *Plugin) Name() string { return "Flock Node" }
 
 func (p *Plugin) Init(host plugin.Host) error {

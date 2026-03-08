@@ -36,7 +36,7 @@ func (a *App) startup(ctx context.Context) {
 	if err != nil {
 		logFile = os.Stderr
 	}
-	logger := log.New(logFile, "[flock] ", log.LstdFlags)
+	logger := log.New(logFile, "[rook] ", log.LstdFlags)
 
 	cfg := core.Config{
 		SitesFile:    config.SitesFile(),

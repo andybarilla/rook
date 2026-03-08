@@ -21,7 +21,7 @@ func TestConfigDir(t *testing.T) {
 		if appData == "" {
 			t.Skip("APPDATA not set")
 		}
-		expected := filepath.Join(appData, "flock")
+		expected := filepath.Join(appData, "rook")
 		if dir != expected {
 			t.Errorf("ConfigDir = %q, want %q", dir, expected)
 		}
@@ -30,7 +30,7 @@ func TestConfigDir(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		expected := filepath.Join(home, ".config", "flock")
+		expected := filepath.Join(home, ".config", "rook")
 		if dir != expected {
 			t.Errorf("ConfigDir = %q, want %q", dir, expected)
 		}
@@ -48,7 +48,7 @@ func TestDataDir(t *testing.T) {
 		if appData == "" {
 			t.Skip("APPDATA not set")
 		}
-		expected := filepath.Join(appData, "flock")
+		expected := filepath.Join(appData, "rook")
 		if dir != expected {
 			t.Errorf("DataDir = %q, want %q", dir, expected)
 		}
@@ -57,7 +57,7 @@ func TestDataDir(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		expected := filepath.Join(home, ".local", "share", "flock")
+		expected := filepath.Join(home, ".local", "share", "rook")
 		if dir != expected {
 			t.Errorf("DataDir = %q, want %q", dir, expected)
 		}
@@ -82,8 +82,8 @@ func TestSitesFile(t *testing.T) {
 
 func TestPluginsDir(t *testing.T) {
 	dir := config.PluginsDir()
-	if !strings.HasSuffix(dir, filepath.Join("flock", "plugins")) {
-		t.Fatalf("PluginsDir() = %q, want suffix flock/plugins", dir)
+	if !strings.HasSuffix(dir, filepath.Join("rook", "plugins")) {
+		t.Fatalf("PluginsDir() = %q, want suffix rook/plugins", dir)
 	}
 }
 
@@ -92,12 +92,12 @@ func TestLogFile(t *testing.T) {
 	if f == "" {
 		t.Fatal("LogFile returned empty string")
 	}
-	if !strings.HasSuffix(f, "flock.log") {
-		t.Errorf("LogFile = %q, want suffix 'flock.log'", f)
+	if !strings.HasSuffix(f, "rook.log") {
+		t.Errorf("LogFile = %q, want suffix 'rook.log'", f)
 	}
 
 	dataDir := config.DataDir()
-	expected := filepath.Join(dataDir, "flock.log")
+	expected := filepath.Join(dataDir, "rook.log")
 	if f != expected {
 		t.Errorf("LogFile = %q, want %q", f, expected)
 	}

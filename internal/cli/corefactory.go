@@ -18,7 +18,7 @@ func NewCore() (*core.Core, func(), error) {
 	if err != nil {
 		logFile = os.Stderr
 	}
-	logger := log.New(logFile, "[flock-cli] ", log.LstdFlags)
+	logger := log.New(logFile, "[rook-cli] ", log.LstdFlags)
 
 	cfg := core.Config{
 		SitesFile:    config.SitesFile(),

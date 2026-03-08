@@ -10,9 +10,9 @@ var jsonOutput bool
 
 func NewRootCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:          "flock",
-		Short:        "Flock — local development environment manager",
-		Long:         "Flock manages local development sites, SSL, PHP, Node, and database services.",
+		Use:          "rook",
+		Short:        "Rook — local development environment manager",
+		Long:         "Rook manages local development sites, SSL, PHP, Node, and database services.",
 		SilenceUsage: true,
 		Run:          func(cmd *cobra.Command, args []string) {},
 	}
