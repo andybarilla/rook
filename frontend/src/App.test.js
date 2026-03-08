@@ -18,14 +18,13 @@ describe('App keyboard shortcuts', () => {
   it('Ctrl+N opens add site form and focuses path input', async () => {
     vi.useFakeTimers();
     const { container } = render(App);
-    await vi.waitFor(() => {
-      expect(container.querySelector('.collapse')).toBeTruthy();
-    });
+    // Modal should not be visible initially
+    expect(container.querySelector('.modal')).toBeNull();
     await fireEvent.keyDown(window, { key: 'n', ctrlKey: true });
     vi.runAllTimers();
     await vi.waitFor(() => {
-      const checkbox = container.querySelector('.collapse input[type="checkbox"]');
-      expect(checkbox.checked).toBe(true);
+      const modal = container.querySelector('.modal');
+      expect(modal).toBeTruthy();
     });
     vi.useRealTimers();
   });
@@ -33,21 +32,16 @@ describe('App keyboard shortcuts', () => {
   it('Escape closes add site form when open', async () => {
     vi.useFakeTimers();
     const { container } = render(App);
-    await vi.waitFor(() => {
-      expect(container.querySelector('.collapse')).toBeTruthy();
-    });
     // Open the form first
     await fireEvent.keyDown(window, { key: 'n', ctrlKey: true });
     vi.runAllTimers();
     await vi.waitFor(() => {
-      const checkbox = container.querySelector('.collapse input[type="checkbox"]');
-      expect(checkbox.checked).toBe(true);
+      expect(container.querySelector('.modal')).toBeTruthy();
     });
     // Press Escape
     await fireEvent.keyDown(window, { key: 'Escape' });
     await vi.waitFor(() => {
-      const checkbox = container.querySelector('.collapse input[type="checkbox"]');
-      expect(checkbox.checked).toBe(false);
+      expect(container.querySelector('.modal')).toBeNull();
     });
     vi.useRealTimers();
   });
@@ -56,15 +50,11 @@ describe('App keyboard shortcuts', () => {
     vi.useFakeTimers();
     const { AddSite } = await import('../wailsjs/go/main/App.js');
     const { container } = render(App);
-    await vi.waitFor(() => {
-      expect(container.querySelector('.collapse')).toBeTruthy();
-    });
     // Open form
     await fireEvent.keyDown(window, { key: 'n', ctrlKey: true });
     vi.runAllTimers();
     await vi.waitFor(() => {
-      const checkbox = container.querySelector('.collapse input[type="checkbox"]');
-      expect(checkbox.checked).toBe(true);
+      expect(container.querySelector('.modal')).toBeTruthy();
     });
     // Fill in fields
     const pathInput = container.querySelector('input[placeholder="/home/user/projects/myapp"]');

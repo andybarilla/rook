@@ -126,7 +126,7 @@
     <div class="max-w-5xl mx-auto px-6 py-6">
       {#if activeTab === 'sites'}
         <SiteList {sites} loaded={sitesLoaded} onRemove={handleRemove} on:addsite={() => { addFormOpen = true; }} />
-        <AddSiteForm bind:this={addSiteForm} onAdd={handleAdd} bind:collapseOpen={addFormOpen} />
+        <AddSiteForm bind:this={addSiteForm} onAdd={handleAdd} open={addFormOpen} on:close={() => { addFormOpen = false; }} />
       {:else if activeTab === 'services'}
         <ServiceList {services} loaded={servicesLoaded} onStart={handleStartService} onStop={handleStopService} />
       {:else if activeTab === 'settings'}

@@ -1,6 +1,9 @@
 <script>
+  import { createEventDispatcher } from 'svelte';
   import { notifySuccess, notifyError } from './lib/notifications.js';
   import { friendlyError } from './lib/errorMessages.js';
+
+  const dispatch = createEventDispatcher();
 
   export let onAdd = () => {};
 
@@ -10,8 +13,12 @@
   let nodeVersion = '';
   let tls = false;
   let submitting = false;
-  export let collapseOpen = false;
+  export let open = false;
   let pathInput;
+
+  $: if (open && pathInput) {
+    pathInput.focus();
+  }
 
   export function focusPathInput() {
     if (pathInput) pathInput.focus();
@@ -43,7 +50,7 @@
       phpVersion = '';
       nodeVersion = '';
       tls = false;
-      collapseOpen = false;
+      dispatch('close');
     } catch (e) {
       notifyError(friendlyError(e.message || String(e)));
     } finally {
@@ -52,12 +59,10 @@
   }
 </script>
 
-<div class="collapse collapse-arrow mt-6 border border-base-300 rounded-lg">
-  <input type="checkbox" bind:checked={collapseOpen} />
-  <div class="collapse-title text-xs text-base-content/70 uppercase tracking-wide font-medium">
-    + Add Site
-  </div>
-  <div class="collapse-content">
+{#if open}
+<div class="modal modal-open" role="dialog" aria-modal="true" aria-labelledby="add-site-title">
+  <div class="modal-box">
+    <h3 id="add-site-title" class="font-bold text-lg mb-4">Add Site</h3>
     <form on:submit|preventDefault={handleSubmit}>
       <div data-section="required" class="mb-2">
         <div class="form-row flex gap-4 items-end mb-3">
@@ -88,17 +93,21 @@
             <input type="checkbox" class="checkbox checkbox-sm" bind:checked={tls} disabled={submitting} />
             <span class="text-xs text-base-content/70 uppercase tracking-wide">TLS</span>
           </label>
-          <div class="flex-1"></div>
-          <button type="submit" class="btn btn-success btn-sm" disabled={submitting}>
-            {#if submitting}
-              <span class="loading loading-spinner loading-xs"></span>
-              Adding…
-            {:else}
-              Add Site
-            {/if}
-          </button>
         </div>
+      </div>
+      <div class="modal-action">
+        <button type="button" class="btn btn-ghost" on:click={() => dispatch('close')}>Cancel</button>
+        <button type="submit" class="btn btn-primary" disabled={submitting}>
+          {#if submitting}
+            <span class="loading loading-spinner loading-xs"></span>
+            Adding…
+          {:else}
+            Add Site
+          {/if}
+        </button>
       </div>
     </form>
   </div>
+  <div class="modal-backdrop" on:click={() => dispatch('close')} on:keydown={() => {}}></div>
 </div>
+{/if}
