@@ -26,7 +26,7 @@ describe('theme store', () => {
 
   it('toggleTheme persists to localStorage', () => {
     toggleTheme();
-    expect(localStorage.getItem('flock-theme')).toBe('dark');
+    expect(localStorage.getItem('rook-theme')).toBe('dark');
   });
 
   it('toggleTheme sets data-theme attribute on html', () => {
@@ -35,7 +35,7 @@ describe('theme store', () => {
   });
 
   it('initTheme reads from localStorage', () => {
-    localStorage.setItem('flock-theme', 'dark');
+    localStorage.setItem('rook-theme', 'dark');
     initTheme();
     expect(get(theme)).toBe('dark');
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark');

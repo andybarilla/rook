@@ -16,11 +16,11 @@
   let removingDomain = null;
   let pendingRemoveDomain = null;
   let searchQuery = '';
-  let viewMode = (typeof localStorage !== 'undefined' && localStorage.getItem('flock-view')) || 'table';
+  let viewMode = (typeof localStorage !== 'undefined' && localStorage.getItem('rook-view')) || 'table';
 
   function setViewMode(mode) {
     viewMode = mode;
-    if (typeof localStorage !== 'undefined') localStorage.setItem('flock-view', mode);
+    if (typeof localStorage !== 'undefined') localStorage.setItem('rook-view', mode);
   }
 
   $: filtered = sites.filter(s =>

@@ -39,7 +39,7 @@
     message="No services available"
     subtitle="Install database plugins to manage MySQL, PostgreSQL, and Redis."
     actionLabel="Setup Guide"
-    on:action={() => window.open('https://github.com/andybarilla/flock#services', '_blank')}
+    on:action={() => window.open('https://github.com/andybarilla/rook#services', '_blank')}
   />
 {:else}
   <div class="space-y-4">

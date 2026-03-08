@@ -4,7 +4,7 @@ export const theme = writable('light');
 
 function applyTheme(value) {
   document.documentElement.setAttribute('data-theme', value);
-  localStorage.setItem('flock-theme', value);
+  localStorage.setItem('rook-theme', value);
 }
 
 export function toggleTheme() {
@@ -14,7 +14,7 @@ export function toggleTheme() {
 }
 
 export function initTheme() {
-  const stored = localStorage.getItem('flock-theme') || 'light';
+  const stored = localStorage.getItem('rook-theme') || 'light';
   theme.set(stored);
   applyTheme(stored);
 }

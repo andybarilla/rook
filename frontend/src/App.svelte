@@ -135,9 +135,9 @@
     <div class="max-w-5xl mx-auto flex items-center gap-6">
       <div class="flex items-center gap-2 py-3">
         <div class="w-7 h-7 bg-primary rounded-lg flex items-center justify-center">
-          <span class="text-primary-content text-sm font-bold">F</span>
+          <span class="text-primary-content text-sm font-bold">R</span>
         </div>
-        <span class="font-bold text-base-content">Flock</span>
+        <span class="font-bold text-base-content">Rook</span>
       </div>
       <div role="tablist" class="tabs tabs-bordered flex-1">
         <button role="tab" class="tab" class:tab-active={activeTab === 'sites'} on:click={() => activeTab = 'sites'}>Sites</button>
