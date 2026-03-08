@@ -1,6 +1,7 @@
 package registry_test
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -213,6 +214,41 @@ func TestNodeVersionPersistence(t *testing.T) {
 	}
 	if sites[0].NodeVersion != "system" {
 		t.Errorf("NodeVersion = %q, want %q", sites[0].NodeVersion, "system")
+	}
+}
+
+func TestConcurrentAddDoesNotCorrupt(t *testing.T) {
+	path := tempFile(t)
+
+	errs := make(chan error, 10)
+	for i := 0; i < 10; i++ {
+		go func(n int) {
+			r := registry.New(path)
+			_ = r.Load()
+			dir := realDir(t)
+			errs <- r.Add(registry.Site{
+				Path:   dir,
+				Domain: fmt.Sprintf("site%d.test", n),
+			})
+		}(i)
+	}
+
+	errCount := 0
+	for i := 0; i < 10; i++ {
+		if err := <-errs; err != nil {
+			errCount++
+		}
+	}
+
+	// Load final state and verify no corruption
+	r := registry.New(path)
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load after concurrent writes: %v", err)
+	}
+
+	sites := r.List()
+	if len(sites) == 0 {
+		t.Error("expected at least 1 site after concurrent adds")
 	}
 }
 
