@@ -1,9 +1,15 @@
 <script>
   export let site;
   export let onRemove = () => {};
+  export let runtimeStatuses = [];
+  export let miseAvailable = false;
+  export let onInstall = () => {};
 
   $: phpBadge = site.php_version ? `PHP ${site.php_version}` : '';
   $: nodeBadge = site.node_version ? `Node ${site.node_version}` : '';
+  $: missingRuntimes = runtimeStatuses.filter(
+    s => s.domain === site.domain && !s.installed
+  );
 </script>
 
 <div class="card bg-base-200 p-5 hover:shadow-md transition-shadow">
@@ -32,4 +38,15 @@
       <span class="badge badge-sm badge-info">TLS</span>
     {/if}
   </div>
+
+  {#each missingRuntimes as missing}
+    <div class="flex items-center gap-2 mt-2">
+      <span class="badge badge-warning badge-sm">{missing.tool === 'php' ? 'PHP' : 'Node'} {missing.version} not found</span>
+      {#if miseAvailable}
+        <button class="btn btn-xs btn-outline btn-warning" on:click={() => onInstall(missing.tool, missing.version)}>
+          Install
+        </button>
+      {/if}
+    </div>
+  {/each}
 </div>

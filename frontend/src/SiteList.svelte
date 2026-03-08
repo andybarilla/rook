@@ -7,6 +7,9 @@
   export let sites = [];
   export let loaded = true;
   export let onRemove = () => {};
+  export let runtimeStatuses = [];
+  export let miseAvailable = false;
+  export let onInstall = () => {};
 
   const dispatch = createEventDispatcher();
 
@@ -118,6 +121,9 @@
           <td>
             {#if site.php_version}
               <span class="badge badge-sm badge-primary">PHP {site.php_version}</span>
+              {#if runtimeStatuses.some(s => s.domain === site.domain && s.tool === 'php' && !s.installed)}
+                <span class="badge badge-sm badge-warning ml-1" title="Not installed">!</span>
+              {/if}
             {:else}
               <span class="text-base-content/30">—</span>
             {/if}
@@ -125,6 +131,9 @@
           <td>
             {#if site.node_version}
               <span class="badge badge-sm badge-success">Node {site.node_version}</span>
+              {#if runtimeStatuses.some(s => s.domain === site.domain && s.tool === 'node' && !s.installed)}
+                <span class="badge badge-sm badge-warning ml-1" title="Not installed">!</span>
+              {/if}
             {:else}
               <span class="text-base-content/30">—</span>
             {/if}
@@ -156,7 +165,7 @@
 {:else}
   <div data-testid="site-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
     {#each filtered as site}
-      <SiteCard {site} onRemove={requestRemove} />
+      <SiteCard {site} onRemove={requestRemove} {runtimeStatuses} {miseAvailable} {onInstall} />
     {/each}
   </div>
 {/if}

@@ -60,4 +60,58 @@ describe('SiteCard', () => {
     const { queryByText } = render(SiteCard, { props: { site, onRemove: vi.fn() } });
     expect(queryByText(/Node/)).toBeNull();
   });
+
+  describe('runtime warnings', () => {
+    it('shows warning badge when runtime is not installed', () => {
+      const { getByText } = render(SiteCard, {
+        props: {
+          site: { domain: 'app.test', path: '/tmp', php_version: '8.3', tls: false },
+          runtimeStatuses: [
+            { tool: 'php', version: '8.3', installed: false, domain: 'app.test' },
+          ],
+          miseAvailable: true,
+        },
+      });
+      expect(getByText('PHP 8.3 not found')).toBeTruthy();
+    });
+
+    it('shows Install button when mise is available', () => {
+      const { getByRole } = render(SiteCard, {
+        props: {
+          site: { domain: 'app.test', path: '/tmp', php_version: '8.3', tls: false },
+          runtimeStatuses: [
+            { tool: 'php', version: '8.3', installed: false, domain: 'app.test' },
+          ],
+          miseAvailable: true,
+        },
+      });
+      expect(getByRole('button', { name: /install/i })).toBeTruthy();
+    });
+
+    it('hides Install button when mise is unavailable', () => {
+      const { queryByRole } = render(SiteCard, {
+        props: {
+          site: { domain: 'app.test', path: '/tmp', php_version: '8.3', tls: false },
+          runtimeStatuses: [
+            { tool: 'php', version: '8.3', installed: false, domain: 'app.test' },
+          ],
+          miseAvailable: false,
+        },
+      });
+      expect(queryByRole('button', { name: /install/i })).toBeNull();
+    });
+
+    it('shows no warning when runtime is installed', () => {
+      const { queryByText } = render(SiteCard, {
+        props: {
+          site: { domain: 'app.test', path: '/tmp', php_version: '8.3', tls: false },
+          runtimeStatuses: [
+            { tool: 'php', version: '8.3', installed: true, domain: 'app.test' },
+          ],
+          miseAvailable: true,
+        },
+      });
+      expect(queryByText(/not found/)).toBeNull();
+    });
+  });
 });
