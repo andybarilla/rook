@@ -1,4 +1,4 @@
-# Flock Roadmap
+# Rook Roadmap
 
 A cross-platform, open-source local development environment manager. Inspired by Laravel Herd, extensible via plugins to any language stack.
 
@@ -42,19 +42,19 @@ Architecture design: `docs/plans/2026-03-03-flock-core-design.md`
 - [x] Site registry — See: docs/tasks/002-site-registry.md
 - [x] Plugin interfaces + host — See: docs/tasks/003-plugin-host.md
 - [x] Caddy manager (embedded) — See: docs/tasks/004-caddy-manager.md
-- [x] flock-ssl plugin (mkcert) — See: docs/tasks/005-flock-ssl.md
-- [x] flock-php plugin (FPM pools) — See: docs/tasks/006-flock-php.md
+- [x] rook-ssl plugin (mkcert) — See: docs/tasks/005-flock-ssl.md
+- [x] rook-php plugin (FPM pools) — See: docs/tasks/006-flock-php.md
 - [x] Core wiring — See: docs/tasks/007-core-wiring.md
 - [x] GUI: system tray + site list — See: docs/tasks/008-gui-site-list.md
 
 ### Phase 2 — Services
 
-- [x] flock-databases plugin (MySQL, PostgreSQL, Redis) — See: docs/tasks/009-flock-databases.md
+- [x] rook-databases plugin (MySQL, PostgreSQL, Redis) — See: docs/tasks/009-flock-databases.md
 
 ### Phase 3 — External Plugins
 
 - [x] Plugin discovery and loading API — See: docs/tasks/010-plugin-discovery.md
-- [x] flock-node plugin — See: docs/tasks/011-flock-node.md
+- [x] rook-node plugin — See: docs/tasks/011-flock-node.md
 
 ### Phase 4 — UI/UX Polish
 
@@ -71,5 +71,5 @@ Architecture design: `docs/plans/2026-03-03-flock-core-design.md`
 
 ### Future — Potential
 
-- [ ] flock-sdk (Go library for plugin authors — handles JSON-RPC boilerplate)
-- [x] flock-cli (CLI for managing sites, services, and plugins without the GUI) — See: docs/plans/2026-03-08-flock-cli-design.md
+- [ ] rook-sdk (Go library for plugin authors — handles JSON-RPC boilerplate)
+- [x] rook-cli (CLI for managing sites, services, and plugins without the GUI) — See: docs/plans/2026-03-08-flock-cli-design.md

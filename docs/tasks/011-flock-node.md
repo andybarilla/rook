@@ -1,4 +1,4 @@
-# Task 011: flock-node Plugin
+# Task 011: rook-node Plugin
 
 ## Progress Summary
 
@@ -13,7 +13,7 @@
 
 ## Overview
 
-Add a built-in Node.js runtime plugin that manages per-site `npm start` processes with auto-assigned ports and HTTP reverse proxy upstream. Mirrors flock-php's pattern — a `NodeRunner` interface injected into a `Plugin` struct implementing `RuntimePlugin` + `ServicePlugin`. Each Node-enabled site gets a process on port 3100+. Caddy reverse-proxies HTTP traffic to it.
+Add a built-in Node.js runtime plugin that manages per-site `npm start` processes with auto-assigned ports and HTTP reverse proxy upstream. Mirrors rook-php's pattern — a `NodeRunner` interface injected into a `Plugin` struct implementing `RuntimePlugin` + `ServicePlugin`. Each Node-enabled site gets a process on port 3100+. Caddy reverse-proxies HTTP traffic to it.
 
 ## Current State Analysis
 
@@ -83,8 +83,8 @@ Update `AddSite` signature in `app.go` and frontend bindings/form to include nod
 Run full test suite, create task file, update roadmap.
 
 **Files to create/modify:**
-- `docs/tasks/011-flock-node.md` — This file
-- `docs/ROADMAP.md` — Mark flock-node as complete (after PR merge)
+- `docs/tasks/011-rook-node.md` — This file
+- `docs/ROADMAP.md` — Mark rook-node as complete (after PR merge)
 
 ## Acceptance Criteria
 
@@ -127,8 +127,8 @@ Run full test suite, create task file, update roadmap.
 
 ## Notes
 
-- Design doc: `docs/plans/2026-03-04-flock-node-design.md`
-- Implementation plan: `docs/plans/2026-03-04-flock-node-plan.md`
+- Design doc: `docs/plans/2026-03-04-rook-node-design.md`
+- Implementation plan: `docs/plans/2026-03-04-rook-node-plan.md`
 - Architecture: `docs/plans/2026-03-03-flock-core-design.md`
 - Reference pattern: `internal/php/` (FPMRunner interface injection)
 

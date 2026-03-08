@@ -1,4 +1,4 @@
-# Task 009: flock-databases Plugin
+# Task 009: rook-databases Plugin
 
 ## Progress Summary
 
@@ -17,13 +17,13 @@
 
 ## Overview
 
-Add a unified databases plugin that manages MySQL, PostgreSQL, and Redis processes. The plugin implements `ServicePlugin`, uses a `DBRunner` interface (same pattern as flock-php's `FPMRunner`), and includes a basic GUI services panel with start/stop controls.
+Add a unified databases plugin that manages MySQL, PostgreSQL, and Redis processes. The plugin implements `ServicePlugin`, uses a `DBRunner` interface (same pattern as rook-php's `FPMRunner`), and includes a basic GUI services panel with start/stop controls.
 
 ## Current State Analysis
 
 - Phase 1 complete: scaffold, registry, plugin host, caddy, ssl, php, core wiring, GUI site list
 - Plugin system established with `ServicePlugin` and `RuntimePlugin` interfaces
-- `flock-php` provides reference implementation for the runner pattern (`FPMRunner`)
+- `rook-php` provides reference implementation for the runner pattern (`FPMRunner`)
 - Core wires plugins via `Config` struct and registers in `NewCore()`
 - GUI has Sites section — need to add Services section
 
@@ -33,7 +33,7 @@ Add a unified databases plugin that manages MySQL, PostgreSQL, and Redis process
 - Plugin registered in Core, exposed via Wails bindings
 - GUI "Services" panel showing MySQL, PostgreSQL, Redis with start/stop buttons
 - Binary detection on Init (services without binaries shown as "Not installed")
-- Config persisted in `~/.config/flock/databases.json`
+- Config persisted in `~/.config/rook/databases.json`
 - ~20 unit tests passing
 
 ## Implementation Steps
@@ -108,7 +108,7 @@ Run full test suite, go vet, and build verification.
 
 ### Step 10: Update Roadmap
 
-Mark flock-databases as complete in `docs/ROADMAP.md`.
+Mark rook-databases as complete in `docs/ROADMAP.md`.
 
 ## Acceptance Criteria
 
@@ -117,7 +117,7 @@ Mark flock-databases as complete in `docs/ROADMAP.md`.
 - [ ] Plugin starts/stops MySQL, PostgreSQL, Redis via system binaries
 - [ ] Config persisted in `databases.json` with port, autostart, dataDir per service
 - [ ] Missing binaries detected and services shown as "Not installed"
-- [ ] Autostart services launch when Flock starts
+- [ ] Autostart services launch when Rook starts
 - [ ] GUI shows service status with start/stop controls
 - [ ] Services can be started/stopped independently
 
@@ -150,8 +150,8 @@ Mark flock-databases as complete in `docs/ROADMAP.md`.
 
 ## Notes
 
-- Design doc: `docs/plans/2026-03-04-flock-databases-design.md`
-- Implementation plan: `docs/plans/2026-03-04-flock-databases.md`
+- Design doc: `docs/plans/2026-03-04-rook-databases-design.md`
+- Implementation plan: `docs/plans/2026-03-04-rook-databases.md`
 - Architecture: `docs/plans/2026-03-03-flock-core-design.md`
 - Reference plugin: `internal/php/php.go` (FPMRunner pattern)
 

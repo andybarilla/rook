@@ -15,7 +15,7 @@
 
 ## Overview
 
-Enable Flock to discover and load external plugins at startup. External plugins are standalone executables in `~/.config/flock/plugins/<name>/`, each with a `plugin.json` manifest. An `ExternalPlugin` adapter proxies the existing Plugin/RuntimePlugin/ServicePlugin interfaces to the subprocess over JSON-RPC 2.0 on stdin/stdout. The existing Manager sees no difference between built-in and external plugins.
+Enable Rook to discover and load external plugins at startup. External plugins are standalone executables in `~/.config/rook/plugins/<name>/`, each with a `plugin.json` manifest. An `ExternalPlugin` adapter proxies the existing Plugin/RuntimePlugin/ServicePlugin interfaces to the subprocess over JSON-RPC 2.0 on stdin/stdout. The existing Manager sees no difference between built-in and external plugins.
 
 ## Current State Analysis
 
@@ -74,7 +74,7 @@ Enable Flock to discover and load external plugins at startup. External plugins 
 
 ### Step 1: PluginsDir Helper
 
-Add `PluginsDir()` to config package returning `~/.config/flock/plugins`.
+Add `PluginsDir()` to config package returning `~/.config/rook/plugins`.
 
 **Files to create/modify:**
 - `internal/config/paths.go` — Add PluginsDir function
@@ -141,7 +141,7 @@ Run full test suite, go vet, update roadmap.
 
 ### Functional Requirements
 
-- [x] External plugins discovered from `~/.config/flock/plugins/` at startup
+- [x] External plugins discovered from `~/.config/rook/plugins/` at startup
 - [x] `plugin.json` manifest validated (id, name, version, executable, capabilities)
 - [x] Invalid plugins logged and skipped (non-fatal)
 - [x] External plugins support RuntimePlugin (handles, upstreamFor)
@@ -188,5 +188,5 @@ Run full test suite, go vet, update roadmap.
 
 ## Dependencies
 
-- Task 009 (flock-databases) — complete
+- Task 009 (rook-databases) — complete
 - Task 007 (Core wiring) — complete
