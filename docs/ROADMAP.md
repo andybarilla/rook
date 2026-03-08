@@ -65,6 +65,10 @@ Architecture design: `docs/plans/2026-03-03-flock-core-design.md`
 - [x] Empty state improvements (actionable guidance for sites and services) — See: docs/plans/2026-03-04-empty-state-improvements-design.md
 - [x] Accessibility (color contrast, keyboard shortcuts) — See: docs/plans/2026-03-05-accessibility-design.md
 
+### Phase 5 — Runtime Management
+
+- [x] Mise integration (auto-detect, install, runtime resolution) — See: docs/plans/2026-03-08-mise-integration-design.md
+
 ### Future — Potential
 
 - [ ] flock-sdk (Go library for plugin authors — handles JSON-RPC boilerplate)
