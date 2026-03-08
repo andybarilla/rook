@@ -1,3 +1,40 @@
+export namespace core {
+	
+	export class MiseInfo {
+	    available: boolean;
+	    version: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new MiseInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.available = source["available"];
+	        this.version = source["version"];
+	    }
+	}
+	export class RuntimeStatus {
+	    tool: string;
+	    version: string;
+	    installed: boolean;
+	    domain: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new RuntimeStatus(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.tool = source["tool"];
+	        this.version = source["version"];
+	        this.installed = source["installed"];
+	        this.domain = source["domain"];
+	    }
+	}
+
+}
+
 export namespace databases {
 	
 	export class ServiceInfo {

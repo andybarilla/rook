@@ -22,12 +22,12 @@ export function InstallRuntime(arg1, arg2) {
   return window['go']['main']['App']['InstallRuntime'](arg1, arg2);
 }
 
-export function MiseStatus() {
-  return window['go']['main']['App']['MiseStatus']();
-}
-
 export function ListSites() {
   return window['go']['main']['App']['ListSites']();
+}
+
+export function MiseStatus() {
+  return window['go']['main']['App']['MiseStatus']();
 }
 
 export function RemoveSite(arg1) {
