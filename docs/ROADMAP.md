@@ -49,12 +49,12 @@ Architecture design: `docs/plans/2026-03-03-rook-core-design.md`
 
 ### Phase 2 — Services
 
-- [x] rook-databases plugin (MySQL, PostgreSQL, Redis) — See: docs/tasks/009-flock-databases.md
+- [x] rook-databases plugin (MySQL, PostgreSQL, Redis) — See: docs/tasks/009-rook-databases.md
 
 ### Phase 3 — External Plugins
 
 - [x] Plugin discovery and loading API — See: docs/tasks/010-plugin-discovery.md
-- [x] rook-node plugin — See: docs/tasks/011-flock-node.md
+- [x] rook-node plugin — See: docs/tasks/011-rook-node.md
 
 ### Phase 4 — UI/UX Polish
 
