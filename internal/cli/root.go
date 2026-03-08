@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"os"
+
 	"github.com/spf13/cobra"
 )
 
@@ -29,5 +31,7 @@ func NewRootCmd() *cobra.Command {
 
 func Execute() {
 	cmd := NewRootCmd()
-	cmd.Execute()
+	if err := cmd.Execute(); err != nil {
+		os.Exit(1)
+	}
 }

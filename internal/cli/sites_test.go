@@ -3,7 +3,6 @@ package cli_test
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"testing"
 
 	"github.com/andybarilla/flock/internal/cli"
@@ -74,18 +73,6 @@ func TestListCmdEmptyJSON(t *testing.T) {
 	}
 }
 
-// Task 5: add/remove rendering tests
-
-func TestRenderAddSuccess(t *testing.T) {
-	var buf bytes.Buffer
-	fmt.Fprintf(&buf, "✓ Site %q added (path: %s)\n", "myapp.test", "/home/user/myapp")
-	out := buf.String()
-
-	if !bytes.Contains([]byte(out), []byte("myapp.test")) {
-		t.Errorf("output missing domain: %s", out)
-	}
-}
-
 func TestRenderAddJSON(t *testing.T) {
 	var buf bytes.Buffer
 	site := registry.Site{Path: "/home/user/myapp", Domain: "myapp.test"}
@@ -97,16 +84,6 @@ func TestRenderAddJSON(t *testing.T) {
 	}
 	if result.Domain != "myapp.test" {
 		t.Errorf("domain = %q, want myapp.test", result.Domain)
-	}
-}
-
-func TestRenderRemoveSuccess(t *testing.T) {
-	var buf bytes.Buffer
-	fmt.Fprintf(&buf, "✓ Site %q removed\n", "myapp.test")
-	out := buf.String()
-
-	if !bytes.Contains([]byte(out), []byte("myapp.test")) {
-		t.Errorf("output missing domain: %s", out)
 	}
 }
 
