@@ -7,6 +7,11 @@ const fakeSites = [
   { domain: 'blog.test', path: '/home/user/blog', php_version: '', node_version: '', tls: false },
 ];
 
+const mockSites = [
+  { domain: 'app.test', path: '/home/user/app', php_version: '8.3', node_version: '', tls: true },
+  { domain: 'api.test', path: '/home/user/api', php_version: '', node_version: '20', tls: false },
+];
+
 describe('SiteList', () => {
   it('clicking Remove opens confirmation modal instead of removing immediately', async () => {
     const onRemove = vi.fn();
@@ -93,5 +98,43 @@ describe('SiteList', () => {
     expect(rows[0].textContent).toContain('20');
     // Second site has empty node_version, should show dash
     expect(rows[1].cells[3].textContent).toBe('—');
+  });
+
+  describe('view toggle', () => {
+    it('renders view toggle buttons', () => {
+      const { getByTitle } = render(SiteList, { props: { sites: mockSites, onRemove: vi.fn() } });
+      expect(getByTitle('Table view')).toBeTruthy();
+      expect(getByTitle('Card view')).toBeTruthy();
+    });
+
+    it('shows table view by default', () => {
+      const { container } = render(SiteList, { props: { sites: mockSites, onRemove: vi.fn() } });
+      expect(container.querySelector('table')).toBeTruthy();
+    });
+
+    it('switches to card view on click', async () => {
+      const { getByTitle, container } = render(SiteList, { props: { sites: mockSites, onRemove: vi.fn() } });
+      await fireEvent.click(getByTitle('Card view'));
+      expect(container.querySelector('table')).toBeNull();
+      expect(container.querySelector('[data-testid="site-cards"]')).toBeTruthy();
+    });
+  });
+
+  describe('search', () => {
+    it('renders search input', () => {
+      const { getByPlaceholderText } = render(SiteList, { props: { sites: mockSites, onRemove: vi.fn() } });
+      expect(getByPlaceholderText(/search/i)).toBeTruthy();
+    });
+
+    it('filters sites by domain', async () => {
+      const sites = [
+        { domain: 'foo.test', path: '/foo', php_version: '', node_version: '', tls: false },
+        { domain: 'bar.test', path: '/bar', php_version: '', node_version: '', tls: false },
+      ];
+      const { getByPlaceholderText, queryByText } = render(SiteList, { props: { sites, onRemove: vi.fn() } });
+      await fireEvent.input(getByPlaceholderText(/search/i), { target: { value: 'foo' } });
+      expect(queryByText('foo.test')).toBeTruthy();
+      expect(queryByText('bar.test')).toBeNull();
+    });
   });
 });

@@ -36,9 +36,14 @@ Flock is a community alternative to [Laravel Herd](https://herd.laravel.com/) â€
 - [Node.js](https://nodejs.org/) (LTS)
 - [Wails CLI](https://wails.io/docs/gettingstarted/installation)
 
-**Linux only:**
+**Linux (Debian/Ubuntu):**
 ```bash
 sudo apt-get install libgtk-3-dev libwebkit2gtk-4.1-dev
+```
+
+**Linux (Fedora 43+):**
+```bash
+sudo dnf install gtk3-devel webkit2gtk4.1-devel
 ```
 
 ### Development
@@ -52,10 +57,12 @@ cd flock
 cd frontend && npm install && cd ..
 
 # Run in dev mode (hot reload)
-wails dev
+wails dev -tags webkit2_41    # Fedora 43+ (webkit2gtk 4.1)
+wails dev                      # other Linux / macOS / Windows
 
 # Build for production
-wails build
+wails build -tags webkit2_41  # Fedora 43+
+wails build                    # other platforms
 ```
 
 ### Running Tests
