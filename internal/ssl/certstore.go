@@ -42,7 +42,7 @@ func (s *LocalCertStore) InstallCA() error {
 	template := &x509.Certificate{
 		SerialNumber: big.NewInt(1),
 		Subject: pkix.Name{
-			Organization: []string{"Flock Development CA"},
+			Organization: []string{"Rook Development CA"},
 		},
 		NotBefore:             time.Now(),
 		NotAfter:              time.Now().Add(10 * 365 * 24 * time.Hour),
@@ -96,7 +96,7 @@ func (s *LocalCertStore) GenerateCert(domain string) error {
 	template := &x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
-			Organization: []string{"Flock"},
+			Organization: []string{"Rook"},
 		},
 		DNSNames:    []string{domain},
 		NotBefore:   time.Now(),

@@ -70,8 +70,8 @@ func getRoutes(t *testing.T, cfg map[string]any) []any {
 	apps := cfg["apps"].(map[string]any)
 	http := apps["http"].(map[string]any)
 	servers := http["servers"].(map[string]any)
-	flock := servers["flock"].(map[string]any)
-	return flock["routes"].([]any)
+	rook := servers["rook"].(map[string]any)
+	return rook["routes"].([]any)
 }
 
 func getRouteHandler(t *testing.T, route any) map[string]any {
@@ -231,8 +231,8 @@ func TestBuildConfigTLSSite(t *testing.T) {
 	// Server should have tls_connection_policies
 	http := apps["http"].(map[string]any)
 	servers := http["servers"].(map[string]any)
-	flock := servers["flock"].(map[string]any)
-	policies := flock["tls_connection_policies"].([]any)
+	rook := servers["rook"].(map[string]any)
+	policies := rook["tls_connection_policies"].([]any)
 	if len(policies) != 1 {
 		t.Fatalf("expected 1 tls_connection_policy, got %d", len(policies))
 	}

@@ -79,8 +79,8 @@ func TestPluginIDAndName(t *testing.T) {
 	if p.ID() != "rook-ssl" {
 		t.Errorf("ID = %q, want rook-ssl", p.ID())
 	}
-	if p.Name() != "Flock SSL" {
-		t.Errorf("Name = %q, want Flock SSL", p.Name())
+	if p.Name() != "Rook SSL" {
+		t.Errorf("Name = %q, want Rook SSL", p.Name())
 	}
 }
 

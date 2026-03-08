@@ -78,8 +78,8 @@ func TestPluginIDAndName(t *testing.T) {
 	if p.ID() != "rook-node" {
 		t.Errorf("ID = %q, want rook-node", p.ID())
 	}
-	if p.Name() != "Flock Node" {
-		t.Errorf("Name = %q, want Flock Node", p.Name())
+	if p.Name() != "Rook Node" {
+		t.Errorf("Name = %q, want Rook Node", p.Name())
 	}
 }
 

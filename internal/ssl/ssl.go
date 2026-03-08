@@ -25,7 +25,7 @@ func NewPlugin(store CertStore) *Plugin {
 }
 
 func (p *Plugin) ID() string   { return "rook-ssl" }
-func (p *Plugin) Name() string { return "Flock SSL" }
+func (p *Plugin) Name() string { return "Rook SSL" }
 
 func (p *Plugin) Init(host plugin.Host) error {
 	p.host = host

@@ -29,7 +29,7 @@ func NewPlugin(runner FPMRunner) *Plugin {
 }
 
 func (p *Plugin) ID() string   { return "rook-php" }
-func (p *Plugin) Name() string { return "Flock PHP" }
+func (p *Plugin) Name() string { return "Rook PHP" }
 
 func (p *Plugin) Init(host plugin.Host) error {
 	p.host = host

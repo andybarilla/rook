@@ -100,8 +100,8 @@ func TestPluginIDAndName(t *testing.T) {
 	if p.ID() != "rook-databases" {
 		t.Errorf("ID = %q, want rook-databases", p.ID())
 	}
-	if p.Name() != "Flock Databases" {
-		t.Errorf("Name = %q, want Flock Databases", p.Name())
+	if p.Name() != "Rook Databases" {
+		t.Errorf("Name = %q, want Rook Databases", p.Name())
 	}
 }
 

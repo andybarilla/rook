@@ -32,7 +32,7 @@ func (p *Plugin) SetBinaryChecker(fn func(string) bool) {
 }
 
 func (p *Plugin) ID() string   { return "rook-databases" }
-func (p *Plugin) Name() string { return "Flock Databases" }
+func (p *Plugin) Name() string { return "Rook Databases" }
 
 func (p *Plugin) Init(host plugin.Host) error {
 	p.host = host

@@ -73,8 +73,8 @@ func TestPluginIDAndName(t *testing.T) {
 	if p.ID() != "rook-php" {
 		t.Errorf("ID = %q, want rook-php", p.ID())
 	}
-	if p.Name() != "Flock PHP" {
-		t.Errorf("Name = %q, want Flock PHP", p.Name())
+	if p.Name() != "Rook PHP" {
+		t.Errorf("Name = %q, want Rook PHP", p.Name())
 	}
 }
 
