@@ -1,22 +1,22 @@
 <p align="center">
-  <h1 align="center">Flock</h1>
+  <h1 align="center">Rook</h1>
   <p align="center">A cross-platform, open-source local development environment manager.</p>
   <p align="center">
-    <a href="https://github.com/andybarilla/flock/actions/workflows/ci.yml"><img src="https://github.com/andybarilla/flock/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-    <a href="https://github.com/andybarilla/flock/releases/latest"><img src="https://img.shields.io/github/v/release/andybarilla/flock?include_prereleases&sort=semver" alt="Release"></a>
-    <a href="https://github.com/andybarilla/flock/blob/main/LICENSE"><img src="https://img.shields.io/github/license/andybarilla/flock" alt="License"></a>
-    <a href="https://goreportcard.com/report/github.com/andybarilla/flock"><img src="https://goreportcard.com/badge/github.com/andybarilla/flock" alt="Go Report Card"></a>
+    <a href="https://github.com/andybarilla/rook/actions/workflows/ci.yml"><img src="https://github.com/andybarilla/rook/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+    <a href="https://github.com/andybarilla/rook/releases/latest"><img src="https://img.shields.io/github/v/release/andybarilla/rook?include_prereleases&sort=semver" alt="Release"></a>
+    <a href="https://github.com/andybarilla/rook/blob/main/LICENSE"><img src="https://img.shields.io/github/license/andybarilla/rook" alt="License"></a>
+    <a href="https://goreportcard.com/report/github.com/andybarilla/rook"><img src="https://goreportcard.com/badge/github.com/andybarilla/rook" alt="Go Report Card"></a>
   </p>
   <p align="center">
-    <a href="https://whattheflock.dev">Website</a> &middot;
-    <a href="https://github.com/andybarilla/flock/releases/latest">Download</a> &middot;
-    <a href="https://github.com/andybarilla/flock/issues">Issues</a>
+    <a href="https://getrook.dev">Website</a> &middot;
+    <a href="https://github.com/andybarilla/rook/releases/latest">Download</a> &middot;
+    <a href="https://github.com/andybarilla/rook/issues">Issues</a>
   </p>
 </p>
 
 ---
 
-Flock is a community alternative to [Laravel Herd](https://herd.laravel.com/) — a native desktop app that manages local vhosts, SSL certificates, PHP runtimes, database services, and more. Built with [Go](https://go.dev) + [Wails](https://wails.io) + [Caddy](https://caddyserver.com), it runs on macOS, Linux, and Windows.
+Rook is a community alternative to [Laravel Herd](https://herd.laravel.com/) — a native desktop app that manages local vhosts, SSL certificates, PHP runtimes, database services, and more. Built with [Go](https://go.dev) + [Wails](https://wails.io) + [Caddy](https://caddyserver.com), it runs on macOS, Linux, and Windows.
 
 ## Features
 
@@ -50,8 +50,8 @@ sudo dnf install gtk3-devel webkit2gtk4.1-devel
 
 ```bash
 # Clone the repo
-git clone https://github.com/andybarilla/flock.git
-cd flock
+git clone https://github.com/andybarilla/rook.git
+cd rook
 
 # Install frontend dependencies
 cd frontend && npm install && cd ..
@@ -78,7 +78,7 @@ cd frontend && npm test
 ## Architecture
 
 ```
-flock/
+rook/
 ├── internal/
 │   ├── core/          # App lifecycle and wiring
 │   ├── caddy/         # Embedded Caddy server management
@@ -99,10 +99,10 @@ flock/
 
 1. **Plugin Host** — discovers, loads, and manages plugin lifecycle
 2. **Caddy Manager** — embeds Caddy as a Go library; manages vhosts and TLS
-3. **Site Registry** — persists local sites to `~/.config/flock/sites.json`
+3. **Site Registry** — persists local sites to `~/.config/rook/sites.json`
 4. **Wails GUI** — native webview with Svelte frontend
 
-See [`docs/plans/2026-03-03-flock-core-design.md`](docs/plans/2026-03-03-flock-core-design.md) for the full architecture document.
+See [`docs/plans/2026-03-03-rook-core-design.md`](docs/plans/2026-03-03-rook-core-design.md) for the full architecture document.
 
 ## Contributing
 

@@ -44,7 +44,7 @@
 - `--head` flag on `gh pr create` still required from worktrees.
 - `go test ./internal/... -v` now runs 27 tests across four packages (caddy, config, plugin, registry).
 
-## 2026-03-04 — Task 005: flock-ssl Plugin
+## 2026-03-04 — Task 005: rook-ssl Plugin
 
 ### Surprises / gotchas
 - Modifying `BuildConfig` signature (adding `CertProvider` parameter) required updating all existing test call sites — plan accounted for this correctly.
@@ -61,7 +61,7 @@
 - `--head` flag on `gh pr create` still required from worktrees.
 - `go test ./internal/... -v` now runs 34 tests across five packages (caddy, config, plugin, registry, ssl).
 
-## 2026-03-04 — Task 006: flock-php Plugin
+## 2026-03-04 — Task 006: rook-php Plugin
 
 ### Surprises / gotchas
 - No surprises — plan was exact, implementation matched 1:1. Simplest task so far: single package, no modifications to existing code.

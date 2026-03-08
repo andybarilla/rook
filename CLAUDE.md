@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Overview
 
-Flock — a cross-platform, open-source local development environment manager. Inspired by Laravel Herd, extensible via plugins to any language stack.
+Rook — a cross-platform, open-source local development environment manager. Inspired by Laravel Herd, extensible via plugins to any language stack.
 
 ## Architecture Overview
 
