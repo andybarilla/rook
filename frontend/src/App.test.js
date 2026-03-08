@@ -121,3 +121,49 @@ describe('tab navigation', () => {
     expect(getByRole('tab', { name: 'Settings' }).classList.contains('tab-active')).toBe(true);
   });
 });
+
+describe('integration', () => {
+  it('Ctrl+N opens Add Site modal', async () => {
+    const { ListSites, DatabaseServices } = await import('../wailsjs/go/main/App.js');
+    ListSites.mockResolvedValue([]);
+    DatabaseServices.mockResolvedValue([]);
+    vi.useFakeTimers();
+    const { container } = render(App);
+    await fireEvent.keyDown(window, { key: 'n', ctrlKey: true });
+    vi.runAllTimers();
+    await vi.waitFor(() => {
+      expect(container.querySelector('.modal-open')).toBeTruthy();
+    });
+    vi.useRealTimers();
+  });
+
+  it('clicking Services tab shows service content', async () => {
+    const { ListSites, DatabaseServices } = await import('../wailsjs/go/main/App.js');
+    ListSites.mockResolvedValue([]);
+    DatabaseServices.mockResolvedValue([
+      { type: 'mysql', enabled: true, running: true, autostart: true, port: 3306 },
+    ]);
+    const { getByRole, getByText } = render(App);
+    await vi.waitFor(() => {
+      expect(getByRole('tab', { name: 'Services' })).toBeTruthy();
+    });
+    await fireEvent.click(getByRole('tab', { name: 'Services' }));
+    await vi.waitFor(() => {
+      expect(getByText('MySQL')).toBeTruthy();
+    });
+  });
+
+  it('clicking Settings tab shows theme toggle', async () => {
+    const { ListSites, DatabaseServices } = await import('../wailsjs/go/main/App.js');
+    ListSites.mockResolvedValue([]);
+    DatabaseServices.mockResolvedValue([]);
+    const { getByRole } = render(App);
+    await vi.waitFor(() => {
+      expect(getByRole('tab', { name: 'Settings' })).toBeTruthy();
+    });
+    await fireEvent.click(getByRole('tab', { name: 'Settings' }));
+    await vi.waitFor(() => {
+      expect(getByRole('checkbox', { name: /dark mode/i })).toBeTruthy();
+    });
+  });
+});
