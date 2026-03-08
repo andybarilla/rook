@@ -68,6 +68,7 @@ Architecture design: `docs/plans/2026-03-03-rook-core-design.md`
 ### Phase 5 — Runtime Management
 
 - [x] Mise integration (auto-detect, install, runtime resolution) — See: docs/plans/2026-03-08-mise-integration-design.md
+- [x] Project type auto-detection (composer.json, package.json fallback) — See: docs/plans/2026-03-08-project-type-detection-design.md
 
 ### Future — Potential
 

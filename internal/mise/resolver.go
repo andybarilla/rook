@@ -3,7 +3,10 @@ package mise
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 )
@@ -101,14 +104,32 @@ func (r *RuntimeResolver) WhichVersion(tool, version string) (string, error) {
 	return path, nil
 }
 
-// Detect returns tool versions configured for a site directory via mise.
-// Returns an empty map if mise is not available.
+// Detect returns tool versions configured for a site directory.
+// It checks mise first (if available), then falls back to project config
+// files (composer.json, package.json) to fill any gaps.
+// Errors from mise are swallowed intentionally — this is best-effort detection.
 func (r *RuntimeResolver) Detect(siteDir string) (map[string]string, error) {
+	var result map[string]string
+
 	ok, _ := r.Available()
-	if !ok {
-		return map[string]string{}, nil
+	if ok {
+		var err error
+		result, err = r.executor.Detect(siteDir)
+		if err != nil {
+			result = map[string]string{}
+		}
+	} else {
+		result = map[string]string{}
 	}
-	return r.executor.Detect(siteDir)
+
+	// Fill gaps from project config files
+	for tool, version := range detectFromProjectFiles(siteDir) {
+		if _, exists := result[tool]; !exists {
+			result[tool] = version
+		}
+	}
+
+	return result, nil
 }
 
 // Install installs a specific version of a tool via mise.
@@ -236,4 +257,73 @@ func (c *cliExecutor) ListInstalled(tool string) ([]string, error) {
 		}
 	}
 	return versions, nil
+}
+
+// Package-level compiled regexes for parseVersionConstraint.
+var (
+	versionPrefixRe = regexp.MustCompile(`^[~^>=<v]+`)
+	versionNumberRe = regexp.MustCompile(`^\d+(\.\d+)*$`)
+)
+
+// parseVersionConstraint extracts a base version number from a version
+// constraint string (e.g., "^8.2" -> "8.2", ">=18" -> "18").
+// For compound constraints (e.g., "^8.2 || ^8.3"), returns the first version.
+// Returns empty string if no version can be extracted.
+func parseVersionConstraint(s string) string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return ""
+	}
+	// For compound constraints, take the first part
+	if idx := strings.Index(s, "||"); idx != -1 {
+		s = strings.TrimSpace(s[:idx])
+	}
+	// For space-separated constraints (e.g., ">=8.2 <9.0"), take the first part
+	if idx := strings.Index(s, " "); idx != -1 {
+		s = strings.TrimSpace(s[:idx])
+	}
+	// Strip leading operators and 'v' prefix
+	s = versionPrefixRe.ReplaceAllString(s, "")
+	// Validate it looks like a version number
+	if !versionNumberRe.MatchString(s) {
+		return ""
+	}
+	return s
+}
+
+// detectFromProjectFiles checks for composer.json and package.json in the
+// given directory and extracts runtime version requirements.
+// Returns a map of tool name -> version (e.g., {"php": "8.2", "node": "18"}).
+func detectFromProjectFiles(dir string) map[string]string {
+	result := map[string]string{}
+
+	// Check composer.json for PHP version
+	if data, err := os.ReadFile(filepath.Join(dir, "composer.json")); err == nil {
+		var composer struct {
+			Require map[string]string `json:"require"`
+		}
+		if json.Unmarshal(data, &composer) == nil {
+			if constraint, ok := composer.Require["php"]; ok {
+				if v := parseVersionConstraint(constraint); v != "" {
+					result["php"] = v
+				}
+			}
+		}
+	}
+
+	// Check package.json for Node version
+	if data, err := os.ReadFile(filepath.Join(dir, "package.json")); err == nil {
+		var pkg struct {
+			Engines map[string]string `json:"engines"`
+		}
+		if json.Unmarshal(data, &pkg) == nil {
+			if constraint, ok := pkg.Engines["node"]; ok {
+				if v := parseVersionConstraint(constraint); v != "" {
+					result["node"] = v
+				}
+			}
+		}
+	}
+
+	return result
 }

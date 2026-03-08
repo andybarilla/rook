@@ -2,7 +2,9 @@ package mise
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"testing"
 )
 
@@ -486,5 +488,243 @@ func TestListInstalled_ReturnsVersions(t *testing.T) {
 	}
 	if versions[0] != "8.2.0" || versions[1] != "8.3.0" {
 		t.Fatalf("expected [8.2.0 8.3.0], got %v", versions)
+	}
+}
+
+func TestDetectFromProjectFiles_ComposerJSON(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "composer.json"), []byte(`{
+		"require": {
+			"php": "^8.2",
+			"laravel/framework": "^11.0"
+		}
+	}`), 0644)
+
+	result := detectFromProjectFiles(dir)
+	if result["php"] != "8.2" {
+		t.Fatalf("expected php 8.2, got %q", result["php"])
+	}
+	if _, ok := result["node"]; ok {
+		t.Fatal("expected no node entry")
+	}
+}
+
+func TestDetectFromProjectFiles_PackageJSON(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{
+		"name": "my-app",
+		"engines": {
+			"node": ">=18"
+		}
+	}`), 0644)
+
+	result := detectFromProjectFiles(dir)
+	if result["node"] != "18" {
+		t.Fatalf("expected node 18, got %q", result["node"])
+	}
+	if _, ok := result["php"]; ok {
+		t.Fatal("expected no php entry")
+	}
+}
+
+func TestDetectFromProjectFiles_BothFiles(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "composer.json"), []byte(`{
+		"require": {"php": "^8.3"}
+	}`), 0644)
+	os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{
+		"engines": {"node": "20"}
+	}`), 0644)
+
+	result := detectFromProjectFiles(dir)
+	if result["php"] != "8.3" {
+		t.Fatalf("expected php 8.3, got %q", result["php"])
+	}
+	if result["node"] != "20" {
+		t.Fatalf("expected node 20, got %q", result["node"])
+	}
+}
+
+func TestDetectFromProjectFiles_NoFiles(t *testing.T) {
+	dir := t.TempDir()
+	result := detectFromProjectFiles(dir)
+	if len(result) != 0 {
+		t.Fatalf("expected empty map, got %v", result)
+	}
+}
+
+func TestDetectFromProjectFiles_NoVersionInComposer(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "composer.json"), []byte(`{
+		"require": {
+			"laravel/framework": "^11.0"
+		}
+	}`), 0644)
+
+	result := detectFromProjectFiles(dir)
+	if _, ok := result["php"]; ok {
+		t.Fatal("expected no php entry when composer.json has no php requirement")
+	}
+}
+
+func TestDetectFromProjectFiles_NoEnginesInPackageJSON(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{
+		"name": "my-app",
+		"version": "1.0.0"
+	}`), 0644)
+
+	result := detectFromProjectFiles(dir)
+	if _, ok := result["node"]; ok {
+		t.Fatal("expected no node entry when package.json has no engines")
+	}
+}
+
+func TestDetectFromProjectFiles_InvalidJSON(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "composer.json"), []byte(`not json`), 0644)
+	os.WriteFile(filepath.Join(dir, "package.json"), []byte(`not json`), 0644)
+
+	result := detectFromProjectFiles(dir)
+	if len(result) != 0 {
+		t.Fatalf("expected empty map for invalid JSON, got %v", result)
+	}
+}
+
+func TestDetect_FallsBackToProjectFiles(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "composer.json"), []byte(`{
+		"require": {"php": "^8.2"}
+	}`), 0644)
+	os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{
+		"engines": {"node": ">=20"}
+	}`), 0644)
+
+	// Mise available but returns nothing for this directory
+	stub := &stubExecutor{
+		available: true,
+		version:   "1.0.0",
+		detectOut: map[string]string{},
+	}
+	r := NewWithExecutor(stub)
+
+	result, err := r.Detect(dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result["php"] != "8.2" {
+		t.Fatalf("expected php 8.2 from composer.json fallback, got %q", result["php"])
+	}
+	if result["node"] != "20" {
+		t.Fatalf("expected node 20 from package.json fallback, got %q", result["node"])
+	}
+}
+
+func TestDetect_MiseWinsOverProjectFiles(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "composer.json"), []byte(`{
+		"require": {"php": "^8.2"}
+	}`), 0644)
+	os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{
+		"engines": {"node": ">=18"}
+	}`), 0644)
+
+	// Mise returns specific versions — these must win
+	stub := &stubExecutor{
+		available: true,
+		version:   "1.0.0",
+		detectOut: map[string]string{
+			"php":  "8.3.0",
+			"node": "20.0.0",
+		},
+	}
+	r := NewWithExecutor(stub)
+
+	result, err := r.Detect(dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result["php"] != "8.3.0" {
+		t.Fatalf("expected mise php 8.3.0 to win, got %q", result["php"])
+	}
+	if result["node"] != "20.0.0" {
+		t.Fatalf("expected mise node 20.0.0 to win, got %q", result["node"])
+	}
+}
+
+func TestDetect_MisePartialFallback(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{
+		"engines": {"node": ">=18"}
+	}`), 0644)
+
+	// Mise returns php but not node
+	stub := &stubExecutor{
+		available: true,
+		version:   "1.0.0",
+		detectOut: map[string]string{
+			"php": "8.3.0",
+		},
+	}
+	r := NewWithExecutor(stub)
+
+	result, err := r.Detect(dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result["php"] != "8.3.0" {
+		t.Fatalf("expected mise php 8.3.0, got %q", result["php"])
+	}
+	if result["node"] != "18" {
+		t.Fatalf("expected node 18 from package.json fallback, got %q", result["node"])
+	}
+}
+
+func TestDetect_FallsBackWhenMiseUnavailable(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "composer.json"), []byte(`{
+		"require": {"php": "^8.2"}
+	}`), 0644)
+
+	stub := &stubExecutor{
+		available: false,
+	}
+	r := NewWithExecutor(stub)
+
+	result, err := r.Detect(dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result["php"] != "8.2" {
+		t.Fatalf("expected php 8.2 from composer.json when mise unavailable, got %q", result["php"])
+	}
+}
+
+func TestParseVersionConstraint(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"^8.2", "8.2"},
+		{">=18", "18"},
+		{"~8.1.0", "8.1.0"},
+		{">8.0", "8.0"},
+		{"v20.1", "20.1"},
+		{"8.3", "8.3"},
+		{"^8.2 || ^8.3", "8.2"},
+		{"=8.2", "8.2"},
+		{"", ""},
+		{"not-a-version", ""},
+		{"*", ""},
+		{">=8.2 <9.0", "8.2"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result := parseVersionConstraint(tt.input)
+			if result != tt.expected {
+				t.Fatalf("parseVersionConstraint(%q) = %q, want %q", tt.input, result, tt.expected)
+			}
+		})
 	}
 }
