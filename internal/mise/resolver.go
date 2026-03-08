@@ -53,8 +53,10 @@ func (r *RuntimeResolver) Available() (bool, string) {
 	return ok, ver
 }
 
-// Version returns the cached mise version string, or empty if not yet checked.
+// Version returns the mise version string, calling Available() first to ensure
+// the cache is populated.
 func (r *RuntimeResolver) Version() string {
+	r.Available() // ensure cache is populated
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	return r.cachedVer

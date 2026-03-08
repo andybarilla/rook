@@ -171,6 +171,46 @@ func TestVersion(t *testing.T) {
 	}
 }
 
+func TestVersion_BeforeAvailable(t *testing.T) {
+	stub := &stubExecutor{
+		available: true,
+		version:   "2024.5.0",
+	}
+
+	r := NewWithExecutor(stub)
+
+	// Call Version() as the FIRST method, without calling Available() first.
+	gotVer := r.Version()
+	if gotVer != "2024.5.0" {
+		t.Fatalf("Version() before Available(): expected 2024.5.0, got %s", gotVer)
+	}
+}
+
+func TestWhich_FallsBackToLookPathWhenMiseWhichErrors(t *testing.T) {
+	// mise IS available, but Which() returns an error for the tool.
+	// Should fall back to exec.LookPath.
+	stub := &stubExecutor{
+		available:    true,
+		version:      "1.0.0",
+		whichResults: map[string]string{},
+		whichErrors: map[string]error{
+			"go": fmt.Errorf("mise which go: tool not configured"),
+		},
+	}
+
+	r := NewWithExecutor(stub)
+
+	// "go" should be findable via LookPath fallback
+	path, err := r.Which("go")
+	if err != nil {
+		t.Skipf("go not in PATH, skipping: %v", err)
+	}
+	if path == "" {
+		t.Fatal("expected non-empty path for 'go' via LookPath fallback")
+	}
+	t.Logf("fallback found go at: %s (mise was available but Which errored)", path)
+}
+
 // countingExecutor wraps stubExecutor but counts Available() calls.
 type countingExecutor struct {
 	available bool
