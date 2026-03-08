@@ -3,9 +3,11 @@
   import { ListSites, AddSite, RemoveSite, DatabaseServices, StartDatabase, StopDatabase } from '../wailsjs/go/main/App.js';
   import { notifySuccess, notifyError, dismissLatest } from './lib/notifications.js';
   import { friendlyError } from './lib/errorMessages.js';
+  import { initTheme } from './lib/theme.js';
   import SiteList from './SiteList.svelte';
   import AddSiteForm from './AddSiteForm.svelte';
   import ServiceList from './ServiceList.svelte';
+  import SettingsTab from './SettingsTab.svelte';
   import ToastContainer from './lib/ToastContainer.svelte';
 
   let sites = [];
@@ -14,10 +16,12 @@
   let servicesLoaded = false;
   let addFormOpen = false;
   let addSiteForm;
+  let activeTab = 'sites';
 
   function handleKeydown(e) {
     if (e.ctrlKey && e.key === 'n') {
       e.preventDefault();
+      activeTab = 'sites';
       addFormOpen = true;
       setTimeout(() => addSiteForm?.focusPathInput(), 0);
       return;
@@ -94,6 +98,7 @@
   }
 
   onMount(() => {
+    initTheme();
     refreshSites();
     refreshServices();
   });
@@ -101,22 +106,35 @@
 
 <svelte:window on:keydown={handleKeydown} />
 
-<main class="max-w-3xl mx-auto px-6 py-8 text-left">
-  <header class="mb-8">
-    <h1 class="text-2xl font-bold m-0">Flock</h1>
-    <p class="text-base-content/70 mt-1 text-sm">Local Development Environment</p>
+<main class="h-full flex flex-col">
+  <header class="bg-base-100 border-b border-base-300 px-6">
+    <div class="max-w-5xl mx-auto flex items-center gap-6">
+      <div class="flex items-center gap-2 py-3">
+        <div class="w-7 h-7 bg-primary rounded-lg flex items-center justify-center">
+          <span class="text-primary-content text-sm font-bold">F</span>
+        </div>
+        <span class="font-bold text-base-content">Flock</span>
+      </div>
+      <div role="tablist" class="tabs tabs-bordered flex-1">
+        <button role="tab" class="tab" class:tab-active={activeTab === 'sites'} on:click={() => activeTab = 'sites'}>Sites</button>
+        <button role="tab" class="tab" class:tab-active={activeTab === 'services'} on:click={() => activeTab = 'services'}>Services</button>
+        <button role="tab" class="tab" class:tab-active={activeTab === 'settings'} on:click={() => activeTab = 'settings'}>Settings</button>
+      </div>
+    </div>
   </header>
 
-  <section class="card bg-base-200 p-6">
-    <h2 class="text-sm text-base-content/70 uppercase tracking-wide mb-4 font-semibold">Sites</h2>
-    <SiteList {sites} loaded={sitesLoaded} onRemove={handleRemove} on:addsite={() => { addFormOpen = true; }} />
-    <AddSiteForm bind:this={addSiteForm} onAdd={handleAdd} bind:collapseOpen={addFormOpen} />
-  </section>
-
-  <section class="card bg-base-200 p-6 mt-6">
-    <h2 class="text-sm text-base-content/70 uppercase tracking-wide mb-4 font-semibold">Services</h2>
-    <ServiceList {services} loaded={servicesLoaded} onStart={handleStartService} onStop={handleStopService} />
-  </section>
+  <div class="flex-1 overflow-auto">
+    <div class="max-w-5xl mx-auto px-6 py-6">
+      {#if activeTab === 'sites'}
+        <SiteList {sites} loaded={sitesLoaded} onRemove={handleRemove} on:addsite={() => { addFormOpen = true; }} />
+        <AddSiteForm bind:this={addSiteForm} onAdd={handleAdd} open={addFormOpen} on:close={() => { addFormOpen = false; }} />
+      {:else if activeTab === 'services'}
+        <ServiceList {services} loaded={servicesLoaded} onStart={handleStartService} onStop={handleStopService} />
+      {:else if activeTab === 'settings'}
+        <SettingsTab />
+      {/if}
+    </div>
+  </div>
 </main>
 
 <ToastContainer />

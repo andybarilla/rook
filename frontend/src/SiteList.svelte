@@ -1,6 +1,7 @@
 <script>
   import ConfirmModal from './lib/ConfirmModal.svelte';
   import EmptyState from './lib/EmptyState.svelte';
+  import SiteCard from './SiteCard.svelte';
   import { createEventDispatcher } from 'svelte';
 
   export let sites = [];
@@ -11,6 +12,18 @@
 
   let removingDomain = null;
   let pendingRemoveDomain = null;
+  let searchQuery = '';
+  let viewMode = (typeof localStorage !== 'undefined' && localStorage.getItem('flock-view')) || 'table';
+
+  function setViewMode(mode) {
+    viewMode = mode;
+    if (typeof localStorage !== 'undefined') localStorage.setItem('flock-view', mode);
+  }
+
+  $: filtered = sites.filter(s =>
+    s.domain.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    s.path.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   function requestRemove(domain) {
     pendingRemoveDomain = domain;
@@ -31,6 +44,24 @@
     }
   }
 </script>
+
+{#if loaded && sites.length > 0}
+<div class="flex items-center justify-between mb-4">
+  <h2 class="text-lg font-semibold text-base-content">Sites</h2>
+  <div class="flex items-center gap-2">
+    <button class="btn btn-ghost btn-sm btn-square" class:btn-active={viewMode === 'table'} title="Table view" on:click={() => setViewMode('table')}>
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+    </button>
+    <button class="btn btn-ghost btn-sm btn-square" class:btn-active={viewMode === 'cards'} title="Card view" on:click={() => setViewMode('cards')}>
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+    </button>
+    <button class="btn btn-primary btn-sm" on:click={() => dispatch('addsite')}>+ Add Site</button>
+  </div>
+</div>
+<div class="mb-4">
+  <input type="text" class="input input-bordered input-sm w-full" placeholder="Search sites..." bind:value={searchQuery} />
+</div>
+{/if}
 
 {#if !loaded}
   <table class="table table-zebra">
@@ -65,7 +96,9 @@
     actionLabel="Add Site"
     on:action={() => dispatch('addsite')}
   />
-{:else}
+{:else if filtered.length === 0}
+  <p class="text-center text-base-content/60 py-8">No matching sites</p>
+{:else if viewMode === 'table'}
   <table class="table table-zebra">
     <thead>
       <tr>
@@ -78,13 +111,31 @@
       </tr>
     </thead>
     <tbody>
-      {#each sites as site}
+      {#each filtered as site}
         <tr>
           <td class="font-semibold">{site.domain}</td>
           <td class="text-base-content/70 text-sm">{site.path}</td>
-          <td>{site.php_version || '—'}</td>
-          <td>{site.node_version || '—'}</td>
-          <td>{site.tls ? '✓' : '—'}</td>
+          <td>
+            {#if site.php_version}
+              <span class="badge badge-sm badge-primary">PHP {site.php_version}</span>
+            {:else}
+              <span class="text-base-content/30">—</span>
+            {/if}
+          </td>
+          <td>
+            {#if site.node_version}
+              <span class="badge badge-sm badge-success">Node {site.node_version}</span>
+            {:else}
+              <span class="text-base-content/30">—</span>
+            {/if}
+          </td>
+          <td>
+            {#if site.tls}
+              <span class="badge badge-sm badge-info">TLS</span>
+            {:else}
+              <span class="text-base-content/30">—</span>
+            {/if}
+          </td>
           <td>
             <button
               class="btn btn-ghost btn-sm hover:btn-error"
@@ -102,6 +153,12 @@
       {/each}
     </tbody>
   </table>
+{:else}
+  <div data-testid="site-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    {#each filtered as site}
+      <SiteCard {site} onRemove={requestRemove} />
+    {/each}
+  </div>
 {/if}
 
 <ConfirmModal

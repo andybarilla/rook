@@ -10,20 +10,24 @@ vi.mock('../wailsjs/go/main/App.js', () => ({
   StopDatabase: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock('./lib/theme.js', () => {
+  const { writable } = require('svelte/store');
+  return { initTheme: vi.fn(), toggleTheme: vi.fn(), theme: writable('light') };
+});
+
 import App from './App.svelte';
 
 describe('App keyboard shortcuts', () => {
   it('Ctrl+N opens add site form and focuses path input', async () => {
     vi.useFakeTimers();
     const { container } = render(App);
-    await vi.waitFor(() => {
-      expect(container.querySelector('.collapse')).toBeTruthy();
-    });
+    // Modal should not be visible initially
+    expect(container.querySelector('.modal')).toBeNull();
     await fireEvent.keyDown(window, { key: 'n', ctrlKey: true });
     vi.runAllTimers();
     await vi.waitFor(() => {
-      const checkbox = container.querySelector('.collapse input[type="checkbox"]');
-      expect(checkbox.checked).toBe(true);
+      const modal = container.querySelector('.modal');
+      expect(modal).toBeTruthy();
     });
     vi.useRealTimers();
   });
@@ -31,21 +35,16 @@ describe('App keyboard shortcuts', () => {
   it('Escape closes add site form when open', async () => {
     vi.useFakeTimers();
     const { container } = render(App);
-    await vi.waitFor(() => {
-      expect(container.querySelector('.collapse')).toBeTruthy();
-    });
     // Open the form first
     await fireEvent.keyDown(window, { key: 'n', ctrlKey: true });
     vi.runAllTimers();
     await vi.waitFor(() => {
-      const checkbox = container.querySelector('.collapse input[type="checkbox"]');
-      expect(checkbox.checked).toBe(true);
+      expect(container.querySelector('.modal')).toBeTruthy();
     });
     // Press Escape
     await fireEvent.keyDown(window, { key: 'Escape' });
     await vi.waitFor(() => {
-      const checkbox = container.querySelector('.collapse input[type="checkbox"]');
-      expect(checkbox.checked).toBe(false);
+      expect(container.querySelector('.modal')).toBeNull();
     });
     vi.useRealTimers();
   });
@@ -54,15 +53,11 @@ describe('App keyboard shortcuts', () => {
     vi.useFakeTimers();
     const { AddSite } = await import('../wailsjs/go/main/App.js');
     const { container } = render(App);
-    await vi.waitFor(() => {
-      expect(container.querySelector('.collapse')).toBeTruthy();
-    });
     // Open form
     await fireEvent.keyDown(window, { key: 'n', ctrlKey: true });
     vi.runAllTimers();
     await vi.waitFor(() => {
-      const checkbox = container.querySelector('.collapse input[type="checkbox"]');
-      expect(checkbox.checked).toBe(true);
+      expect(container.querySelector('.modal')).toBeTruthy();
     });
     // Fill in fields
     const pathInput = container.querySelector('input[placeholder="/home/user/projects/myapp"]');
@@ -75,5 +70,100 @@ describe('App keyboard shortcuts', () => {
       expect(AddSite).toHaveBeenCalledWith('/tmp/myapp', 'myapp.test', '', '', false);
     });
     vi.useRealTimers();
+  });
+});
+
+describe('tab navigation', () => {
+  it('renders three tabs: Sites, Services, Settings', async () => {
+    const { ListSites, DatabaseServices } = await import('../wailsjs/go/main/App.js');
+    ListSites.mockResolvedValue([]);
+    DatabaseServices.mockResolvedValue([]);
+    const { getByRole } = render(App);
+    await vi.waitFor(() => {
+      expect(getByRole('tab', { name: 'Sites' })).toBeTruthy();
+      expect(getByRole('tab', { name: 'Services' })).toBeTruthy();
+      expect(getByRole('tab', { name: 'Settings' })).toBeTruthy();
+    });
+  });
+
+  it('shows Sites tab as active by default', async () => {
+    const { ListSites, DatabaseServices } = await import('../wailsjs/go/main/App.js');
+    ListSites.mockResolvedValue([]);
+    DatabaseServices.mockResolvedValue([]);
+    const { getByRole } = render(App);
+    await vi.waitFor(() => {
+      expect(getByRole('tab', { name: 'Sites' }).classList.contains('tab-active')).toBe(true);
+    });
+  });
+
+  it('switches to Services tab on click', async () => {
+    const { ListSites, DatabaseServices } = await import('../wailsjs/go/main/App.js');
+    ListSites.mockResolvedValue([]);
+    DatabaseServices.mockResolvedValue([]);
+    const { getByRole } = render(App);
+    await vi.waitFor(() => {
+      expect(getByRole('tab', { name: 'Services' })).toBeTruthy();
+    });
+    await fireEvent.click(getByRole('tab', { name: 'Services' }));
+    expect(getByRole('tab', { name: 'Services' }).classList.contains('tab-active')).toBe(true);
+    expect(getByRole('tab', { name: 'Sites' }).classList.contains('tab-active')).toBe(false);
+  });
+
+  it('switches to Settings tab on click', async () => {
+    const { ListSites, DatabaseServices } = await import('../wailsjs/go/main/App.js');
+    ListSites.mockResolvedValue([]);
+    DatabaseServices.mockResolvedValue([]);
+    const { getByRole } = render(App);
+    await vi.waitFor(() => {
+      expect(getByRole('tab', { name: 'Settings' })).toBeTruthy();
+    });
+    await fireEvent.click(getByRole('tab', { name: 'Settings' }));
+    expect(getByRole('tab', { name: 'Settings' }).classList.contains('tab-active')).toBe(true);
+  });
+});
+
+describe('integration', () => {
+  it('Ctrl+N opens Add Site modal', async () => {
+    const { ListSites, DatabaseServices } = await import('../wailsjs/go/main/App.js');
+    ListSites.mockResolvedValue([]);
+    DatabaseServices.mockResolvedValue([]);
+    vi.useFakeTimers();
+    const { container } = render(App);
+    await fireEvent.keyDown(window, { key: 'n', ctrlKey: true });
+    vi.runAllTimers();
+    await vi.waitFor(() => {
+      expect(container.querySelector('.modal-open')).toBeTruthy();
+    });
+    vi.useRealTimers();
+  });
+
+  it('clicking Services tab shows service content', async () => {
+    const { ListSites, DatabaseServices } = await import('../wailsjs/go/main/App.js');
+    ListSites.mockResolvedValue([]);
+    DatabaseServices.mockResolvedValue([
+      { type: 'mysql', enabled: true, running: true, autostart: true, port: 3306 },
+    ]);
+    const { getByRole, getByText } = render(App);
+    await vi.waitFor(() => {
+      expect(getByRole('tab', { name: 'Services' })).toBeTruthy();
+    });
+    await fireEvent.click(getByRole('tab', { name: 'Services' }));
+    await vi.waitFor(() => {
+      expect(getByText('MySQL')).toBeTruthy();
+    });
+  });
+
+  it('clicking Settings tab shows theme toggle', async () => {
+    const { ListSites, DatabaseServices } = await import('../wailsjs/go/main/App.js');
+    ListSites.mockResolvedValue([]);
+    DatabaseServices.mockResolvedValue([]);
+    const { getByRole } = render(App);
+    await vi.waitFor(() => {
+      expect(getByRole('tab', { name: 'Settings' })).toBeTruthy();
+    });
+    await fireEvent.click(getByRole('tab', { name: 'Settings' }));
+    await vi.waitFor(() => {
+      expect(getByRole('checkbox', { name: /dark mode/i })).toBeTruthy();
+    });
   });
 });
