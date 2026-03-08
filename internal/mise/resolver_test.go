@@ -8,10 +8,14 @@ import (
 
 // stubExecutor implements Executor for testing.
 type stubExecutor struct {
-	available    bool
-	version      string
-	whichResults map[string]string // tool -> path
-	whichErrors  map[string]error
+	available           bool
+	version             string
+	whichResults        map[string]string // tool -> path
+	whichErrors         map[string]error
+	whichVersionResults map[string]string // "tool@version" -> path
+	whichVersionErrors  map[string]error
+	detectOut           map[string]string
+	detectErr           error
 }
 
 func (s *stubExecutor) Available() (bool, string) {
@@ -29,11 +33,24 @@ func (s *stubExecutor) Which(tool string) (string, error) {
 }
 
 func (s *stubExecutor) WhichVersion(tool, version string) (string, error) {
-	return "", fmt.Errorf("not implemented")
+	key := tool + "@" + version
+	if err, ok := s.whichVersionErrors[key]; ok {
+		return "", err
+	}
+	if path, ok := s.whichVersionResults[key]; ok {
+		return path, nil
+	}
+	return "", fmt.Errorf("tool %q version %q not found", tool, version)
 }
 
 func (s *stubExecutor) Detect(dir string) (map[string]string, error) {
-	return nil, fmt.Errorf("not implemented")
+	if s.detectErr != nil {
+		return nil, s.detectErr
+	}
+	if s.detectOut != nil {
+		return s.detectOut, nil
+	}
+	return map[string]string{}, nil
 }
 
 func (s *stubExecutor) Install(tool, version string) error {
@@ -245,4 +262,120 @@ func (c *countingExecutor) IsInstalled(tool, version string) (bool, error) {
 
 func (c *countingExecutor) ListInstalled(tool string) ([]string, error) {
 	return nil, fmt.Errorf("not implemented")
+}
+
+func TestWhichVersion_UsesMiseWhenAvailable(t *testing.T) {
+	stub := &stubExecutor{
+		available: true,
+		version:   "1.0.0",
+		whichVersionResults: map[string]string{
+			"node@20.0.0": "/home/user/.local/share/mise/installs/node/20.0.0/bin/node",
+		},
+	}
+
+	r := NewWithExecutor(stub)
+
+	path, err := r.WhichVersion("node", "20.0.0")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	expected := "/home/user/.local/share/mise/installs/node/20.0.0/bin/node"
+	if path != expected {
+		t.Fatalf("expected %s, got %s", expected, path)
+	}
+}
+
+func TestWhichVersion_FallsBackWhenMiseUnavailable(t *testing.T) {
+	stub := &stubExecutor{
+		available: false,
+		version:   "",
+	}
+
+	r := NewWithExecutor(stub)
+
+	// "go" should be findable via LookPath on any dev machine
+	path, err := r.WhichVersion("go", "1.21.0")
+	if err != nil {
+		t.Skipf("go not in PATH, skipping: %v", err)
+	}
+	if path == "" {
+		t.Fatal("expected non-empty path for 'go' via LookPath fallback")
+	}
+	t.Logf("fallback found go at: %s", path)
+}
+
+func TestDetect_ReturnsParsedVersions(t *testing.T) {
+	stub := &stubExecutor{
+		available: true,
+		version:   "1.0.0",
+		detectOut: map[string]string{
+			"php":  "8.3.0",
+			"node": "20.0.0",
+		},
+	}
+
+	r := NewWithExecutor(stub)
+
+	result, err := r.Detect("/some/site/dir")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(result) != 2 {
+		t.Fatalf("expected 2 entries, got %d", len(result))
+	}
+	if result["php"] != "8.3.0" {
+		t.Fatalf("expected php 8.3.0, got %s", result["php"])
+	}
+	if result["node"] != "20.0.0" {
+		t.Fatalf("expected node 20.0.0, got %s", result["node"])
+	}
+}
+
+func TestDetect_ReturnsEmptyWhenMiseUnavailable(t *testing.T) {
+	stub := &stubExecutor{
+		available: false,
+		version:   "",
+	}
+
+	r := NewWithExecutor(stub)
+
+	result, err := r.Detect("/some/site/dir")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(result) != 0 {
+		t.Fatalf("expected empty map, got %v", result)
+	}
+}
+
+func TestParseCurrentVersions(t *testing.T) {
+	input := []byte(`{
+		"php": [{"version": "8.3.0", "source": {}}],
+		"node": [{"version": "20.0.0", "source": {}}],
+		"empty": []
+	}`)
+
+	result, err := parseCurrentVersions(input)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(result) != 2 {
+		t.Fatalf("expected 2 entries, got %d: %v", len(result), result)
+	}
+	if result["php"] != "8.3.0" {
+		t.Fatalf("expected php 8.3.0, got %s", result["php"])
+	}
+	if result["node"] != "20.0.0" {
+		t.Fatalf("expected node 20.0.0, got %s", result["node"])
+	}
+}
+
+func TestParseCurrentVersions_InvalidJSON(t *testing.T) {
+	result, err := parseCurrentVersions([]byte(`not json`))
+	if err != nil {
+		t.Fatalf("expected no error on invalid JSON, got: %v", err)
+	}
+	if len(result) != 0 {
+		t.Fatalf("expected empty map, got %v", result)
+	}
 }

@@ -1,6 +1,7 @@
 package mise
 
 import (
+	"encoding/json"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -81,6 +82,35 @@ func (r *RuntimeResolver) Which(tool string) (string, error) {
 	return path, nil
 }
 
+// WhichVersion resolves the path to a specific version of a tool binary.
+// It tries mise first (if available), then falls back to exec.LookPath.
+func (r *RuntimeResolver) WhichVersion(tool, version string) (string, error) {
+	ok, _ := r.Available()
+	if ok {
+		path, err := r.executor.WhichVersion(tool, version)
+		if err == nil {
+			return path, nil
+		}
+		// mise failed, fall through to LookPath
+	}
+
+	path, err := exec.LookPath(tool)
+	if err != nil {
+		return "", fmt.Errorf("tool %q version %q not found via mise or PATH: %w", tool, version, err)
+	}
+	return path, nil
+}
+
+// Detect returns tool versions configured for a site directory via mise.
+// Returns an empty map if mise is not available.
+func (r *RuntimeResolver) Detect(siteDir string) (map[string]string, error) {
+	ok, _ := r.Available()
+	if !ok {
+		return map[string]string{}, nil
+	}
+	return r.executor.Detect(siteDir)
+}
+
 // cliExecutor implements Executor by calling the real mise CLI.
 type cliExecutor struct{}
 
@@ -102,11 +132,37 @@ func (c *cliExecutor) Which(tool string) (string, error) {
 }
 
 func (c *cliExecutor) WhichVersion(tool, version string) (string, error) {
-	return "", fmt.Errorf("not implemented")
+	out, err := exec.Command("mise", "which", tool+"@"+version).Output()
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(out)), nil
 }
 
 func (c *cliExecutor) Detect(dir string) (map[string]string, error) {
-	return nil, fmt.Errorf("not implemented")
+	out, err := exec.Command("mise", "ls", "--current", "--json", "-C", dir).Output()
+	if err != nil {
+		return map[string]string{}, nil
+	}
+	return parseCurrentVersions(out)
+}
+
+// parseCurrentVersions parses the JSON output of `mise ls --current --json`.
+// The format is: {"tool": [{"version": "x.y.z", ...}], ...}
+func parseCurrentVersions(data []byte) (map[string]string, error) {
+	var raw map[string][]struct {
+		Version string `json:"version"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return map[string]string{}, nil
+	}
+	result := map[string]string{}
+	for tool, entries := range raw {
+		if len(entries) > 0 && entries[0].Version != "" {
+			result[tool] = entries[0].Version
+		}
+	}
+	return result, nil
 }
 
 func (c *cliExecutor) Install(tool, version string) error {
