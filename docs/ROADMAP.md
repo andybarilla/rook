@@ -72,4 +72,4 @@ Architecture design: `docs/plans/2026-03-03-flock-core-design.md`
 ### Future — Potential
 
 - [ ] flock-sdk (Go library for plugin authors — handles JSON-RPC boilerplate)
-- [ ] flock-cli (CLI for managing sites, services, and plugins without the GUI)
+- [x] flock-cli (CLI for managing sites, services, and plugins without the GUI) — See: docs/plans/2026-03-08-flock-cli-design.md
