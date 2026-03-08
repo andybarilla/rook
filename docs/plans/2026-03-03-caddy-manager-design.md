@@ -5,7 +5,7 @@
 
 ## Overview
 
-Embedded Caddy manager for Flock: generates JSON config from site registry entries and plugin upstream resolution, manages Caddy lifecycle via `caddy.Run()` for zero-downtime hot-reloads.
+Embedded Caddy manager for Rook: generates JSON config from site registry entries and plugin upstream resolution, manages Caddy lifecycle via `caddy.Run()` for zero-downtime hot-reloads.
 
 ## Package
 
@@ -72,7 +72,7 @@ func NewManager(runner CaddyRunner, resolver UpstreamResolver) *Manager
   "apps": {
     "http": {
       "servers": {
-        "flock": {
+        "rook": {
           "listen": [":80", ":443"],
           "routes": [
             {
@@ -93,7 +93,7 @@ func NewManager(runner CaddyRunner, resolver UpstreamResolver) *Manager
 
 ### TLS
 
-Not handled in this task. The flock-ssl plugin (later task) will add TLS automation config. For now, sites listen on both `:80` and `:443` but without cert provisioning — effectively HTTP only until flock-ssl is implemented.
+Not handled in this task. The rook-ssl plugin (later task) will add TLS automation config. For now, sites listen on both `:80` and `:443` but without cert provisioning — effectively HTTP only until rook-ssl is implemented.
 
 ## Testing Strategy
 

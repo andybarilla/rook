@@ -30,7 +30,7 @@ import (
 	"os/exec"
 	"testing"
 
-	"github.com/andybarilla/flock/internal/mise"
+	"github.com/andybarilla/rook/internal/mise"
 )
 
 func TestAvailable_ReturnsTrueWhenMiseInPath(t *testing.T) {
@@ -708,7 +708,7 @@ Expected: FAIL — methods don't exist
 Add to `internal/core/core.go`:
 
 ```go
-import "github.com/andybarilla/flock/internal/mise"
+import "github.com/andybarilla/rook/internal/mise"
 ```
 
 Add `Resolver` to `Config`:
@@ -832,7 +832,7 @@ Expected: PASS (current state compiles)
 Add to `app.go`:
 
 ```go
-import "github.com/andybarilla/flock/internal/core"
+import "github.com/andybarilla/rook/internal/core"
 
 // DetectSiteVersions scans a project directory for mise config files
 // and returns detected runtime versions (e.g., {"php": "8.3", "node": "20"}).

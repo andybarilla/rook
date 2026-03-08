@@ -2,7 +2,7 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Create a GitHub Actions workflow that builds Flock for Linux, macOS, and Windows on tag push, then publishes a GitHub Release with the binaries.
+**Goal:** Create a GitHub Actions workflow that builds Rook for Linux, macOS, and Windows on tag push, then publishes a GitHub Release with the binaries.
 
 **Architecture:** Single workflow file with a build matrix (3 OS jobs) followed by a release job that collects artifacts and creates a GitHub Release. Uses `wails build` for cross-platform desktop builds.
 
@@ -35,13 +35,13 @@ jobs:
         include:
           - os: ubuntu-latest
             platform: linux
-            archive_name: flock-linux-amd64.tar.gz
+            archive_name: rook-linux-amd64.tar.gz
           - os: macos-latest
             platform: darwin
-            archive_name: flock-darwin-amd64.tar.gz
+            archive_name: rook-darwin-amd64.tar.gz
           - os: windows-latest
             platform: windows
-            archive_name: flock-windows-amd64.zip
+            archive_name: rook-windows-amd64.zip
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -148,7 +148,7 @@ Expected: All 3 build jobs succeed, release job creates a GitHub Release at the 
 gh release view v0.0.1-rc.1
 ```
 
-Expected: Release exists with 3 assets: `flock-linux-amd64.tar.gz`, `flock-darwin-amd64.tar.gz`, `flock-windows-amd64.zip`.
+Expected: Release exists with 3 assets: `rook-linux-amd64.tar.gz`, `rook-darwin-amd64.tar.gz`, `rook-windows-amd64.zip`.
 
 **Step 4: Clean up test release (optional)**
 

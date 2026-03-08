@@ -2,7 +2,7 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Incrementally reskin the Flock frontend with tab navigation, card views, light/dark theming, and purple accent — inspired by the Figma prototype.
+**Goal:** Incrementally reskin the Rook frontend with tab navigation, card views, light/dark theming, and purple accent — inspired by the Figma prototype.
 
 **Architecture:** Modify existing Svelte + DaisyUI components in-place. Add tab navigation via reactive variable (no router). New components: SiteCard, AddSiteModal, ServiceCard, SettingsTab. Theme switching via DaisyUI's built-in multi-theme support + localStorage persistence.
 
@@ -102,7 +102,7 @@ describe('theme store', () => {
 
   it('toggleTheme persists to localStorage', () => {
     toggleTheme();
-    expect(localStorage.getItem('flock-theme')).toBe('dark');
+    expect(localStorage.getItem('rook-theme')).toBe('dark');
   });
 
   it('toggleTheme sets data-theme attribute on html', () => {
@@ -111,7 +111,7 @@ describe('theme store', () => {
   });
 
   it('initTheme reads from localStorage', () => {
-    localStorage.setItem('flock-theme', 'dark');
+    localStorage.setItem('rook-theme', 'dark');
     initTheme();
     expect(get(theme)).toBe('dark');
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
@@ -141,7 +141,7 @@ export const theme = writable('light');
 
 function applyTheme(value) {
   document.documentElement.setAttribute('data-theme', value);
-  localStorage.setItem('flock-theme', value);
+  localStorage.setItem('rook-theme', value);
 }
 
 export function toggleTheme() {
@@ -151,7 +151,7 @@ export function toggleTheme() {
 }
 
 export function initTheme() {
-  const stored = localStorage.getItem('flock-theme') || 'light';
+  const stored = localStorage.getItem('rook-theme') || 'light';
   theme.set(stored);
   applyTheme(stored);
 }
@@ -358,7 +358,7 @@ Replace the `<main>` section in `frontend/src/App.svelte` with the tabbed layout
         <div class="w-7 h-7 bg-primary rounded-lg flex items-center justify-center">
           <span class="text-primary-content text-sm font-bold">F</span>
         </div>
-        <span class="font-bold text-base-content">Flock</span>
+        <span class="font-bold text-base-content">Rook</span>
       </div>
       <div role="tablist" class="tabs tabs-bordered flex-1">
         <button role="tab" class="tab" class:tab-active={activeTab === 'sites'} on:click={() => activeTab = 'sites'}>Sites</button>
@@ -386,14 +386,14 @@ Replace the `<main>` section in `frontend/src/App.svelte` with the tabbed layout
 <ToastContainer />
 ```
 
-Note: The old `<section class="card bg-base-200 p-6">` wrappers and `<header>` with `<h1>Flock</h1>` are removed. The Sites/Services headings were in the old card sections — those will be handled in later tasks when we add section headers.
+Note: The old `<section class="card bg-base-200 p-6">` wrappers and `<header>` with `<h1>Rook</h1>` are removed. The Sites/Services headings were in the old card sections — those will be handled in later tasks when we add section headers.
 
 **Step 4: Update existing tests that rely on old layout**
 
-Some existing tests may query for elements that were in the old layout (e.g., the "Flock" heading as `<h1>`). Update any selectors that break. The key change: the sites and services sections are no longer both visible at once — tests that check for both will need the tab to be switched.
+Some existing tests may query for elements that were in the old layout (e.g., the "Rook" heading as `<h1>`). Update any selectors that break. The key change: the sites and services sections are no longer both visible at once — tests that check for both will need the tab to be switched.
 
 Review each failing test and fix selectors. Common fixes:
-- Old `<h1>Flock</h1>` is now a `<span>` in the header — update any queries for it
+- Old `<h1>Rook</h1>` is now a `<span>` in the header — update any queries for it
 - Services-related tests need `activeTab = 'services'` — but since services tests are in `ServiceList.test.js` (rendered independently), they should still work
 - `App.test.js` tests that check for service behavior may need to click the Services tab first
 
@@ -746,7 +746,7 @@ Update `frontend/src/SiteList.svelte` to include:
 - Import SiteCard
 
 The component should:
-- Add `let searchQuery = ''` and `let viewMode` initialized from `localStorage.getItem('flock-view') || 'table'`
+- Add `let searchQuery = ''` and `let viewMode` initialized from `localStorage.getItem('rook-view') || 'table'`
 - Filter sites: `$: filtered = sites.filter(s => s.domain.toLowerCase().includes(searchQuery.toLowerCase()) || s.path.toLowerCase().includes(searchQuery.toLowerCase()))`
 - Toggle between table and card grid with `viewMode`
 - Save viewMode to localStorage on change

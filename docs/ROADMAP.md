@@ -36,7 +36,7 @@ A cross-platform, open-source local development environment manager. Inspired by
 
 ### Phase 1 — Foundation
 
-Architecture design: `docs/plans/2026-03-03-flock-core-design.md`
+Architecture design: `docs/plans/2026-03-03-rook-core-design.md`
 
 - [x] Project scaffold (Go + Wails + CI) — See: docs/tasks/001-scaffold.md
 - [x] Site registry — See: docs/tasks/002-site-registry.md
@@ -72,4 +72,4 @@ Architecture design: `docs/plans/2026-03-03-flock-core-design.md`
 ### Future — Potential
 
 - [ ] rook-sdk (Go library for plugin authors — handles JSON-RPC boilerplate)
-- [x] rook-cli (CLI for managing sites, services, and plugins without the GUI) — See: docs/plans/2026-03-08-flock-cli-design.md
+- [x] rook-cli (CLI for managing sites, services, and plugins without the GUI) — See: docs/plans/2026-03-08-rook-cli-design.md

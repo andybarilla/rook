@@ -30,9 +30,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/andybarilla/flock/internal/core"
-	"github.com/andybarilla/flock/internal/plugin"
-	"github.com/andybarilla/flock/internal/registry"
+	"github.com/andybarilla/rook/internal/core"
+	"github.com/andybarilla/rook/internal/plugin"
+	"github.com/andybarilla/rook/internal/registry"
 )
 
 // --- Stubs ---
@@ -218,11 +218,11 @@ func TestPluginsReturnsInfo(t *testing.T) {
 	for _, p := range plugins {
 		ids[p.ID] = true
 	}
-	if !ids["flock-ssl"] {
-		t.Error("expected flock-ssl plugin")
+	if !ids["rook-ssl"] {
+		t.Error("expected rook-ssl plugin")
 	}
-	if !ids["flock-php"] {
-		t.Error("expected flock-php plugin")
+	if !ids["rook-php"] {
+		t.Error("expected rook-php plugin")
 	}
 }
 
@@ -297,11 +297,11 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/andybarilla/flock/internal/caddy"
-	"github.com/andybarilla/flock/internal/php"
-	"github.com/andybarilla/flock/internal/plugin"
-	"github.com/andybarilla/flock/internal/registry"
-	"github.com/andybarilla/flock/internal/ssl"
+	"github.com/andybarilla/rook/internal/caddy"
+	"github.com/andybarilla/rook/internal/php"
+	"github.com/andybarilla/rook/internal/plugin"
+	"github.com/andybarilla/rook/internal/registry"
+	"github.com/andybarilla/rook/internal/ssl"
 )
 
 type Config struct {
@@ -431,9 +431,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/andybarilla/flock/internal/config"
-	"github.com/andybarilla/flock/internal/core"
-	"github.com/andybarilla/flock/internal/registry"
+	"github.com/andybarilla/rook/internal/config"
+	"github.com/andybarilla/rook/internal/core"
+	"github.com/andybarilla/rook/internal/registry"
 )
 
 // App struct
@@ -458,7 +458,7 @@ func (a *App) startup(ctx context.Context) {
 	if err != nil {
 		logFile = os.Stderr
 	}
-	logger := log.New(logFile, "[flock] ", log.LstdFlags)
+	logger := log.New(logFile, "[rook] ", log.LstdFlags)
 
 	cfg := core.Config{
 		SitesFile:   config.SitesFile(),
@@ -608,7 +608,7 @@ func main() {
 
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:  "flock",
+		Title:  "rook",
 		Width:  1024,
 		Height: 768,
 		AssetServer: &assetserver.Options{

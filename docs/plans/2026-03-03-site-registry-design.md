@@ -18,7 +18,7 @@ type Site struct {
 }
 ```
 
-Stored as a JSON array in `~/.config/flock/sites.json` (platform-aware via `config.SitesFile()`).
+Stored as a JSON array in `~/.config/rook/sites.json` (platform-aware via `config.SitesFile()`).
 
 ## Change Events
 
@@ -89,5 +89,5 @@ All TDD. ~12 tests:
 
 ## References
 
-- Architecture: `docs/plans/2026-03-03-flock-core-design.md` (Site Registry & Caddy Integration section)
-- Implementation plan: `docs/plans/2026-03-03-flock-core.md` (Task 2)
+- Architecture: `docs/plans/2026-03-03-rook-core-design.md` (Site Registry & Caddy Integration section)
+- Implementation plan: `docs/plans/2026-03-03-rook-core.md` (Task 2)

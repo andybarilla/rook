@@ -129,7 +129,7 @@ Run full test suite, create task file, update roadmap.
 
 - Design doc: `docs/plans/2026-03-04-rook-node-design.md`
 - Implementation plan: `docs/plans/2026-03-04-rook-node-plan.md`
-- Architecture: `docs/plans/2026-03-03-flock-core-design.md`
+- Architecture: `docs/plans/2026-03-03-rook-core-design.md`
 - Reference pattern: `internal/php/` (FPMRunner interface injection)
 
 ## Dependencies

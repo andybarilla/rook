@@ -1,10 +1,10 @@
-# flock-node Plugin Implementation Plan
+# rook-node Plugin Implementation Plan
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Add a built-in Node.js runtime plugin that manages per-site `npm start` processes with auto-assigned ports and HTTP reverse proxy upstream.
 
-**Architecture:** Mirror flock-php's pattern — a `NodeRunner` interface injected into a `Plugin` struct implementing `RuntimePlugin` + `ServicePlugin`. Each Node-enabled site gets a process on port 3100+. Caddy reverse-proxies HTTP traffic to it.
+**Architecture:** Mirror rook-php's pattern — a `NodeRunner` interface injected into a `Plugin` struct implementing `RuntimePlugin` + `ServicePlugin`. Each Node-enabled site gets a process on port 3100+. Caddy reverse-proxies HTTP traffic to it.
 
 **Tech Stack:** Go, standard library `os/exec`, existing plugin/registry interfaces.
 
@@ -93,9 +93,9 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/andybarilla/flock/internal/node"
-	"github.com/andybarilla/flock/internal/plugin"
-	"github.com/andybarilla/flock/internal/registry"
+	"github.com/andybarilla/rook/internal/node"
+	"github.com/andybarilla/rook/internal/plugin"
+	"github.com/andybarilla/rook/internal/registry"
 )
 
 // --- Mock NodeRunner ---
@@ -163,11 +163,11 @@ func (m *mockHost) Log(pluginID string, msg string, args ...any) {}
 
 func TestPluginIDAndName(t *testing.T) {
 	p := node.NewPlugin(newMockNodeRunner())
-	if p.ID() != "flock-node" {
-		t.Errorf("ID = %q, want flock-node", p.ID())
+	if p.ID() != "rook-node" {
+		t.Errorf("ID = %q, want rook-node", p.ID())
 	}
-	if p.Name() != "Flock Node" {
-		t.Errorf("Name = %q, want Flock Node", p.Name())
+	if p.Name() != "Rook Node" {
+		t.Errorf("Name = %q, want Rook Node", p.Name())
 	}
 }
 
@@ -396,8 +396,8 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/andybarilla/flock/internal/plugin"
-	"github.com/andybarilla/flock/internal/registry"
+	"github.com/andybarilla/rook/internal/plugin"
+	"github.com/andybarilla/rook/internal/registry"
 )
 
 type NodeRunner interface {
@@ -426,8 +426,8 @@ func NewPlugin(runner NodeRunner) *Plugin {
 	}
 }
 
-func (p *Plugin) ID() string   { return "flock-node" }
-func (p *Plugin) Name() string { return "Flock Node" }
+func (p *Plugin) ID() string   { return "rook-node" }
+func (p *Plugin) Name() string { return "Rook Node" }
 
 func (p *Plugin) Init(host plugin.Host) error {
 	p.host = host
@@ -532,7 +532,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/andybarilla/flock/internal/node"
+	"github.com/andybarilla/rook/internal/node"
 )
 
 func TestProcessRunnerStartAndStop(t *testing.T) {
@@ -833,7 +833,7 @@ Modify `internal/core/core.go`:
 
 Add import:
 ```go
-"github.com/andybarilla/flock/internal/node"
+"github.com/andybarilla/rook/internal/node"
 ```
 
 Add to `Config`:
@@ -865,14 +865,14 @@ nodePlugin: nodePlugin,
 Run: `go test ./internal/core/ -v`
 Expected: ALL PASS
 
-Note: `TestPluginsReturnsInfo` needs updating — it now expects 4 plugins (ssl, php, node, databases) instead of 3. Update the expected count and add `flock-node` check.
+Note: `TestPluginsReturnsInfo` needs updating — it now expects 4 plugins (ssl, php, node, databases) instead of 3. Update the expected count and add `rook-node` check.
 
 **Step 5: Update app.go**
 
 In `app.go`, add the node import and instantiate the process runner:
 
 ```go
-import "github.com/andybarilla/flock/internal/node"
+import "github.com/andybarilla/rook/internal/node"
 ```
 
 Add to the `cfg` in `startup()`:
@@ -889,7 +889,7 @@ Expected: ALL PASS
 
 ```bash
 git add internal/core/core.go internal/core/core_test.go app.go
-git commit -m "feat(core): wire flock-node plugin into core startup"
+git commit -m "feat(core): wire rook-node plugin into core startup"
 ```
 
 ---
@@ -932,12 +932,12 @@ git commit -m "feat(app): add NodeVersion parameter to AddSite"
 ### Task 6: Create task file and update roadmap
 
 **Files:**
-- Create: `docs/tasks/011-flock-node.md`
+- Create: `docs/tasks/011-rook-node.md`
 - Modify: `docs/ROADMAP.md`
 
 **Step 1: Create the task file**
 
-Create `docs/tasks/011-flock-node.md` following the `000-sample.md` template, referencing the design doc and listing all implementation steps with acceptance criteria.
+Create `docs/tasks/011-rook-node.md` following the `000-sample.md` template, referencing the design doc and listing all implementation steps with acceptance criteria.
 
 **Step 2: Update roadmap**
 
@@ -946,6 +946,6 @@ No roadmap changes yet — the task will be marked complete after the PR is merg
 **Step 3: Commit**
 
 ```bash
-git add docs/tasks/011-flock-node.md
-git commit -m "docs: add flock-node task file"
+git add docs/tasks/011-rook-node.md
+git commit -m "docs: add rook-node task file"
 ```

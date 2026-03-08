@@ -1,8 +1,8 @@
-# flock-ssl Plugin Design
+# rook-ssl Plugin Design
 
 ## Goal
 
-Provide automatic local TLS for Flock-managed sites using mkcert's Go library. Sites with `TLS: true` get trusted HTTPS certificates without manual setup.
+Provide automatic local TLS for Rook-managed sites using mkcert's Go library. Sites with `TLS: true` get trusted HTTPS certificates without manual setup.
 
 ## Architecture
 
@@ -34,7 +34,7 @@ type CertStore interface {
 
 **`ssl.Plugin`** — implements `plugin.ServicePlugin` + `caddy.CertProvider`:
 
-- `Init(host)` — creates cert directory at `~/.local/share/flock/certs/`, initializes mkcert CA (installs to system trust store)
+- `Init(host)` — creates cert directory at `~/.local/share/rook/certs/`, initializes mkcert CA (installs to system trust store)
 - `Start()` — iterates `host.Sites()`, generates certs for `TLS: true` sites missing certs
 - `Stop()` — no-op (certs persist on disk)
 - `CertPair(domain)` — returns `{certsDir}/{domain}.pem` and `{certsDir}/{domain}-key.pem`
@@ -63,5 +63,5 @@ Site with TLS=true added
 
 - Go 1.23
 - `github.com/FiloSottile/mkcert` Go library (embedded, no external binary)
-- Certs stored at `~/.local/share/flock/certs/`
+- Certs stored at `~/.local/share/rook/certs/`
 - CA stored at mkcert's default CAROOT location

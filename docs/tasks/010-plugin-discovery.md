@@ -183,7 +183,7 @@ Run full test suite, go vet, update roadmap.
 
 - Design doc: `docs/plans/2026-03-04-plugin-discovery-design.md`
 - Implementation plan: `docs/plans/2026-03-04-plugin-discovery.md`
-- Architecture: `docs/plans/2026-03-03-flock-core-design.md`
+- Architecture: `docs/plans/2026-03-03-rook-core-design.md`
 - Reference pattern: built-in plugins in `internal/php/`, `internal/ssl/`, `internal/databases/`
 
 ## Dependencies

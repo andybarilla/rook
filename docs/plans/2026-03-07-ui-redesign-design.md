@@ -27,7 +27,7 @@ A Figma Make prototype ("Multi-language Herd frontend") was created as visual in
 ## Layout & Navigation
 
 - Top tab bar with 3 tabs: Sites, Services, Settings
-- Small Flock logo/name on the left, tabs next to it
+- Small Rook logo/name on the left, tabs next to it
 - DaisyUI `tabs` component (bordered or lifted variant)
 - Active tab highlighted with purple accent
 - Simple reactive variable to show/hide sections (no routing library)

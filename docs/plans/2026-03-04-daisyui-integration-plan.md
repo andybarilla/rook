@@ -117,7 +117,7 @@ Replace the `<main>` template in `App.svelte`:
 ```svelte
 <main class="max-w-3xl mx-auto p-6 text-left">
   <header class="mb-8">
-    <h1 class="text-2xl font-bold">Flock</h1>
+    <h1 class="text-2xl font-bold">Rook</h1>
     <p class="text-sm text-base-content/60 mt-1">Local Development Environment</p>
   </header>
 

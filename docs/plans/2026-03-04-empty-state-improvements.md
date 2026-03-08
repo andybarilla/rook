@@ -333,11 +333,11 @@ With:
     message="No services available"
     subtitle="Install database plugins to manage MySQL, PostgreSQL, and Redis."
     actionLabel="Setup Guide"
-    on:action={() => window.open('https://github.com/andybarilla/flock#services', '_blank')}
+    on:action={() => window.open('https://github.com/andybarilla/rook#services', '_blank')}
   />
 ```
 
-Note: The docs URL (`https://github.com/andybarilla/flock#services`) is a placeholder. Update it when actual documentation exists.
+Note: The docs URL (`https://github.com/andybarilla/rook#services`) is a placeholder. Update it when actual documentation exists.
 
 **Step 2: Run all frontend tests to verify nothing is broken**
 
@@ -362,7 +362,7 @@ Expected: All tests PASS
 
 **Step 2: Run all Go tests**
 
-Run: `cd /home/andy/dev/andybarilla/flock && go test ./internal/... -v`
+Run: `cd /home/andy/dev/andybarilla/rook && go test ./internal/... -v`
 Expected: All 54+ tests PASS (no Go changes, just confirming nothing is broken)
 
 **Step 3: Final commit with any remaining changes**

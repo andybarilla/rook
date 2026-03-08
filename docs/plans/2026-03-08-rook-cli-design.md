@@ -1,10 +1,10 @@
-# flock-cli Design
+# rook-cli Design
 
-CLI interface for Flock — enables developer convenience and scripting automation without the GUI.
+CLI interface for Rook — enables developer convenience and scripting automation without the GUI.
 
 ## Goals
 
-- Quick commands for common tasks (`flock add .`, `flock list`, `flock start mysql`)
+- Quick commands for common tasks (`rook add .`, `rook list`, `rook start mysql`)
 - Scriptable output for automation (CI, dotfiles, shell aliases)
 - Single binary: no args launches GUI, subcommands run CLI
 
@@ -18,16 +18,16 @@ CLI interface for Flock — enables developer convenience and scripting automati
 
 | Command | Description | Example |
 |---------|-------------|---------|
-| `flock list` | List all sites | `flock list` |
-| `flock add <path>` | Add a site (infer domain) | `flock add .` |
-| `flock remove <domain>` | Remove a site | `flock remove myapp.test` |
-| `flock status` | Show all service statuses | `flock status` |
-| `flock start <service>` | Start a database service | `flock start mysql` |
-| `flock stop <service>` | Stop a database service | `flock stop redis` |
+| `rook list` | List all sites | `rook list` |
+| `rook add <path>` | Add a site (infer domain) | `rook add .` |
+| `rook remove <domain>` | Remove a site | `rook remove myapp.test` |
+| `rook status` | Show all service statuses | `rook status` |
+| `rook start <service>` | Start a database service | `rook start mysql` |
+| `rook stop <service>` | Stop a database service | `rook stop redis` |
 
 ### Flags
 
-- `flock add` accepts `--domain`, `--php`, `--node`, `--tls` to override defaults
+- `rook add` accepts `--domain`, `--php`, `--node`, `--tls` to override defaults
 - Global `--json` flag forces JSON output
 
 ### CLI Framework
@@ -43,28 +43,28 @@ Auto-detect TTY:
 Human output:
 
 ```
-$ flock list
+$ rook list
 DOMAIN          PATH                      PHP    NODE   TLS
 myapp.test      /home/user/projects/myapp  8.3           ✓
 api.test        /home/user/projects/api    8.2    20     ✓
 
-$ flock status
+$ rook status
 SERVICE     STATUS
 mysql       running
 postgresql  stopped
 redis       running
 
-$ flock add .
+$ rook add .
 ✓ Site "myapp.test" added (path: /home/user/projects/myapp)
 ```
 
 JSON output:
 
 ```
-$ flock list --json
+$ rook list --json
 [{"domain":"myapp.test","path":"/home/user/projects/myapp","php":"8.3","node":"","tls":true}]
 
-$ flock add . --json
+$ rook add . --json
 {"domain":"myapp.test","path":"/home/user/projects/myapp"}
 ```
 
@@ -103,12 +103,12 @@ The CLI reuses `internal/core.Core` directly — the same business logic layer t
 
 CLI always runs standalone, instantiating its own Core. File locking on the registry prevents corrupt writes if both GUI and CLI run simultaneously.
 
-File locking: add `flock(2)` advisory locking around registry reads/writes in `registry.go`. GUI picks up CLI changes on next registry read.
+File locking: add `rook(2)` advisory locking around registry reads/writes in `registry.go`. GUI picks up CLI changes on next registry read.
 
 ### Phase 2 (Future)
 
-- GUI writes a lock file (`~/.local/share/flock/flock.lock`) with PID on startup
-- GUI exposes a Unix socket (`~/.local/share/flock/flock.sock`)
+- GUI writes a lock file (`~/.local/share/rook/rook.lock`) with PID on startup
+- GUI exposes a Unix socket (`~/.local/share/rook/rook.sock`)
 - CLI checks lock file: if PID alive, connects via socket; otherwise runs standalone
 
 ## Testing

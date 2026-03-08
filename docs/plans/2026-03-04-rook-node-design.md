@@ -1,8 +1,8 @@
-# flock-node Plugin Design
+# rook-node Plugin Design
 
 ## Overview
 
-A built-in plugin for managing Node.js development servers. Mirrors the flock-php pattern — implements both `RuntimePlugin` and `ServicePlugin`. Each Node-enabled site gets its own `npm start` process on an auto-assigned port, with Caddy reverse-proxying HTTP traffic to it.
+A built-in plugin for managing Node.js development servers. Mirrors the rook-php pattern — implements both `RuntimePlugin` and `ServicePlugin`. Each Node-enabled site gets its own `npm start` process on an auto-assigned port, with Caddy reverse-proxying HTTP traffic to it.
 
 ## Site Registry Changes
 
@@ -85,7 +85,7 @@ Uses `os/exec.Command("npm", "start")` with:
 - Environment: `PORT=<assigned_port>`
 - Stores `*exec.Cmd` handles in a map keyed by site directory
 
-No process supervision — if an app crashes, it stays down until manually restarted from the GUI or Flock restarts.
+No process supervision — if an app crashes, it stays down until manually restarted from the GUI or Rook restarts.
 
 ## Port Assignment
 
@@ -125,7 +125,7 @@ No Caddy changes needed. `ResolveUpstream(site)` returns the first matching plug
 
 ## Testing Strategy
 
-TDD with mock runner and host, mirroring flock-php test patterns.
+TDD with mock runner and host, mirroring rook-php test patterns.
 
 **Mock types:**
 - `mockNodeRunner` — tracks calls, configurable errors, reports running state

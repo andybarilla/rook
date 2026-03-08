@@ -1,8 +1,8 @@
-# flock-php Plugin Design
+# rook-php Plugin Design
 
 ## Goal
 
-Provide PHP-FPM pool management for Flock-managed sites. Sites with a `PHPVersion` set get routed through PHP-FPM via Caddy's reverse proxy.
+Provide PHP-FPM pool management for Rook-managed sites. Sites with a `PHPVersion` set get routed through PHP-FPM via Caddy's reverse proxy.
 
 ## Architecture
 
@@ -24,8 +24,8 @@ type FPMRunner interface {
 
 **`php.Plugin`** — implements `plugin.RuntimePlugin` + `plugin.ServicePlugin`:
 
-- `ID()` → `"flock-php"`
-- `Name()` → `"Flock PHP"`
+- `ID()` → `"rook-php"`
+- `Name()` → `"Rook PHP"`
 - `Init(host)` — stores host reference
 - `Start()` — scans `host.Sites()`, collects unique non-empty `PHPVersion` values, calls `runner.StartPool(version)` for each. Tracks running pools.
 - `Stop()` — stops all running pools via `runner.StopPool(version)`
@@ -49,7 +49,7 @@ Site added with PHPVersion="8.3"
 
 - Pool start failure → log warning, skip version (don't block other pools)
 - `UpstreamFor()` for non-running pool → returns error (Caddy falls back to file_server)
-- Plugin init/start failure → marked degraded by plugin manager, Flock continues
+- Plugin init/start failure → marked degraded by plugin manager, Rook continues
 
 ### Scope
 

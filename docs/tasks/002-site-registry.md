@@ -16,7 +16,7 @@ Implement the site registry — an in-memory + JSON-persisted store of local dev
 
 - Task 001 complete: Go + Wails scaffold with `internal/config` package providing `SitesFile()` path
 - No `internal/registry` package exists yet
-- Architecture design approved in `docs/plans/2026-03-03-flock-core-design.md`
+- Architecture design approved in `docs/plans/2026-03-03-rook-core-design.md`
 - Detailed design in `docs/plans/2026-03-03-site-registry-design.md`
 
 ## Target State
@@ -91,8 +91,8 @@ Implement the `Registry` struct with all methods: `New`, `Load`, `List`, `Get`, 
 ## Notes
 
 - Design doc: `docs/plans/2026-03-03-site-registry-design.md`
-- Architecture: `docs/plans/2026-03-03-flock-core-design.md`
-- Implementation reference: `docs/plans/2026-03-03-flock-core.md` (Task 2)
+- Architecture: `docs/plans/2026-03-03-rook-core-design.md`
+- Implementation reference: `docs/plans/2026-03-03-rook-core.md` (Task 2)
 - No concurrency — registry is single-goroutine (Wails main thread)
 
 ## Dependencies

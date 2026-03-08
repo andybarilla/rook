@@ -2,30 +2,30 @@
 
 ## Overview
 
-Enable Flock to load external plugins at startup. External plugins are standalone executables that communicate with Flock over JSON-RPC 2.0 on stdin/stdout. They implement the same capabilities as built-in plugins (runtime routing, service management) but run as child processes.
+Enable Rook to load external plugins at startup. External plugins are standalone executables that communicate with Rook over JSON-RPC 2.0 on stdin/stdout. They implement the same capabilities as built-in plugins (runtime routing, service management) but run as child processes.
 
 ## Discovery
 
-Flock scans `~/.config/flock/plugins/` (platform-aware via existing `config` package) at startup. Each subdirectory is a plugin containing a manifest and executable:
+Rook scans `~/.config/rook/plugins/` (platform-aware via existing `config` package) at startup. Each subdirectory is a plugin containing a manifest and executable:
 
 ```
-~/.config/flock/plugins/
-  flock-node/
+~/.config/rook/plugins/
+  rook-node/
     plugin.json
-    flock-node          # executable (flock-node.exe on Windows)
-  flock-ruby/
+    rook-node          # executable (rook-node.exe on Windows)
+  rook-ruby/
     plugin.json
-    flock-ruby
+    rook-ruby
 ```
 
 ### Manifest Format (`plugin.json`)
 
 ```json
 {
-  "id": "flock-node",
-  "name": "Flock Node",
+  "id": "rook-node",
+  "name": "Rook Node",
   "version": "0.1.0",
-  "executable": "flock-node",
+  "executable": "rook-node",
   "capabilities": ["runtime"],
   "minFlockVersion": "0.1.0"
 }
@@ -36,7 +36,7 @@ Flock scans `~/.config/flock/plugins/` (platform-aware via existing `config` pac
 - `version` — semver version string
 - `executable` — filename of the executable within the plugin directory
 - `capabilities` — array of `"runtime"` (handles site requests) and/or `"service"` (manages background services)
-- `minFlockVersion` — minimum compatible Flock version
+- `minFlockVersion` — minimum compatible Rook version
 
 ### Validation
 
@@ -53,7 +53,7 @@ The existing `Manager` sees no difference between built-in and external plugins.
 
 ## JSON-RPC Protocol
 
-Communication is JSON-RPC 2.0 over stdin/stdout. Flock sends requests, the plugin responds. Stderr is captured for logging.
+Communication is JSON-RPC 2.0 over stdin/stdout. Rook sends requests, the plugin responds. Stderr is captured for logging.
 
 ### Methods
 
@@ -70,9 +70,9 @@ Communication is JSON-RPC 2.0 over stdin/stdout. Flock sends requests, the plugi
 
 ### Lifecycle
 
-1. Flock spawns the process on `Init()` and sends `plugin.init`
+1. Rook spawns the process on `Init()` and sends `plugin.init`
 2. `Start()` / `Stop()` map directly to RPC calls
-3. On `Stop()`, after the RPC response, Flock sends SIGTERM and waits (with timeout) for the process to exit
+3. On `Stop()`, after the RPC response, Rook sends SIGTERM and waits (with timeout) for the process to exit
 4. If the process crashes unexpectedly, the plugin is marked degraded
 
 ### Error Handling
@@ -112,7 +112,7 @@ The existing `Manager.Plugins()` method returns status for all registered plugin
 
 ### Hot Reload
 
-Not in scope. Plugins are loaded at startup only. Restart Flock to pick up new plugins.
+Not in scope. Plugins are loaded at startup only. Restart Rook to pick up new plugins.
 
 ## Package Layout
 
@@ -139,6 +139,6 @@ The `plugin` package (interfaces) and `Manager` stay untouched.
 
 ## Future
 
-- **flock-sdk** — Go library for plugin authors that handles JSON-RPC boilerplate (see roadmap)
+- **rook-sdk** — Go library for plugin authors that handles JSON-RPC boilerplate (see roadmap)
 - **Hot reload** — detect new plugins without restart
 - **Plugin marketplace** — discovery and installation from a registry

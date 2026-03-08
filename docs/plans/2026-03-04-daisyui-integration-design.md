@@ -6,7 +6,7 @@
 
 ## Context
 
-The Flock frontend is a Svelte 3 app running under Wails (plain Vite, no SvelteKit). All styling is hand-written CSS (~200 lines across 4 components + global styles). As we add UI/UX improvements (error UX, form improvements, accessibility), a component library will accelerate development.
+The Rook frontend is a Svelte 3 app running under Wails (plain Vite, no SvelteKit). All styling is hand-written CSS (~200 lines across 4 components + global styles). As we add UI/UX improvements (error UX, form improvements, accessibility), a component library will accelerate development.
 
 DaisyUI was chosen because:
 - Pure CSS — no JS dependency, works with any Svelte version including 3.x

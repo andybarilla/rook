@@ -29,7 +29,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/andybarilla/flock/internal/registry"
+	"github.com/andybarilla/rook/internal/registry"
 )
 
 func tempFile(t *testing.T) string {

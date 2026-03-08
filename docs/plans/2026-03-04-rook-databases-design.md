@@ -1,11 +1,11 @@
-# flock-databases Plugin Design
+# rook-databases Plugin Design
 
 **Date:** 2026-03-04
 **Status:** Approved
 
 ## Overview
 
-The `flock-databases` plugin manages local database services (MySQL, PostgreSQL, Redis) as a single unified `ServicePlugin`. It starts, stops, and monitors database processes using binaries found on the system PATH.
+The `rook-databases` plugin manages local database services (MySQL, PostgreSQL, Redis) as a single unified `ServicePlugin`. It starts, stops, and monitors database processes using binaries found on the system PATH.
 
 ## Decisions
 
@@ -21,7 +21,7 @@ The `flock-databases` plugin manages local database services (MySQL, PostgreSQL,
 
 ### Unified Plugin (Approach 1)
 
-One `flock-databases` plugin implementing `ServicePlugin`, with an internal `DBRunner` interface abstracting the three database types. Follows the same pattern as `flock-php` with `FPMRunner`.
+One `rook-databases` plugin implementing `ServicePlugin`, with an internal `DBRunner` interface abstracting the three database types. Follows the same pattern as `rook-php` with `FPMRunner`.
 
 ### DBRunner Interface
 
@@ -65,7 +65,7 @@ type Plugin struct {
 ```
 
 **Lifecycle:**
-- `Init()` — loads config from `~/.config/flock/databases.json`, checks PATH for binaries
+- `Init()` — loads config from `~/.config/rook/databases.json`, checks PATH for binaries
 - `Start()` — starts all services marked as autostart (if enabled)
 - `Stop()` — stops all running services
 - `ServiceStatus()` — returns Running if any service is up, Stopped if none
@@ -77,7 +77,7 @@ type Plugin struct {
 
 ## Configuration
 
-**File:** `~/.config/flock/databases.json`
+**File:** `~/.config/rook/databases.json`
 
 ```json
 {
@@ -103,9 +103,9 @@ type Plugin struct {
 ```
 
 - **`enabled`**: Whether the binary was found on PATH (auto-detected)
-- **`autostart`**: Start when Flock starts (user-configured)
+- **`autostart`**: Start when Rook starts (user-configured)
 - **`port`**: Configurable to avoid conflicts with existing installations
-- **`dataDir`**: Defaults to `~/.local/share/flock/databases/{mysql,postgres,redis}/`
+- **`dataDir`**: Defaults to `~/.local/share/rook/databases/{mysql,postgres,redis}/`
 
 Missing config file → created with defaults. Missing binary → `enabled: false`, logged.
 
@@ -178,7 +178,7 @@ type ServiceInfo struct {
     Type      ServiceType
     Enabled   bool   // binary found on PATH
     Running   bool   // currently running
-    Autostart bool   // start with Flock
+    Autostart bool   // start with Rook
     Port      int    // configured port
 }
 ```
@@ -202,7 +202,7 @@ Follows existing dark theme and styling patterns. No autostart toggle in GUI —
 
 - Binary not found → `enabled: false`, logged, not an error
 - Process start failure → logged, service stays stopped, others unaffected
-- Process stop failure → logged, best-effort (don't block Flock shutdown)
+- Process stop failure → logged, best-effort (don't block Rook shutdown)
 - Data dir init failure → error from Start, service stays stopped
 - Config file missing → create with defaults
 - Config file corrupt → error from Init, plugin degraded

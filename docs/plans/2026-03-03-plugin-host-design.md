@@ -5,7 +5,7 @@
 
 ## Overview
 
-Plugin system for Flock: three plugin interfaces (`Plugin`, `RuntimePlugin`, `ServicePlugin`), a `Host` interface plugins receive for accessing core services, and a `Manager` that owns plugin lifecycle and upstream resolution.
+Plugin system for Rook: three plugin interfaces (`Plugin`, `RuntimePlugin`, `ServicePlugin`), a `Host` interface plugins receive for accessing core services, and a `Manager` that owns plugin lifecycle and upstream resolution.
 
 ## Package
 

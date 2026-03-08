@@ -92,8 +92,8 @@ CI workflow that runs `go test ./...` on all three platforms.
 
 ## Notes
 
-- Design doc: `docs/plans/2026-03-03-flock-core-design.md`
-- Detailed implementation reference: `docs/plans/2026-03-03-flock-core.md` (Task 1)
+- Design doc: `docs/plans/2026-03-03-rook-core-design.md`
+- Detailed implementation reference: `docs/plans/2026-03-03-rook-core.md` (Task 1)
 - Wails v2 requires `libgtk-3-dev libwebkit2gtk-4.0-dev` on Linux (handled in CI)
 
 ## Dependencies

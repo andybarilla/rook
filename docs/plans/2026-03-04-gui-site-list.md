@@ -388,7 +388,7 @@ Replace `frontend/src/App.svelte` with:
 
 <main>
   <header>
-    <h1>Flock</h1>
+    <h1>Rook</h1>
     <p class="subtitle">Local Development Environment</p>
   </header>
 

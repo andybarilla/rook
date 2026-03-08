@@ -152,7 +152,7 @@ Mark rook-databases as complete in `docs/ROADMAP.md`.
 
 - Design doc: `docs/plans/2026-03-04-rook-databases-design.md`
 - Implementation plan: `docs/plans/2026-03-04-rook-databases.md`
-- Architecture: `docs/plans/2026-03-03-flock-core-design.md`
+- Architecture: `docs/plans/2026-03-03-rook-core-design.md`
 - Reference plugin: `internal/php/php.go` (FPMRunner pattern)
 
 ## Dependencies

@@ -1,8 +1,8 @@
-# flock-cli Implementation Plan
+# rook-cli Implementation Plan
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Add CLI subcommands to the existing `flock` binary so users can manage sites and services from the terminal.
+**Goal:** Add CLI subcommands to the existing `rook` binary so users can manage sites and services from the terminal.
 
 **Architecture:** Single binary dispatch — `main.go` checks for subcommands and runs Cobra CLI handlers instead of launching the Wails GUI. CLI commands instantiate the same `core.Core` used by the GUI. Output auto-detects TTY for human-readable tables vs JSON.
 
@@ -32,7 +32,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/andybarilla/flock/internal/cli"
+	"github.com/andybarilla/rook/internal/cli"
 )
 
 func TestRootCommandShowsHelp(t *testing.T) {
@@ -46,8 +46,8 @@ func TestRootCommandShowsHelp(t *testing.T) {
 	}
 
 	out := buf.String()
-	if !bytes.Contains([]byte(out), []byte("flock")) {
-		t.Errorf("help output missing 'flock': %s", out)
+	if !bytes.Contains([]byte(out), []byte("rook")) {
+		t.Errorf("help output missing 'rook': %s", out)
 	}
 }
 
@@ -86,9 +86,9 @@ var jsonOutput bool
 
 func NewRootCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "flock",
-		Short: "Flock — local development environment manager",
-		Long:  "Flock manages local development sites, SSL, PHP, Node, and database services.",
+		Use:   "rook",
+		Short: "Rook — local development environment manager",
+		Long:  "Rook manages local development sites, SSL, PHP, Node, and database services.",
 		SilenceUsage: true,
 	}
 
@@ -119,7 +119,7 @@ import (
 	"embed"
 	"os"
 
-	"github.com/andybarilla/flock/internal/cli"
+	"github.com/andybarilla/rook/internal/cli"
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
@@ -136,7 +136,7 @@ func main() {
 
 	app := NewApp()
 	err := wails.Run(&options.App{
-		Title:  "flock",
+		Title:  "rook",
 		Width:  1024,
 		Height: 768,
 		AssetServer: &assetserver.Options{
@@ -188,7 +188,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/andybarilla/flock/internal/cli"
+	"github.com/andybarilla/rook/internal/cli"
 )
 
 func TestFormatTable(t *testing.T) {
@@ -331,7 +331,7 @@ package cli_test
 import (
 	"testing"
 
-	"github.com/andybarilla/flock/internal/cli"
+	"github.com/andybarilla/rook/internal/cli"
 )
 
 func TestNewCoreReturnsNonNil(t *testing.T) {
@@ -376,10 +376,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/andybarilla/flock/internal/config"
-	"github.com/andybarilla/flock/internal/core"
-	"github.com/andybarilla/flock/internal/databases"
-	"github.com/andybarilla/flock/internal/node"
+	"github.com/andybarilla/rook/internal/config"
+	"github.com/andybarilla/rook/internal/core"
+	"github.com/andybarilla/rook/internal/databases"
+	"github.com/andybarilla/rook/internal/node"
 )
 
 // NewCore creates a Core instance with production config, identical to the GUI.
@@ -391,7 +391,7 @@ func NewCore() (*core.Core, func(), error) {
 	if err != nil {
 		logFile = os.Stderr
 	}
-	logger := log.New(logFile, "[flock-cli] ", log.LstdFlags)
+	logger := log.New(logFile, "[rook-cli] ", log.LstdFlags)
 
 	cfg := core.Config{
 		SitesFile:    config.SitesFile(),
@@ -455,7 +455,7 @@ git commit -m "feat(cli): add core factory for CLI commands"
 
 ---
 
-### Task 4: `flock list` command
+### Task 4: `rook list` command
 
 **Files:**
 - Create: `internal/cli/sites.go`
@@ -473,8 +473,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/andybarilla/flock/internal/cli"
-	"github.com/andybarilla/flock/internal/registry"
+	"github.com/andybarilla/rook/internal/cli"
+	"github.com/andybarilla/rook/internal/registry"
 )
 
 func TestListCmdTable(t *testing.T) {
@@ -560,7 +560,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/andybarilla/flock/internal/registry"
+	"github.com/andybarilla/rook/internal/registry"
 	"github.com/spf13/cobra"
 )
 
@@ -704,9 +704,9 @@ Update `internal/cli/root.go` — add subcommands in `NewRootCmd()`:
 ```go
 func NewRootCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "flock",
-		Short: "Flock — local development environment manager",
-		Long:  "Flock manages local development sites, SSL, PHP, Node, and database services.",
+		Use:   "rook",
+		Short: "Rook — local development environment manager",
+		Long:  "Rook manages local development sites, SSL, PHP, Node, and database services.",
 		SilenceUsage: true,
 	}
 
@@ -734,7 +734,7 @@ git commit -m "feat(cli): add list, add, and remove site commands"
 
 ---
 
-### Task 5: `flock add` and `flock remove` tests
+### Task 5: `rook add` and `rook remove` tests
 
 **Files:**
 - Modify: `internal/cli/sites_test.go`
@@ -806,7 +806,7 @@ git commit -m "test(cli): add rendering tests for add and remove commands"
 
 ---
 
-### Task 6: `flock status`, `flock start`, `flock stop` commands
+### Task 6: `rook status`, `rook start`, `rook stop` commands
 
 **Files:**
 - Create: `internal/cli/services.go`
@@ -824,8 +824,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/andybarilla/flock/internal/cli"
-	"github.com/andybarilla/flock/internal/databases"
+	"github.com/andybarilla/rook/internal/cli"
+	"github.com/andybarilla/rook/internal/databases"
 )
 
 func TestRenderServiceStatus(t *testing.T) {
@@ -895,7 +895,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/andybarilla/flock/internal/databases"
+	"github.com/andybarilla/rook/internal/databases"
 	"github.com/spf13/cobra"
 )
 
@@ -1117,10 +1117,10 @@ func (r *Registry) withFileLock(fn func() error) error {
 	}
 	defer f.Close()
 
-	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
+	if err := syscall.Rook(int(f.Fd()), syscall.LOCK_EX); err != nil {
 		return fmt.Errorf("acquire lock: %w", err)
 	}
-	defer syscall.Flock(int(f.Fd()), syscall.LOCK_UN)
+	defer syscall.Rook(int(f.Fd()), syscall.LOCK_UN)
 
 	return fn()
 }
@@ -1161,7 +1161,7 @@ func (r *Registry) Add(s Site) error {
 
 Rename existing `save()` to `saveToDisk()` (internal, no lock) and add `loadFromDisk()` (internal, no lock). The public `Load()` method should also use `withFileLock`.
 
-**Important:** `syscall.Flock` is Unix-only. For Windows compatibility, use `golang.org/x/sys/windows` or a build-tag approach. For Phase 1, Unix-only locking is acceptable since the primary targets are Linux and macOS. Add a `//go:build !windows` tag and a no-op `registry_lock_windows.go` stub.
+**Important:** `syscall.Rook` is Unix-only. For Windows compatibility, use `golang.org/x/sys/windows` or a build-tag approach. For Phase 1, Unix-only locking is acceptable since the primary targets are Linux and macOS. Add a `//go:build !windows` tag and a no-op `registry_lock_windows.go` stub.
 
 **Step 4: Run concurrent test to verify it passes**
 
@@ -1194,27 +1194,27 @@ Expected: All PASS
 
 **Step 2: Manual smoke test**
 
-Run: `go build -tags webkit2_41 -o /tmp/flock-test .`
+Run: `go build -tags webkit2_41 -o /tmp/rook-test .`
 
 Then test:
 ```bash
-/tmp/flock-test list
-/tmp/flock-test status
-/tmp/flock-test --help
-/tmp/flock-test list --json
-/tmp/flock-test list | cat   # should output JSON (piped)
+/tmp/rook-test list
+/tmp/rook-test status
+/tmp/rook-test --help
+/tmp/rook-test list --json
+/tmp/rook-test list | cat   # should output JSON (piped)
 ```
 
 **Step 3: Update ROADMAP.md**
 
 Mark the CLI item as complete:
 ```markdown
-- [x] flock-cli (CLI for managing sites, services, and plugins without the GUI) — See: docs/plans/2026-03-08-flock-cli-design.md
+- [x] rook-cli (CLI for managing sites, services, and plugins without the GUI) — See: docs/plans/2026-03-08-rook-cli-design.md
 ```
 
 **Step 4: Commit**
 
 ```bash
 git add docs/ROADMAP.md
-git commit -m "docs: mark flock-cli as complete in roadmap"
+git commit -m "docs: mark rook-cli as complete in roadmap"
 ```

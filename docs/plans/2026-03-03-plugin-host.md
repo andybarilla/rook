@@ -30,8 +30,8 @@ import (
 	"log"
 	"testing"
 
-	"github.com/andybarilla/flock/internal/plugin"
-	"github.com/andybarilla/flock/internal/registry"
+	"github.com/andybarilla/rook/internal/plugin"
+	"github.com/andybarilla/rook/internal/registry"
 )
 
 // --- Mock SiteSource ---
@@ -328,7 +328,7 @@ Create `internal/plugin/plugin.go`:
 package plugin
 
 import (
-	"github.com/andybarilla/flock/internal/registry"
+	"github.com/andybarilla/rook/internal/registry"
 )
 
 type Plugin interface {
@@ -396,7 +396,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/andybarilla/flock/internal/registry"
+	"github.com/andybarilla/rook/internal/registry"
 )
 
 type pluginEntry struct {

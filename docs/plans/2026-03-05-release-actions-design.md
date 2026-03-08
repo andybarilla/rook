@@ -10,9 +10,9 @@ Three parallel build jobs using `wails build`:
 
 | Platform | Runner | Output | Archive |
 |----------|--------|--------|---------|
-| Linux | `ubuntu-latest` | `flock` binary | `flock-linux-amd64.tar.gz` |
-| macOS | `macos-latest` | `flock.app` bundle | `flock-darwin-amd64.tar.gz` |
-| Windows | `windows-latest` | `flock.exe` | `flock-windows-amd64.zip` |
+| Linux | `ubuntu-latest` | `rook` binary | `rook-linux-amd64.tar.gz` |
+| macOS | `macos-latest` | `rook.app` bundle | `rook-darwin-amd64.tar.gz` |
+| Windows | `windows-latest` | `rook.exe` | `rook-windows-amd64.zip` |
 
 Each build job:
 

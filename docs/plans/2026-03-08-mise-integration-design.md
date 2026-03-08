@@ -6,7 +6,7 @@
 
 ## Context
 
-Flock currently assumes language runtimes (PHP, Node.js) are pre-installed on the system. Users must manually install the correct versions and manually specify them when adding sites. [mise](https://mise.jdx.dev) is a polyglot runtime version manager that handles installation and version switching for PHP, Node, Python, Ruby, Go, and hundreds of other tools.
+Rook currently assumes language runtimes (PHP, Node.js) are pre-installed on the system. Users must manually install the correct versions and manually specify them when adding sites. [mise](https://mise.jdx.dev) is a polyglot runtime version manager that handles installation and version switching for PHP, Node, Python, Ruby, Go, and hundreds of other tools.
 
 This design integrates mise as an optional runtime backend — using it when available, falling back to current system PATH behavior when not.
 
@@ -18,7 +18,7 @@ This design integrates mise as an optional runtime backend — using it when ava
 | Availability | Graceful degradation | Use mise if present, fall back to system binaries if not |
 | Version detection | Auto-detect with override | Scan project config files, pre-fill form, user can change |
 | Runtime installation | Explicit user action | Show warning + Install button; no silent downloads |
-| Supported runtimes | PHP + Node only | Only runtimes with existing Flock plugins |
+| Supported runtimes | PHP + Node only | Only runtimes with existing Rook plugins |
 | Settings UI | Status indicator only | Show mise detected/not-found; no full runtime manager |
 
 ## RuntimeResolver (internal/mise/)
@@ -143,8 +143,8 @@ No runtime listing or version management UI in Settings.
 
 ## What's Not Included
 
-- Python, Ruby, Go runtime support (no Flock plugins for these yet)
+- Python, Ruby, Go runtime support (no Rook plugins for these yet)
 - Full runtime manager UI in Settings (premature without more plugins)
 - Auto-installation of runtimes (user must click Install)
-- Bundling/embedding mise in Flock (users install it themselves)
-- mise configuration management (Flock reads but doesn't write mise config)
+- Bundling/embedding mise in Rook (users install it themselves)
+- mise configuration management (Rook reads but doesn't write mise config)

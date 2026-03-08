@@ -2,7 +2,7 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Add dismissable toast notifications, loading states, skeleton loading, and friendly error messages to the Flock frontend.
+**Goal:** Add dismissable toast notifications, loading states, skeleton loading, and friendly error messages to the Rook frontend.
 
 **Architecture:** Frontend-only changes using a shared Svelte writable store for notifications, a ToastContainer component rendering DaisyUI toasts, per-component loading booleans with disabled buttons/spinners, and a simple error message mapper. See `docs/plans/2026-03-04-error-ux-design.md` for full design.
 
@@ -422,7 +422,7 @@ Replace the entire content of `frontend/src/App.svelte` with:
 
 <main class="max-w-3xl mx-auto px-6 py-8 text-left">
   <header class="mb-8">
-    <h1 class="text-2xl font-bold m-0">Flock</h1>
+    <h1 class="text-2xl font-bold m-0">Rook</h1>
     <p class="text-base-content/50 mt-1 text-sm">Local Development Environment</p>
   </header>
 

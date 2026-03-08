@@ -1,10 +1,10 @@
-# flock-databases Plugin Implementation Plan
+# rook-databases Plugin Implementation Plan
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Add a databases plugin that manages MySQL, PostgreSQL, and Redis processes with start/stop/status control and a basic GUI services panel.
 
-**Architecture:** Unified `flock-databases` ServicePlugin with a `DBRunner` interface (same pattern as flock-php's `FPMRunner`). Config persisted in `databases.json`. Concrete `ProcessRunner` uses `os/exec` to manage database daemons. GUI adds a "Services" section with start/stop buttons.
+**Architecture:** Unified `rook-databases` ServicePlugin with a `DBRunner` interface (same pattern as rook-php's `FPMRunner`). Config persisted in `databases.json`. Concrete `ProcessRunner` uses `os/exec` to manage database daemons. GUI adds a "Services" section with start/stop buttons.
 
 **Tech Stack:** Go 1.23, Wails v2, Svelte, os/exec for process management
 
@@ -92,7 +92,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/andybarilla/flock/internal/databases"
+	"github.com/andybarilla/rook/internal/databases"
 )
 
 func TestDefaultConfig(t *testing.T) {
@@ -238,7 +238,7 @@ func (c *Config) SetEnabled(svc ServiceType, enabled bool) {
 }
 
 // DefaultConfig returns a Config with sensible defaults.
-// dataRoot is the base directory for database data (e.g. ~/.local/share/flock/databases).
+// dataRoot is the base directory for database data (e.g. ~/.local/share/rook/databases).
 func DefaultConfig(dataRoot string) Config {
 	return Config{
 		MySQL: SvcConfig{
@@ -327,9 +327,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/andybarilla/flock/internal/databases"
-	"github.com/andybarilla/flock/internal/plugin"
-	"github.com/andybarilla/flock/internal/registry"
+	"github.com/andybarilla/rook/internal/databases"
+	"github.com/andybarilla/rook/internal/plugin"
+	"github.com/andybarilla/rook/internal/registry"
 )
 
 // --- Mock DBRunner ---
@@ -412,11 +412,11 @@ func TestPluginIDAndName(t *testing.T) {
 	configPath, dataDir := tmpConfigDir(t)
 	p := databases.NewPlugin(runner, configPath, dataDir)
 
-	if p.ID() != "flock-databases" {
-		t.Errorf("ID = %q, want flock-databases", p.ID())
+	if p.ID() != "rook-databases" {
+		t.Errorf("ID = %q, want rook-databases", p.ID())
 	}
-	if p.Name() != "Flock Databases" {
-		t.Errorf("Name = %q, want Flock Databases", p.Name())
+	if p.Name() != "Rook Databases" {
+		t.Errorf("Name = %q, want Rook Databases", p.Name())
 	}
 }
 
@@ -644,7 +644,7 @@ Expected: FAIL — `databases.NewPlugin`, `Plugin` methods not defined
 package databases
 
 import (
-	"github.com/andybarilla/flock/internal/plugin"
+	"github.com/andybarilla/rook/internal/plugin"
 )
 
 // Plugin manages MySQL, PostgreSQL, and Redis services.
@@ -669,8 +669,8 @@ func NewPlugin(runner DBRunner, configPath, dataRoot string) *Plugin {
 	}
 }
 
-func (p *Plugin) ID() string   { return "flock-databases" }
-func (p *Plugin) Name() string { return "Flock Databases" }
+func (p *Plugin) ID() string   { return "rook-databases" }
+func (p *Plugin) Name() string { return "Rook Databases" }
 
 func (p *Plugin) Init(host plugin.Host) error {
 	p.host = host
@@ -788,7 +788,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/andybarilla/flock/internal/databases"
+	"github.com/andybarilla/rook/internal/databases"
 )
 
 func TestProcessRunnerStatusStoppedByDefault(t *testing.T) {
@@ -1166,8 +1166,8 @@ func TestPluginsIncludesDatabases(t *testing.T) {
 	for _, p := range plugins {
 		ids[p.ID] = true
 	}
-	if !ids["flock-databases"] {
-		t.Error("expected flock-databases plugin")
+	if !ids["rook-databases"] {
+		t.Error("expected rook-databases plugin")
 	}
 }
 ```
@@ -1181,7 +1181,7 @@ Expected: FAIL — `core.Config` doesn't have `DBRunner` field
 
 Modify `internal/core/core.go`:
 
-Add import: `"github.com/andybarilla/flock/internal/databases"`
+Add import: `"github.com/andybarilla/rook/internal/databases"`
 
 Update `Config`:
 ```go
@@ -1254,7 +1254,7 @@ git commit -m "feat(core): integrate databases plugin"
 
 **Step 1: Update App with database bindings**
 
-Add import: `"github.com/andybarilla/flock/internal/databases"`
+Add import: `"github.com/andybarilla/rook/internal/databases"`
 
 In `startup()`, update the `core.Config` to include:
 ```go
@@ -1625,16 +1625,16 @@ Expected: success
 
 Change:
 ```
-- [ ] flock-databases plugin (MySQL, PostgreSQL, Redis)
+- [ ] rook-databases plugin (MySQL, PostgreSQL, Redis)
 ```
 To:
 ```
-- [x] flock-databases plugin (MySQL, PostgreSQL, Redis) — See: docs/tasks/009-flock-databases.md
+- [x] rook-databases plugin (MySQL, PostgreSQL, Redis) — See: docs/tasks/009-rook-databases.md
 ```
 
 **Step 2: Commit**
 
 ```bash
 git add docs/ROADMAP.md
-git commit -m "docs: mark flock-databases as complete in roadmap"
+git commit -m "docs: mark rook-databases as complete in roadmap"
 ```

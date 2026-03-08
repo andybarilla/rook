@@ -2,9 +2,9 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Enable Flock to discover and load external plugins at startup via convention-based directory scanning and JSON-RPC 2.0 subprocess communication.
+**Goal:** Enable Rook to discover and load external plugins at startup via convention-based directory scanning and JSON-RPC 2.0 subprocess communication.
 
-**Architecture:** External plugins are standalone executables in `~/.config/flock/plugins/<name>/`. Each has a `plugin.json` manifest declaring capabilities. An `ExternalPlugin` adapter struct proxies the existing `Plugin`/`RuntimePlugin`/`ServicePlugin` interfaces to the subprocess over JSON-RPC 2.0 on stdin/stdout. The existing Manager sees no difference between built-in and external plugins.
+**Architecture:** External plugins are standalone executables in `~/.config/rook/plugins/<name>/`. Each has a `plugin.json` manifest declaring capabilities. An `ExternalPlugin` adapter struct proxies the existing `Plugin`/`RuntimePlugin`/`ServicePlugin` interfaces to the subprocess over JSON-RPC 2.0 on stdin/stdout. The existing Manager sees no difference between built-in and external plugins.
 
 **Tech Stack:** Go stdlib only (encoding/json, os/exec, bufio, context). No new dependencies.
 
@@ -21,15 +21,15 @@
 ```go
 func TestPluginsDir(t *testing.T) {
 	dir := config.PluginsDir()
-	if !strings.HasSuffix(dir, filepath.Join("flock", "plugins")) {
-		t.Fatalf("PluginsDir() = %q, want suffix flock/plugins", dir)
+	if !strings.HasSuffix(dir, filepath.Join("rook", "plugins")) {
+		t.Fatalf("PluginsDir() = %q, want suffix rook/plugins", dir)
 	}
 }
 ```
 
 **Step 2: Run test to verify it fails**
 
-Run: `cd /home/andy/dev/andybarilla/flock.git/agent-1 && go test ./internal/config/ -run TestPluginsDir -v`
+Run: `cd /home/andy/dev/andybarilla/rook.git/agent-1 && go test ./internal/config/ -run TestPluginsDir -v`
 Expected: FAIL — `PluginsDir` not defined
 
 **Step 3: Write minimal implementation**
@@ -44,7 +44,7 @@ func PluginsDir() string {
 
 **Step 4: Run test to verify it passes**
 
-Run: `cd /home/andy/dev/andybarilla/flock.git/agent-1 && go test ./internal/config/ -run TestPluginsDir -v`
+Run: `cd /home/andy/dev/andybarilla/rook.git/agent-1 && go test ./internal/config/ -run TestPluginsDir -v`
 Expected: PASS
 
 **Step 5: Commit**
@@ -96,20 +96,20 @@ func TestScanNonexistentDir(t *testing.T) {
 
 func TestScanValidPlugin(t *testing.T) {
 	dir := t.TempDir()
-	pluginDir := filepath.Join(dir, "flock-node")
+	pluginDir := filepath.Join(dir, "rook-node")
 	os.MkdirAll(pluginDir, 0o755)
 
 	manifest := `{
-		"id": "flock-node",
-		"name": "Flock Node",
+		"id": "rook-node",
+		"name": "Rook Node",
 		"version": "0.1.0",
-		"executable": "flock-node",
+		"executable": "rook-node",
 		"capabilities": ["runtime"]
 	}`
 	os.WriteFile(filepath.Join(pluginDir, "plugin.json"), []byte(manifest), 0o644)
 
 	// Create a fake executable
-	exePath := filepath.Join(pluginDir, "flock-node")
+	exePath := filepath.Join(pluginDir, "rook-node")
 	os.WriteFile(exePath, []byte("#!/bin/sh\n"), 0o755)
 
 	manifests, errs := Scan(dir)
@@ -120,11 +120,11 @@ func TestScanValidPlugin(t *testing.T) {
 		t.Fatalf("expected 1 manifest, got %d", len(manifests))
 	}
 	m := manifests[0]
-	if m.ID != "flock-node" {
-		t.Errorf("ID = %q, want flock-node", m.ID)
+	if m.ID != "rook-node" {
+		t.Errorf("ID = %q, want rook-node", m.ID)
 	}
-	if m.Name != "Flock Node" {
-		t.Errorf("Name = %q, want Flock Node", m.Name)
+	if m.Name != "Rook Node" {
+		t.Errorf("Name = %q, want Rook Node", m.Name)
 	}
 	if m.ExePath != exePath {
 		t.Errorf("ExePath = %q, want %q", m.ExePath, exePath)
@@ -211,7 +211,7 @@ func TestScanMultiplePlugins(t *testing.T) {
 
 **Step 2: Run tests to verify they fail**
 
-Run: `cd /home/andy/dev/andybarilla/flock.git/agent-1 && go test ./internal/discovery/ -v`
+Run: `cd /home/andy/dev/andybarilla/rook.git/agent-1 && go test ./internal/discovery/ -v`
 Expected: FAIL — package doesn't exist
 
 **Step 3: Write implementation**
@@ -310,7 +310,7 @@ func validate(m PluginManifest) error {
 
 **Step 4: Run tests to verify they pass**
 
-Run: `cd /home/andy/dev/andybarilla/flock.git/agent-1 && go test ./internal/discovery/ -v`
+Run: `cd /home/andy/dev/andybarilla/rook.git/agent-1 && go test ./internal/discovery/ -v`
 Expected: PASS (all 7 tests)
 
 **Step 5: Commit**
@@ -397,7 +397,7 @@ func TestRPCClientCallNilResult(t *testing.T) {
 
 **Step 2: Run tests to verify they fail**
 
-Run: `cd /home/andy/dev/andybarilla/flock.git/agent-1 && go test ./internal/external/ -run TestRPC -v`
+Run: `cd /home/andy/dev/andybarilla/rook.git/agent-1 && go test ./internal/external/ -run TestRPC -v`
 Expected: FAIL — package doesn't exist
 
 **Step 3: Write implementation**
@@ -493,7 +493,7 @@ func (c *rpcClient) Call(method string, params any, result any) error {
 
 **Step 4: Run tests to verify they pass**
 
-Run: `cd /home/andy/dev/andybarilla/flock.git/agent-1 && go test ./internal/external/ -run TestRPC -v`
+Run: `cd /home/andy/dev/andybarilla/rook.git/agent-1 && go test ./internal/external/ -run TestRPC -v`
 Expected: PASS (all 3 tests)
 
 **Step 5: Commit**
@@ -524,9 +524,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/andybarilla/flock/internal/discovery"
-	"github.com/andybarilla/flock/internal/plugin"
-	"github.com/andybarilla/flock/internal/registry"
+	"github.com/andybarilla/rook/internal/discovery"
+	"github.com/andybarilla/rook/internal/plugin"
+	"github.com/andybarilla/rook/internal/registry"
 )
 
 // mockProcess simulates a plugin subprocess
@@ -594,16 +594,16 @@ func (p *pipeProcess) Wait() error             { return nil }
 
 func TestExternalPluginIDAndName(t *testing.T) {
 	manifest := discovery.PluginManifest{
-		ID:           "flock-node",
-		Name:         "Flock Node",
+		ID:           "rook-node",
+		Name:         "Rook Node",
 		Capabilities: []string{"runtime"},
 	}
 	p := NewPlugin(manifest, nil)
-	if p.ID() != "flock-node" {
-		t.Errorf("ID() = %q, want flock-node", p.ID())
+	if p.ID() != "rook-node" {
+		t.Errorf("ID() = %q, want rook-node", p.ID())
 	}
-	if p.Name() != "Flock Node" {
-		t.Errorf("Name() = %q, want Flock Node", p.Name())
+	if p.Name() != "Rook Node" {
+		t.Errorf("Name() = %q, want Rook Node", p.Name())
 	}
 }
 
@@ -758,7 +758,7 @@ func (h *mockHost) Log(pluginID string, msg string, args ...any)  {}
 
 **Step 2: Run tests to verify they fail**
 
-Run: `cd /home/andy/dev/andybarilla/flock.git/agent-1 && go test ./internal/external/ -v`
+Run: `cd /home/andy/dev/andybarilla/rook.git/agent-1 && go test ./internal/external/ -v`
 Expected: FAIL — types not defined
 
 **Step 3: Write implementation**
@@ -770,9 +770,9 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/andybarilla/flock/internal/discovery"
-	"github.com/andybarilla/flock/internal/plugin"
-	"github.com/andybarilla/flock/internal/registry"
+	"github.com/andybarilla/rook/internal/discovery"
+	"github.com/andybarilla/rook/internal/plugin"
+	"github.com/andybarilla/rook/internal/registry"
 )
 
 // Process represents a running plugin subprocess.
@@ -889,7 +889,7 @@ func (p *ExternalPlugin) StopService() error {
 
 **Step 4: Run tests to verify they pass**
 
-Run: `cd /home/andy/dev/andybarilla/flock.git/agent-1 && go test ./internal/external/ -v`
+Run: `cd /home/andy/dev/andybarilla/rook.git/agent-1 && go test ./internal/external/ -v`
 Expected: PASS (all tests)
 
 **Step 5: Commit**
@@ -952,7 +952,7 @@ echo '{"jsonrpc":"2.0","id":1,"result":{}}'
 
 **Step 2: Run test to verify it fails**
 
-Run: `cd /home/andy/dev/andybarilla/flock.git/agent-1 && go test ./internal/external/ -run TestExecProcessStarter -v`
+Run: `cd /home/andy/dev/andybarilla/rook.git/agent-1 && go test ./internal/external/ -run TestExecProcessStarter -v`
 Expected: FAIL — `ExecProcessStarter` not defined
 
 **Step 3: Write implementation**
@@ -995,7 +995,7 @@ func ExecProcessStarter(exePath string) (Process, error) {
 
 **Step 4: Run test to verify it passes**
 
-Run: `cd /home/andy/dev/andybarilla/flock.git/agent-1 && go test ./internal/external/ -run TestExecProcessStarter -v`
+Run: `cd /home/andy/dev/andybarilla/rook.git/agent-1 && go test ./internal/external/ -run TestExecProcessStarter -v`
 Expected: PASS
 
 **Step 5: Commit**
@@ -1056,7 +1056,7 @@ func TestExternalPluginsRegistered(t *testing.T) {
 
 **Step 2: Run test to verify it fails**
 
-Run: `cd /home/andy/dev/andybarilla/flock.git/agent-1 && go test ./internal/core/ -run TestExternalPluginsRegistered -v`
+Run: `cd /home/andy/dev/andybarilla/rook.git/agent-1 && go test ./internal/core/ -run TestExternalPluginsRegistered -v`
 Expected: FAIL — `PluginsDir` field doesn't exist on Config
 
 **Step 3: Write implementation**
@@ -1082,12 +1082,12 @@ Update `app.go` — pass `config.PluginsDir()` to `core.Config.PluginsDir`.
 
 **Step 4: Run test to verify it passes**
 
-Run: `cd /home/andy/dev/andybarilla/flock.git/agent-1 && go test ./internal/core/ -run TestExternalPluginsRegistered -v`
+Run: `cd /home/andy/dev/andybarilla/rook.git/agent-1 && go test ./internal/core/ -run TestExternalPluginsRegistered -v`
 Expected: PASS
 
 **Step 5: Run full test suite**
 
-Run: `cd /home/andy/dev/andybarilla/flock.git/agent-1 && go test ./...`
+Run: `cd /home/andy/dev/andybarilla/rook.git/agent-1 && go test ./...`
 Expected: PASS (all existing tests still pass)
 
 **Step 6: Commit**
@@ -1234,7 +1234,7 @@ func TestExternalPluginIntegration(t *testing.T) {
 
 **Step 3: Run integration test**
 
-Run: `cd /home/andy/dev/andybarilla/flock.git/agent-1 && go test ./internal/external/ -run TestExternalPluginIntegration -v`
+Run: `cd /home/andy/dev/andybarilla/rook.git/agent-1 && go test ./internal/external/ -run TestExternalPluginIntegration -v`
 Expected: PASS
 
 **Step 4: Commit**
@@ -1254,12 +1254,12 @@ git commit -m "test: add integration test with real plugin subprocess"
 
 **Step 1: Run full test suite**
 
-Run: `cd /home/andy/dev/andybarilla/flock.git/agent-1 && go test ./... -v`
+Run: `cd /home/andy/dev/andybarilla/rook.git/agent-1 && go test ./... -v`
 Expected: ALL PASS
 
 **Step 2: Run go vet**
 
-Run: `cd /home/andy/dev/andybarilla/flock.git/agent-1 && go vet ./...`
+Run: `cd /home/andy/dev/andybarilla/rook.git/agent-1 && go vet ./...`
 Expected: No issues
 
 **Step 3: Update roadmap**
