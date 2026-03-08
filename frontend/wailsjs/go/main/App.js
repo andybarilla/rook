@@ -18,6 +18,10 @@ export function RemoveSite(arg1) {
   return window['go']['main']['App']['RemoveSite'](arg1);
 }
 
+export function SelectDirectory() {
+  return window['go']['main']['App']['SelectDirectory']();
+}
+
 export function StartDatabase(arg1) {
   return window['go']['main']['App']['StartDatabase'](arg1);
 }

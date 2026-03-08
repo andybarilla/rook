@@ -11,6 +11,7 @@ import (
 	"github.com/andybarilla/flock/internal/databases"
 	"github.com/andybarilla/flock/internal/node"
 	"github.com/andybarilla/flock/internal/registry"
+	wailsRuntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // App struct
@@ -76,6 +77,13 @@ func (a *App) AddSite(path, domain, phpVersion, nodeVersion string, tls bool) er
 		PHPVersion:  phpVersion,
 		NodeVersion: nodeVersion,
 		TLS:         tls,
+	})
+}
+
+// SelectDirectory opens a native directory picker and returns the selected path
+func (a *App) SelectDirectory() (string, error) {
+	return wailsRuntime.OpenDirectoryDialog(a.ctx, wailsRuntime.OpenDialogOptions{
+		Title: "Select Project Directory",
 	})
 }
 

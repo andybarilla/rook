@@ -2,6 +2,9 @@
   import { createEventDispatcher } from 'svelte';
   import { notifySuccess, notifyError } from './lib/notifications.js';
   import { friendlyError } from './lib/errorMessages.js';
+  import { SelectDirectory } from '../wailsjs/go/main/App';
+
+  const dispatch = createEventDispatcher();
 
   const dispatch = createEventDispatcher();
 
@@ -33,6 +36,21 @@
   function handlePathInput() {
     if (!domain || domain === inferDomain(path.slice(0, path.length - 1))) {
       domain = inferDomain(path);
+    }
+  }
+
+  async function handleBrowse() {
+    try {
+      const selected = await SelectDirectory();
+      if (selected) {
+        const oldPath = path;
+        path = selected;
+        if (!domain || domain === inferDomain(oldPath)) {
+          domain = inferDomain(path);
+        }
+      }
+    } catch (e) {
+      notifyError('Failed to open directory picker.');
     }
   }
 
@@ -68,7 +86,14 @@
         <div class="form-row flex gap-4 items-end mb-3">
           <label class="flex flex-col flex-[2] text-left">
             <span class="text-xs text-base-content/70 uppercase tracking-wide mb-1">Path</span>
-            <input type="text" class="input input-bordered input-md" bind:value={path} bind:this={pathInput} on:input={handlePathInput} placeholder="/home/user/projects/myapp" disabled={submitting} />
+            <div class="join w-full">
+              <input type="text" class="input input-bordered input-md join-item flex-1" bind:value={path} bind:this={pathInput} on:input={handlePathInput} placeholder="/home/user/projects/myapp" disabled={submitting} />
+              <button type="button" class="btn btn-bordered input-md join-item" on:click={handleBrowse} disabled={submitting} title="Browse for directory">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+                </svg>
+              </button>
+            </div>
           </label>
           <label class="flex flex-col flex-1 text-left">
             <span class="text-xs text-base-content/70 uppercase tracking-wide mb-1">Domain</span>

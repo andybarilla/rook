@@ -11,6 +11,8 @@ export function ListSites():Promise<Array<registry.Site>>;
 
 export function RemoveSite(arg1:string):Promise<void>;
 
+export function SelectDirectory():Promise<string>;
+
 export function StartDatabase(arg1:string):Promise<void>;
 
 export function StopDatabase(arg1:string):Promise<void>;
