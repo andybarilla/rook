@@ -8,6 +8,7 @@ import (
 	"github.com/andybarilla/flock/internal/databases"
 	"github.com/andybarilla/flock/internal/discovery"
 	"github.com/andybarilla/flock/internal/external"
+	"github.com/andybarilla/flock/internal/mise"
 	"github.com/andybarilla/flock/internal/node"
 	"github.com/andybarilla/flock/internal/php"
 	"github.com/andybarilla/flock/internal/plugin"
@@ -26,6 +27,7 @@ type Config struct {
 	DBDataRoot   string
 	NodeRunner   node.NodeRunner
 	PluginsDir   string
+	Resolver     *mise.RuntimeResolver
 }
 
 type Core struct {
@@ -37,9 +39,27 @@ type Core struct {
 	nodePlugin *node.Plugin
 	dbPlugin   *databases.Plugin
 	logger     *log.Logger
+	resolver   *mise.RuntimeResolver
+}
+
+type MiseInfo struct {
+	Available bool   `json:"available"`
+	Version   string `json:"version"`
+}
+
+type RuntimeStatus struct {
+	Tool      string `json:"tool"`
+	Version   string `json:"version"`
+	Installed bool   `json:"installed"`
+	Domain    string `json:"domain"`
 }
 
 func NewCore(cfg Config) *Core {
+	resolver := cfg.Resolver
+	if resolver == nil {
+		resolver = mise.New()
+	}
+
 	reg := registry.New(cfg.SitesFile)
 	pluginMgr := plugin.NewManager(reg, cfg.Logger)
 
@@ -72,6 +92,7 @@ func NewCore(cfg Config) *Core {
 		nodePlugin: nodePlugin,
 		dbPlugin:   dbPlugin,
 		logger:     cfg.Logger,
+		resolver:   resolver,
 	}
 
 	reg.OnChange(func(e registry.ChangeEvent) {
@@ -132,4 +153,43 @@ func (c *Core) StartDatabase(svc string) error {
 
 func (c *Core) StopDatabase(svc string) error {
 	return c.dbPlugin.StopSvc(databases.ServiceType(svc))
+}
+
+func (c *Core) DetectSiteVersions(path string) (map[string]string, error) {
+	return c.resolver.Detect(path)
+}
+
+func (c *Core) MiseStatus() MiseInfo {
+	available, ver := c.resolver.Available()
+	return MiseInfo{
+		Available: available,
+		Version:   ver,
+	}
+}
+
+func (c *Core) CheckRuntimes() []RuntimeStatus {
+	var statuses []RuntimeStatus
+	for _, site := range c.registry.List() {
+		if site.PHPVersion != "" {
+			statuses = append(statuses, RuntimeStatus{
+				Tool:      "php",
+				Version:   site.PHPVersion,
+				Installed: c.resolver.IsInstalled("php", site.PHPVersion),
+				Domain:    site.Domain,
+			})
+		}
+		if site.NodeVersion != "" {
+			statuses = append(statuses, RuntimeStatus{
+				Tool:      "node",
+				Version:   site.NodeVersion,
+				Installed: c.resolver.IsInstalled("node", site.NodeVersion),
+				Domain:    site.Domain,
+			})
+		}
+	}
+	return statuses
+}
+
+func (c *Core) InstallRuntime(tool, version string) error {
+	return c.resolver.Install(tool, version)
 }

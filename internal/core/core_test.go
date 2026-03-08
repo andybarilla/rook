@@ -9,6 +9,7 @@ import (
 
 	"github.com/andybarilla/flock/internal/core"
 	"github.com/andybarilla/flock/internal/databases"
+	"github.com/andybarilla/flock/internal/mise"
 	"github.com/andybarilla/flock/internal/registry"
 )
 
@@ -147,6 +148,20 @@ func (s *stubNodeRunner) AppPort(siteDir string) int {
 	return s.started[siteDir]
 }
 
+type stubMiseExecutor struct{}
+
+func (s *stubMiseExecutor) Available() (bool, string)         { return false, "" }
+func (s *stubMiseExecutor) Which(tool string) (string, error) { return "", fmt.Errorf("not available") }
+func (s *stubMiseExecutor) WhichVersion(tool, version string) (string, error) {
+	return "", fmt.Errorf("not available")
+}
+func (s *stubMiseExecutor) Detect(dir string) (map[string]string, error) {
+	return map[string]string{}, nil
+}
+func (s *stubMiseExecutor) Install(tool, version string) error             { return fmt.Errorf("not available") }
+func (s *stubMiseExecutor) IsInstalled(tool, version string) (bool, error) { return false, nil }
+func (s *stubMiseExecutor) ListInstalled(tool string) ([]string, error)    { return nil, nil }
+
 // --- Helpers ---
 
 func tmpSitesFile(t *testing.T) string {
@@ -173,6 +188,7 @@ func testConfig(t *testing.T) (core.Config, *stubCaddyRunner, *stubFPMRunner, *s
 		DBConfigPath: filepath.Join(dir, "databases.json"),
 		DBDataRoot:   filepath.Join(dir, "db-data"),
 		NodeRunner:   nodeRunner,
+		Resolver:     mise.NewWithExecutor(&stubMiseExecutor{}),
 	}
 	return cfg, runner, fpm, certs, db, nodeRunner
 }
@@ -370,6 +386,61 @@ func TestAddSiteReloadsCaddy(t *testing.T) {
 
 	if runner.runCalls != initialRuns+1 {
 		t.Errorf("caddy runCalls = %d, want %d (reload after AddSite)", runner.runCalls, initialRuns+1)
+	}
+}
+
+func TestDetectSiteVersions_ReturnsDetectedVersions(t *testing.T) {
+	cfg, _, _, _, _, _ := testConfig(t)
+	c := core.NewCore(cfg)
+
+	dir := t.TempDir()
+	versions, err := c.DetectSiteVersions(dir)
+	if err != nil {
+		t.Fatalf("DetectSiteVersions: %v", err)
+	}
+	if versions == nil {
+		t.Fatal("expected non-nil map from DetectSiteVersions")
+	}
+}
+
+func TestMiseStatus_ReturnsInfo(t *testing.T) {
+	cfg, _, _, _, _, _ := testConfig(t)
+	c := core.NewCore(cfg)
+
+	info := c.MiseStatus()
+	// Just verify the struct is returned; Available may be true or false
+	_ = info.Available
+	_ = info.Version
+}
+
+func TestCheckRuntimes_ReturnsStatusForSites(t *testing.T) {
+	cfg, _, _, _, _, _ := testConfig(t)
+
+	dir := t.TempDir()
+	sitesJSON := fmt.Sprintf(`[{"path":%q,"domain":"phpapp.test","php_version":"8.3"}]`, dir)
+	os.MkdirAll(filepath.Dir(cfg.SitesFile), 0o755)
+	os.WriteFile(cfg.SitesFile, []byte(sitesJSON), 0o644)
+
+	c := core.NewCore(cfg)
+	if err := c.Start(); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	defer c.Stop()
+
+	statuses := c.CheckRuntimes()
+	if len(statuses) == 0 {
+		t.Fatal("expected at least one RuntimeStatus")
+	}
+
+	found := false
+	for _, s := range statuses {
+		if s.Tool == "php" && s.Version == "8.3" && s.Domain == "phpapp.test" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("expected RuntimeStatus with Tool=php, Version=8.3, Domain=phpapp.test")
 	}
 }
 

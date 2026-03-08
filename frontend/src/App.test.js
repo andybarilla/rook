@@ -8,6 +8,9 @@ vi.mock('../wailsjs/go/main/App.js', () => ({
   DatabaseServices: vi.fn().mockResolvedValue([]),
   StartDatabase: vi.fn().mockResolvedValue(undefined),
   StopDatabase: vi.fn().mockResolvedValue(undefined),
+  CheckRuntimes: vi.fn().mockResolvedValue([]),
+  InstallRuntime: vi.fn().mockResolvedValue(undefined),
+  MiseStatus: vi.fn().mockResolvedValue({ available: false, version: '' }),
 }));
 
 vi.mock('./lib/theme.js', () => {

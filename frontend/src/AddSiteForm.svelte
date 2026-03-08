@@ -2,7 +2,7 @@
   import { createEventDispatcher } from 'svelte';
   import { notifySuccess, notifyError } from './lib/notifications.js';
   import { friendlyError } from './lib/errorMessages.js';
-  import { SelectDirectory } from '../wailsjs/go/main/App';
+  import { SelectDirectory, DetectSiteVersions } from '../wailsjs/go/main/App';
 
   const dispatch = createEventDispatcher();
 
@@ -16,6 +16,8 @@
   let submitting = false;
   export let open = false;
   let pathInput;
+  let detectedSource = '';
+  let detectTimer;
 
   $: if (open && pathInput) {
     pathInput.focus();
@@ -35,6 +37,26 @@
     if (!domain || domain === inferDomain(path.slice(0, path.length - 1))) {
       domain = inferDomain(path);
     }
+    // Debounced auto-detection
+    clearTimeout(detectTimer);
+    if (path) {
+      detectTimer = setTimeout(async () => {
+        try {
+          const versions = await DetectSiteVersions(path);
+          if (versions && Object.keys(versions).length > 0) {
+            if (versions.php && !phpVersion) phpVersion = versions.php;
+            if (versions.node && !nodeVersion) nodeVersion = versions.node;
+            detectedSource = 'detected from project config';
+          } else {
+            detectedSource = '';
+          }
+        } catch {
+          detectedSource = '';
+        }
+      }, 300);
+    } else {
+      detectedSource = '';
+    }
   }
 
   async function handleBrowse() {
@@ -46,6 +68,7 @@
         if (!domain || domain === inferDomain(oldPath)) {
           domain = inferDomain(path);
         }
+        handlePathInput();
       }
     } catch (e) {
       notifyError('Failed to open directory picker.');
@@ -66,6 +89,7 @@
       phpVersion = '';
       nodeVersion = '';
       tls = false;
+      detectedSource = '';
       dispatch('close');
     } catch (e) {
       notifyError(friendlyError(e.message || String(e)));
@@ -111,6 +135,9 @@
             <input type="text" class="input input-bordered input-sm" bind:value={nodeVersion} placeholder="system (optional)" disabled={submitting} />
           </label>
         </div>
+        {#if detectedSource}
+          <p class="text-xs text-success mt-1">{detectedSource}</p>
+        {/if}
         <div class="form-row flex gap-4 items-end">
           <label class="flex flex-row items-center gap-2 flex-none whitespace-nowrap">
             <input type="checkbox" class="checkbox checkbox-sm" bind:checked={tls} disabled={submitting} />

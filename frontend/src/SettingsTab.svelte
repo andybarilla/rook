@@ -1,5 +1,17 @@
 <script>
+  import { onMount } from 'svelte';
   import { theme, toggleTheme } from './lib/theme.js';
+  import { MiseStatus } from '../wailsjs/go/main/App.js';
+
+  let miseInfo = { available: false, version: '' };
+
+  onMount(async () => {
+    try {
+      miseInfo = await MiseStatus();
+    } catch {
+      // ignore — not critical
+    }
+  });
 </script>
 
 <div class="space-y-6">
@@ -18,6 +30,26 @@
         aria-label="Dark mode"
       />
     </label>
+  </div>
+
+  <div class="card bg-base-200 p-6">
+    <h3 class="font-semibold text-base-content mb-4">Runtime Manager</h3>
+    {#if miseInfo.available}
+      <div class="flex items-center gap-2">
+        <span class="badge badge-success badge-sm">Detected</span>
+        <span class="text-sm text-base-content">{miseInfo.version}</span>
+      </div>
+    {:else}
+      <div class="flex items-center gap-2">
+        <span class="badge badge-ghost badge-sm">Not found</span>
+        <span class="text-sm text-base-content/60">
+          Install mise for automatic runtime version management
+        </span>
+      </div>
+      <a href="https://mise.jdx.dev" target="_blank" rel="noopener noreferrer" class="link link-primary text-sm mt-2 inline-block">
+        mise.jdx.dev
+      </a>
+    {/if}
   </div>
 
   <div class="card bg-base-200 p-6">

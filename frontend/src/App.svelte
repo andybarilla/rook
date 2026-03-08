@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { ListSites, AddSite, RemoveSite, DatabaseServices, StartDatabase, StopDatabase } from '../wailsjs/go/main/App.js';
+  import { ListSites, AddSite, RemoveSite, DatabaseServices, StartDatabase, StopDatabase, CheckRuntimes, InstallRuntime, MiseStatus } from '../wailsjs/go/main/App.js';
   import { notifySuccess, notifyError, dismissLatest } from './lib/notifications.js';
   import { friendlyError } from './lib/errorMessages.js';
   import { initTheme } from './lib/theme.js';
@@ -17,6 +17,8 @@
   let addFormOpen = false;
   let addSiteForm;
   let activeTab = 'sites';
+  let runtimeStatuses = [];
+  let miseAvailable = false;
 
   function handleKeydown(e) {
     if (e.ctrlKey && e.key === 'n') {
@@ -55,6 +57,7 @@
   async function handleAdd(path, domain, phpVersion, nodeVersion, tls) {
     await AddSite(path, domain, phpVersion, nodeVersion, tls);
     await refreshSites();
+    await refreshRuntimes();
   }
 
   async function handleRemove(domain) {
@@ -97,10 +100,31 @@
     }
   }
 
+  async function refreshRuntimes() {
+    try {
+      runtimeStatuses = await CheckRuntimes() || [];
+      const status = await MiseStatus();
+      miseAvailable = status.available;
+    } catch {
+      // non-critical
+    }
+  }
+
+  async function handleInstall(tool, version) {
+    try {
+      await InstallRuntime(tool, version);
+      notifySuccess(`${tool}@${version} installed.`);
+      await refreshRuntimes();
+    } catch (e) {
+      notifyError(friendlyError(e.message || String(e)));
+    }
+  }
+
   onMount(() => {
     initTheme();
     refreshSites();
     refreshServices();
+    refreshRuntimes();
   });
 </script>
 
@@ -126,7 +150,7 @@
   <div class="flex-1 overflow-auto">
     <div class="max-w-5xl mx-auto px-6 py-6">
       {#if activeTab === 'sites'}
-        <SiteList {sites} loaded={sitesLoaded} onRemove={handleRemove} on:addsite={() => { addFormOpen = true; }} />
+        <SiteList {sites} loaded={sitesLoaded} onRemove={handleRemove} {runtimeStatuses} {miseAvailable} onInstall={handleInstall} on:addsite={() => { addFormOpen = true; }} />
         <AddSiteForm bind:this={addSiteForm} onAdd={handleAdd} open={addFormOpen} on:close={() => { addFormOpen = false; }} />
       {:else if activeTab === 'services'}
         <ServiceList {services} loaded={servicesLoaded} onStart={handleStartService} onStop={handleStopService} />

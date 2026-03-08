@@ -1,5 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, fireEvent } from '@testing-library/svelte';
+
+vi.mock('../wailsjs/go/main/App.js', () => ({
+  SelectDirectory: vi.fn(),
+  DetectSiteVersions: vi.fn().mockResolvedValue({}),
+}));
+
 import AddSiteForm from './AddSiteForm.svelte';
 
 describe('AddSiteForm', () => {
@@ -119,5 +125,82 @@ describe('AddSiteForm', () => {
     const title = container.querySelector('#add-site-title');
     expect(title).toBeTruthy();
     expect(title.textContent).toBe('Add Site');
+  });
+
+  describe('auto-detection', () => {
+    it('calls DetectSiteVersions when path changes', async () => {
+      const { DetectSiteVersions } = await import('../wailsjs/go/main/App.js');
+      DetectSiteVersions.mockResolvedValue({ php: '8.3', node: '20' });
+      vi.useFakeTimers();
+
+      const { container } = render(AddSiteForm, { props: { open: true, onAdd: vi.fn() } });
+      const pathInput = container.querySelector('input[placeholder="/home/user/projects/myapp"]');
+      await fireEvent.input(pathInput, { target: { value: '/tmp/myapp' } });
+
+      vi.advanceTimersByTime(300);
+      await vi.waitFor(() => {
+        expect(DetectSiteVersions).toHaveBeenCalledWith('/tmp/myapp');
+      });
+
+      vi.useRealTimers();
+    });
+
+    it('pre-fills version fields with detected values', async () => {
+      const { DetectSiteVersions } = await import('../wailsjs/go/main/App.js');
+      DetectSiteVersions.mockResolvedValue({ php: '8.3', node: '20' });
+      vi.useFakeTimers();
+
+      const { container } = render(AddSiteForm, { props: { open: true, onAdd: vi.fn() } });
+      const pathInput = container.querySelector('input[placeholder="/home/user/projects/myapp"]');
+      await fireEvent.input(pathInput, { target: { value: '/tmp/myapp' } });
+
+      vi.advanceTimersByTime(300);
+      await vi.waitFor(() => {
+        const phpInput = container.querySelector('input[placeholder="8.3 (optional)"]');
+        expect(phpInput.value).toBe('8.3');
+      });
+
+      vi.useRealTimers();
+    });
+
+    it('shows detection hint when versions are found', async () => {
+      const { DetectSiteVersions } = await import('../wailsjs/go/main/App.js');
+      DetectSiteVersions.mockResolvedValue({ php: '8.3', node: '20' });
+      vi.useFakeTimers();
+
+      const { container } = render(AddSiteForm, { props: { open: true, onAdd: vi.fn() } });
+      const pathInput = container.querySelector('input[placeholder="/home/user/projects/myapp"]');
+      await fireEvent.input(pathInput, { target: { value: '/tmp/myapp' } });
+
+      vi.advanceTimersByTime(300);
+      await vi.waitFor(() => {
+        expect(container.textContent).toContain('detected');
+      });
+
+      vi.useRealTimers();
+    });
+
+    it('does not overwrite manually entered versions', async () => {
+      const { DetectSiteVersions } = await import('../wailsjs/go/main/App.js');
+      DetectSiteVersions.mockResolvedValue({ php: '8.3', node: '20' });
+      vi.useFakeTimers();
+
+      const { container } = render(AddSiteForm, { props: { open: true, onAdd: vi.fn() } });
+      const phpInput = container.querySelector('input[placeholder="8.3 (optional)"]');
+      await fireEvent.input(phpInput, { target: { value: '8.2' } });
+
+      const pathInput = container.querySelector('input[placeholder="/home/user/projects/myapp"]');
+      await fireEvent.input(pathInput, { target: { value: '/tmp/myapp' } });
+
+      vi.advanceTimersByTime(300);
+      // Wait for detection to complete
+      await vi.waitFor(() => {
+        expect(DetectSiteVersions).toHaveBeenCalled();
+      });
+      // PHP should still be 8.2 (manually set), not overwritten
+      expect(phpInput.value).toBe('8.2');
+
+      vi.useRealTimers();
+    });
   });
 });

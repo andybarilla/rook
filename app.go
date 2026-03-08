@@ -106,3 +106,24 @@ func (a *App) StartDatabase(svc string) error {
 func (a *App) StopDatabase(svc string) error {
 	return a.core.StopDatabase(svc)
 }
+
+// DetectSiteVersions scans a project directory for mise config files
+// and returns detected runtime versions.
+func (a *App) DetectSiteVersions(path string) (map[string]string, error) {
+	return a.core.DetectSiteVersions(path)
+}
+
+// MiseStatus returns whether mise is available and its version.
+func (a *App) MiseStatus() core.MiseInfo {
+	return a.core.MiseStatus()
+}
+
+// CheckRuntimes returns installation status for all site runtimes.
+func (a *App) CheckRuntimes() []core.RuntimeStatus {
+	return a.core.CheckRuntimes()
+}
+
+// InstallRuntime installs a specific tool version via mise.
+func (a *App) InstallRuntime(tool, version string) error {
+	return a.core.InstallRuntime(tool, version)
+}
