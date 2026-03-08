@@ -6,8 +6,24 @@ export function AddSite(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['main']['App']['AddSite'](arg1, arg2, arg3, arg4, arg5);
 }
 
+export function CheckRuntimes() {
+  return window['go']['main']['App']['CheckRuntimes']();
+}
+
 export function DatabaseServices() {
   return window['go']['main']['App']['DatabaseServices']();
+}
+
+export function DetectSiteVersions(arg1) {
+  return window['go']['main']['App']['DetectSiteVersions'](arg1);
+}
+
+export function InstallRuntime(arg1, arg2) {
+  return window['go']['main']['App']['InstallRuntime'](arg1, arg2);
+}
+
+export function MiseStatus() {
+  return window['go']['main']['App']['MiseStatus']();
 }
 
 export function ListSites() {
