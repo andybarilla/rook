@@ -9,6 +9,7 @@ import (
 
 	"github.com/andybarilla/flock/internal/core"
 	"github.com/andybarilla/flock/internal/databases"
+	"github.com/andybarilla/flock/internal/mise"
 	"github.com/andybarilla/flock/internal/registry"
 )
 
@@ -147,6 +148,20 @@ func (s *stubNodeRunner) AppPort(siteDir string) int {
 	return s.started[siteDir]
 }
 
+type stubMiseExecutor struct{}
+
+func (s *stubMiseExecutor) Available() (bool, string)         { return false, "" }
+func (s *stubMiseExecutor) Which(tool string) (string, error) { return "", fmt.Errorf("not available") }
+func (s *stubMiseExecutor) WhichVersion(tool, version string) (string, error) {
+	return "", fmt.Errorf("not available")
+}
+func (s *stubMiseExecutor) Detect(dir string) (map[string]string, error) {
+	return map[string]string{}, nil
+}
+func (s *stubMiseExecutor) Install(tool, version string) error             { return fmt.Errorf("not available") }
+func (s *stubMiseExecutor) IsInstalled(tool, version string) (bool, error) { return false, nil }
+func (s *stubMiseExecutor) ListInstalled(tool string) ([]string, error)    { return nil, nil }
+
 // --- Helpers ---
 
 func tmpSitesFile(t *testing.T) string {
@@ -173,6 +188,7 @@ func testConfig(t *testing.T) (core.Config, *stubCaddyRunner, *stubFPMRunner, *s
 		DBConfigPath: filepath.Join(dir, "databases.json"),
 		DBDataRoot:   filepath.Join(dir, "db-data"),
 		NodeRunner:   nodeRunner,
+		Resolver:     mise.NewWithExecutor(&stubMiseExecutor{}),
 	}
 	return cfg, runner, fpm, certs, db, nodeRunner
 }

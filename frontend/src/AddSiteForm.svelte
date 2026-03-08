@@ -68,6 +68,7 @@
         if (!domain || domain === inferDomain(oldPath)) {
           domain = inferDomain(path);
         }
+        handlePathInput();
       }
     } catch (e) {
       notifyError('Failed to open directory picker.');

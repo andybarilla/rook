@@ -204,11 +204,16 @@ func (c *cliExecutor) Install(tool, version string) error {
 }
 
 func (c *cliExecutor) IsInstalled(tool, version string) (bool, error) {
-	out, err := exec.Command("mise", "ls", "--installed", tool).Output()
+	versions, err := c.ListInstalled(tool)
 	if err != nil {
 		return false, err
 	}
-	return strings.Contains(string(out), version), nil
+	for _, v := range versions {
+		if v == version || strings.HasPrefix(v, version+".") {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func (c *cliExecutor) ListInstalled(tool string) ([]string, error) {
