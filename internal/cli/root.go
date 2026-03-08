@@ -17,6 +17,13 @@ func NewRootCmd() *cobra.Command {
 
 	cmd.PersistentFlags().BoolVar(&jsonOutput, "json", false, "Output in JSON format")
 
+	cmd.AddCommand(newListCmd())
+	cmd.AddCommand(newAddCmd())
+	cmd.AddCommand(newRemoveCmd())
+	cmd.AddCommand(newStatusCmd())
+	cmd.AddCommand(newStartCmd())
+	cmd.AddCommand(newStopCmd())
+
 	return cmd
 }
 
