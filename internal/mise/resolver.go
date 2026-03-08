@@ -104,14 +104,31 @@ func (r *RuntimeResolver) WhichVersion(tool, version string) (string, error) {
 	return path, nil
 }
 
-// Detect returns tool versions configured for a site directory via mise.
-// Returns an empty map if mise is not available.
+// Detect returns tool versions configured for a site directory.
+// It checks mise first (if available), then falls back to project config
+// files (composer.json, package.json) to fill any gaps.
 func (r *RuntimeResolver) Detect(siteDir string) (map[string]string, error) {
+	var result map[string]string
+
 	ok, _ := r.Available()
-	if !ok {
-		return map[string]string{}, nil
+	if ok {
+		var err error
+		result, err = r.executor.Detect(siteDir)
+		if err != nil {
+			result = map[string]string{}
+		}
+	} else {
+		result = map[string]string{}
 	}
-	return r.executor.Detect(siteDir)
+
+	// Fill gaps from project config files
+	for tool, version := range detectFromProjectFiles(siteDir) {
+		if _, exists := result[tool]; !exists {
+			result[tool] = version
+		}
+	}
+
+	return result, nil
 }
 
 // Install installs a specific version of a tool via mise.
