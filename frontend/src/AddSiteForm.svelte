@@ -7,6 +7,8 @@
   const dispatch = createEventDispatcher();
 
   export let onAdd = () => {};
+  export let editingSite = null;
+  export let onUpdate = () => {};
 
   let path = '';
   let domain = '';
@@ -18,6 +20,16 @@
   let pathInput;
   let detectedSource = '';
   let detectTimer;
+
+  $: isEditing = !!editingSite;
+
+  $: if (editingSite && open) {
+    path = editingSite.path || '';
+    domain = editingSite.domain || '';
+    phpVersion = editingSite.php_version || '';
+    nodeVersion = editingSite.node_version || '';
+    tls = editingSite.tls || false;
+  }
 
   $: if (open && pathInput) {
     pathInput.focus();
@@ -82,14 +94,19 @@
     }
     submitting = true;
     try {
-      await onAdd(path, domain, phpVersion, nodeVersion, tls);
-      notifySuccess(`Site "${domain}" added.`);
-      path = '';
-      domain = '';
-      phpVersion = '';
-      nodeVersion = '';
-      tls = false;
-      detectedSource = '';
+      if (isEditing) {
+        await onUpdate(domain, path, phpVersion, nodeVersion, tls);
+        notifySuccess(`Site "${domain}" updated.`);
+      } else {
+        await onAdd(path, domain, phpVersion, nodeVersion, tls);
+        notifySuccess(`Site "${domain}" added.`);
+        path = '';
+        domain = '';
+        phpVersion = '';
+        nodeVersion = '';
+        tls = false;
+        detectedSource = '';
+      }
       dispatch('close');
     } catch (e) {
       notifyError(friendlyError(e.message || String(e)));
@@ -102,7 +119,7 @@
 {#if open}
 <div class="modal modal-open" role="dialog" aria-modal="true" aria-labelledby="add-site-title">
   <div class="modal-box">
-    <h3 id="add-site-title" class="font-bold text-lg mb-4">Add Site</h3>
+    <h3 id="add-site-title" class="font-bold text-lg mb-4">{isEditing ? 'Edit Site' : 'Add Site'}</h3>
     <form on:submit|preventDefault={handleSubmit}>
       <div data-section="required" class="mb-2">
         <div class="form-row flex gap-4 items-end mb-3">
@@ -119,7 +136,7 @@
           </label>
           <label class="flex flex-col flex-1 text-left">
             <span class="text-xs text-base-content/70 uppercase tracking-wide mb-1">Domain</span>
-            <input type="text" class="input input-bordered input-md" bind:value={domain} placeholder="myapp.test" disabled={submitting} />
+            <input type="text" class="input input-bordered input-md" bind:value={domain} placeholder="myapp.test" disabled={submitting || isEditing} />
           </label>
         </div>
       </div>
@@ -150,9 +167,9 @@
         <button type="submit" class="btn btn-primary" disabled={submitting}>
           {#if submitting}
             <span class="loading loading-spinner loading-xs"></span>
-            Adding…
+            {isEditing ? 'Updating…' : 'Adding…'}
           {:else}
-            Add Site
+            {isEditing ? 'Update Site' : 'Add Site'}
           {/if}
         </button>
       </div>

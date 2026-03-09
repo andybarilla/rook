@@ -203,4 +203,61 @@ describe('AddSiteForm', () => {
       vi.useRealTimers();
     });
   });
+
+  describe('edit mode', () => {
+    const editSite = {
+      domain: 'app.test',
+      path: '/home/user/app',
+      php_version: '8.3',
+      node_version: '20',
+      tls: true,
+    };
+
+    it('shows "Edit Site" title when editingSite is provided', () => {
+      const { container } = render(AddSiteForm, {
+        props: { open: true, editingSite: editSite },
+      });
+      const title = container.querySelector('#add-site-title');
+      expect(title.textContent).toBe('Edit Site');
+    });
+
+    it('pre-populates fields with site data', () => {
+      const { container } = render(AddSiteForm, {
+        props: { open: true, editingSite: editSite },
+      });
+      const pathInput = container.querySelector('input[placeholder="/home/user/projects/myapp"]');
+      const domainInput = container.querySelector('input[placeholder="myapp.test"]');
+      expect(pathInput.value).toBe('/home/user/app');
+      expect(domainInput.value).toBe('app.test');
+    });
+
+    it('disables domain input in edit mode', () => {
+      const { container } = render(AddSiteForm, {
+        props: { open: true, editingSite: editSite },
+      });
+      const domainInput = container.querySelector('input[placeholder="myapp.test"]');
+      expect(domainInput.disabled).toBe(true);
+    });
+
+    it('shows "Update Site" button text', () => {
+      const { getByText } = render(AddSiteForm, {
+        props: { open: true, editingSite: editSite },
+      });
+      expect(getByText('Update Site')).toBeTruthy();
+    });
+
+    it('calls onUpdate instead of onAdd when submitting', async () => {
+      const onUpdate = vi.fn().mockResolvedValue(undefined);
+      const { container, component } = render(AddSiteForm, {
+        props: { open: true, editingSite: editSite, onUpdate },
+      });
+      const closeSpy = vi.fn();
+      component.$on('close', closeSpy);
+      const form = container.querySelector('form');
+      await fireEvent.submit(form);
+      await vi.waitFor(() => {
+        expect(onUpdate).toHaveBeenCalledWith('app.test', '/home/user/app', '8.3', '20', true);
+      });
+    });
+  });
 });
