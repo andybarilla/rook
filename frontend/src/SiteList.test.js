@@ -120,6 +120,31 @@ describe('SiteList', () => {
     });
   });
 
+  describe('edit button', () => {
+    beforeEach(() => {
+      localStorage.removeItem('rook-view');
+    });
+
+    it('renders Edit button in table view for each site', () => {
+      const { getAllByTitle } = render(SiteList, {
+        props: { sites: fakeSites, loaded: true, onRemove: vi.fn() },
+      });
+      const editButtons = getAllByTitle('Edit site');
+      expect(editButtons.length).toBe(2);
+    });
+
+    it('dispatches editsite event with site data when Edit is clicked', async () => {
+      const { getAllByTitle, component } = render(SiteList, {
+        props: { sites: fakeSites, loaded: true, onRemove: vi.fn() },
+      });
+      const editSpy = vi.fn();
+      component.$on('editsite', editSpy);
+      await fireEvent.click(getAllByTitle('Edit site')[0]);
+      expect(editSpy).toHaveBeenCalled();
+      expect(editSpy.mock.calls[0][0].detail).toEqual(fakeSites[0]);
+    });
+  });
+
   describe('search', () => {
     it('renders search input', () => {
       const { getByPlaceholderText } = render(SiteList, { props: { sites: mockSites, onRemove: vi.fn() } });
