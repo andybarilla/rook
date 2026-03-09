@@ -34,18 +34,23 @@
 
   <div class="card bg-base-200 p-6">
     <h3 class="font-semibold text-base-content mb-4">Runtime Manager</h3>
-    {#if miseInfo.available}
-      <div class="flex items-center gap-2">
+    <div class="flex items-center gap-3 mb-2">
+      <span class="font-medium text-base-content">mise</span>
+      {#if miseInfo.available}
         <span class="badge badge-success badge-sm">Detected</span>
-        <span class="text-sm text-base-content">{miseInfo.version}</span>
-      </div>
-    {:else}
-      <div class="flex items-center gap-2">
+        <span class="text-sm text-base-content/60">{miseInfo.version}</span>
+      {:else}
         <span class="badge badge-ghost badge-sm">Not found</span>
-        <span class="text-sm text-base-content/60">
-          Install mise for automatic runtime version management
-        </span>
-      </div>
+      {/if}
+    </div>
+    {#if miseInfo.available}
+      <p class="text-sm text-base-content/60">
+        Manages runtime versions for PHP and Node.js
+      </p>
+    {:else}
+      <p class="text-sm text-base-content/60">
+        Install mise for automatic runtime version management
+      </p>
       <a href="https://mise.jdx.dev" target="_blank" rel="noopener noreferrer" class="link link-primary text-sm mt-2 inline-block">
         mise.jdx.dev
       </a>
