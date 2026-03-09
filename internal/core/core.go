@@ -131,6 +131,10 @@ func (c *Core) Sites() []registry.Site {
 	return c.registry.List()
 }
 
+func (c *Core) GetSite(domain string) (registry.Site, bool) {
+	return c.registry.Get(domain)
+}
+
 func (c *Core) AddSite(site registry.Site) error {
 	return c.registry.Add(site)
 }

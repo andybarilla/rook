@@ -108,6 +108,67 @@ func newAddCmd() *cobra.Command {
 	return cmd
 }
 
+func newEditCmd() *cobra.Command {
+	var path, phpVersion, nodeVersion string
+	var tls *bool
+
+	cmd := &cobra.Command{
+		Use:   "edit <domain>",
+		Short: "Edit a registered site",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			domain := args[0]
+
+			c, cleanup, err := NewCore()
+			if err != nil {
+				return err
+			}
+			defer cleanup()
+
+			site, ok := c.GetSite(domain)
+			if !ok {
+				return fmt.Errorf("site %q not found", domain)
+			}
+
+			if cmd.Flags().Changed("path") {
+				absPath, err := filepath.Abs(path)
+				if err != nil {
+					return err
+				}
+				site.Path = absPath
+			}
+			if cmd.Flags().Changed("php") {
+				site.PHPVersion = phpVersion
+			}
+			if cmd.Flags().Changed("node") {
+				site.NodeVersion = nodeVersion
+			}
+			if cmd.Flags().Changed("tls") {
+				site.TLS = *tls
+			}
+
+			if err := c.UpdateSite(domain, site); err != nil {
+				return err
+			}
+
+			useJSON := jsonOutput || !IsTTY()
+			if useJSON {
+				FormatJSON(os.Stdout, site)
+			} else {
+				fmt.Fprintf(os.Stdout, "✓ Site %q updated\n", domain)
+			}
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVar(&path, "path", "", "Project directory path")
+	cmd.Flags().StringVar(&phpVersion, "php", "", "PHP version")
+	cmd.Flags().StringVar(&nodeVersion, "node", "", "Node version")
+	tls = cmd.Flags().Bool("tls", false, "Enable TLS")
+
+	return cmd
+}
+
 func newRemoveCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "remove <domain>",

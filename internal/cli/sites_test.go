@@ -87,6 +87,20 @@ func TestRenderAddJSON(t *testing.T) {
 	}
 }
 
+func TestRenderEditJSON(t *testing.T) {
+	var buf bytes.Buffer
+	site := registry.Site{Path: "/home/user/myapp", Domain: "myapp.test", PHPVersion: "8.3"}
+	cli.FormatJSON(&buf, site)
+
+	var result registry.Site
+	if err := json.Unmarshal(buf.Bytes(), &result); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	if result.PHPVersion != "8.3" {
+		t.Errorf("php_version = %q, want 8.3", result.PHPVersion)
+	}
+}
+
 func TestRenderRemoveJSON(t *testing.T) {
 	var buf bytes.Buffer
 	cli.FormatJSON(&buf, map[string]string{"removed": "myapp.test"})
