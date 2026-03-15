@@ -77,12 +77,12 @@ type WorkspaceAPI struct {
 - `RestartService(workspace, service string) error` — restart a single service (stop + start)
 - `StopService(workspace, service string) error` — stop a single service
 
-Note: `StartService`, `RestartService`, and `StopService` require adding `StartService` and `Restart` methods to the orchestrator (not yet in the core library). These will be implemented as part of the GUI build.
+Note: These methods require adding `StartService`, `StopService`, and `Restart` methods to the orchestrator (not yet in the core library — it currently only has `Up`, `Down`, and `Status`). These will be implemented as part of the GUI build.
 
 **Read-only queries:**
 - `GetPorts() []PortEntry` — global port allocation table
 - `GetEnv(workspace string) (map[string]map[string]string, error)` — resolved env vars per service. Reads allocated ports from the port allocator and resolves templates directly — does not require the workspace to be running. Returns an error if the workspace has never been initialized (no port allocations exist).
-- `GetLogs(workspace, service string, lines int) ([]LogLine, error)` — recent log lines. Pass empty string for `service` to get interleaved logs from all services.
+- `GetLogs(workspace, service string, lines int) ([]LogLine, error)` — recent log lines. Pass empty string for `service` to get interleaved logs from all services. Logs are buffered in-process memory only — after a GUI relaunch, historical logs are unavailable. For Docker containers, `GetLogs` falls back to `docker logs` to retrieve history. For process services, logs are lost on relaunch (documented limitation).
 - `PreviewManifest(manifest Manifest) (string, error)` — render a manifest struct as YAML string (for the Discovery Wizard preview)
 
 ### Real-time Events
