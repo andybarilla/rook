@@ -1,1 +1,6 @@
 .worktrees/
+/rook
+.idea/
+.vscode/
+.DS_Store
+*.env
