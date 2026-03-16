@@ -112,8 +112,15 @@ func (r *DockerRunner) Start(ctx context.Context, name string, svc workspace.Ser
 	// Create new container
 	args := []string{"run", "-d", "--name", containerName, "--network", networkName}
 
-	if port, ok := ports[name]; ok && len(svc.Ports) > 0 {
-		args = append(args, "-p", fmt.Sprintf("%d:%d", port, svc.Ports[0]))
+	// Map ports: first port uses the allocated host port, additional ports map directly
+	for i, containerPort := range svc.Ports {
+		if i == 0 {
+			if hostPort, ok := ports[name]; ok {
+				args = append(args, "-p", fmt.Sprintf("%d:%d", hostPort, containerPort))
+			}
+		} else {
+			args = append(args, "-p", fmt.Sprintf("%d:%d", containerPort, containerPort))
+		}
 	}
 
 	if svc.EnvFile != "" {
