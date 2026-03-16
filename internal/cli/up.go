@@ -16,6 +16,7 @@ import (
 
 func newUpCmd() *cobra.Command {
 	var detach bool
+	var build bool
 
 	cmd := &cobra.Command{
 		Use:   "up [workspace] [profile]",
@@ -62,6 +63,15 @@ func newUpCmd() *cobra.Command {
 					envPath := fmt.Sprintf("%s/.env.%s", ws.Root, name)
 					if err := envgen.WriteEnvFile(envPath, resolved); err != nil {
 						return fmt.Errorf("writing env for %s: %w", name, err)
+					}
+				}
+			}
+
+			if build {
+				for name, svc := range ws.Services {
+					if svc.Build != "" {
+						svc.ForceBuild = true
+						ws.Services[name] = svc
 					}
 				}
 			}
@@ -148,5 +158,6 @@ func newUpCmd() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVarP(&detach, "detach", "d", false, "Start services and exit immediately")
+	cmd.Flags().BoolVar(&build, "build", false, "Force rebuild of services with build context")
 	return cmd
 }
