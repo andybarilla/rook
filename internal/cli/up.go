@@ -67,6 +67,9 @@ func newUpCmd() *cobra.Command {
 			}
 
 			orch := cctx.newOrchestrator(wsName)
+			if err := orch.Reconnect(*ws); err != nil {
+				fmt.Fprintf(os.Stderr, "warning: reconnect failed: %v\n", err)
+			}
 			fmt.Printf("Starting %s (profile: %s)...\n", wsName, profile)
 			if err := orch.Up(ctx, *ws, profile); err != nil {
 				return err

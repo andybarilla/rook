@@ -26,6 +26,7 @@ func newRestartCmd() *cobra.Command {
 				return err
 			}
 			orch := cctx.newOrchestrator(wsName)
+			orch.Reconnect(*ws)
 
 			if len(args) > 1 {
 				svcName := args[1]
