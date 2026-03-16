@@ -181,6 +181,29 @@ func TestOrchestrator_StartService_Unknown(t *testing.T) {
 	}
 }
 
+func TestOrchestrator_Up_WaitsForHealthCheck(t *testing.T) {
+	mock := &mockRunner{}
+	ws := workspace.Workspace{
+		Name: "test", Root: t.TempDir(),
+		Services: map[string]workspace.Service{
+			"postgres": {Image: "postgres:16", Healthcheck: "echo ok"},
+			"app":      {Command: "air", DependsOn: []string{"postgres"}},
+		},
+		Profiles: map[string][]string{"default": {"postgres", "app"}},
+	}
+	orch := orchestrator.New(mock, mock, nil)
+	err := orch.Up(context.Background(), ws, "default")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(mock.started) != 2 {
+		t.Fatalf("expected 2, got %d", len(mock.started))
+	}
+	if mock.started[0] != "postgres" {
+		t.Errorf("expected postgres first")
+	}
+}
+
 func TestOrchestrator_Down(t *testing.T) {
 	mock := &mockRunner{}
 	ws := workspace.Workspace{

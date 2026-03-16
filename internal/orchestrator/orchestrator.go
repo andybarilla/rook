@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/andybarilla/rook/internal/health"
 	"github.com/andybarilla/rook/internal/ports"
 	"github.com/andybarilla/rook/internal/profile"
 	"github.com/andybarilla/rook/internal/runner"
@@ -123,6 +124,19 @@ func (o *Orchestrator) Up(ctx context.Context, ws workspace.Workspace, profileNa
 		o.mu.Lock()
 		o.handles[ws.Name][name] = handle
 		o.mu.Unlock()
+
+		// Wait for health check if defined
+		if svc.Healthcheck != nil {
+			check, cfg, err := health.ParseFromService(svc.Healthcheck)
+			if err == nil {
+				hctx, hcancel := context.WithTimeout(ctx, cfg.Timeout)
+				if waitErr := health.WaitUntilHealthy(hctx, check, cfg.Interval); waitErr != nil {
+					hcancel()
+					return fmt.Errorf("health check failed for %s: %w", name, waitErr)
+				}
+				hcancel()
+			}
+		}
 	}
 
 	return nil
