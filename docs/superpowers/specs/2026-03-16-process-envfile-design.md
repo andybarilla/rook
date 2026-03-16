@@ -21,6 +21,11 @@ Reads a `.env` file and returns key-value pairs.
 - `export KEY=VALUE` — `export ` prefix stripped
 - Inline comments (`KEY=value # comment`) — **not supported** (value includes everything after `=`)
 
+**Edge cases:**
+- `KEY=` (empty value) — sets key to empty string
+- Duplicate keys — last value wins (matches docker-compose)
+- Only single-file `env_file` form is supported (list form is a pre-existing discovery limitation)
+
 **Error handling:**
 - Returns error if file doesn't exist or can't be read
 - Lines without `=` are skipped (no error)
@@ -30,9 +35,9 @@ Reads a `.env` file and returns key-value pairs.
 In the template resolution section, after resolving inline `Environment` for process services:
 
 1. If `svc.EnvFile` is set and `svc.IsProcess()`:
+   - Resolve path: `filepath.Join(ws.Root, svc.EnvFile)`
    - Call `envgen.ParseEnvFile()` to read the file
-   - Run parsed values through `envgen.ExpandShellVars()`
-   - Run parsed values through `envgen.ResolveTemplates()` with the same host/port context used for inline vars
+   - For each value: run through `envgen.ExpandShellVars()` then `envgen.ResolveTemplates()` with the same host/port context used for inline vars
    - Merge into `svc.Environment` — **inline values take precedence** over env_file values (matching docker-compose behavior)
 
 ### No changes needed
@@ -49,5 +54,7 @@ In the template resolution section, after resolving inline `Environment` for pro
 
 ### Testing
 
-- `envgen.ParseEnvFile()`: unit tests for all supported syntax (basic, comments, blank lines, quotes, export prefix, no-equals lines)
-- `internal/cli/up.go`: integration-level test or verification that process services with env_file get the variables merged into their environment
+- `envgen.ParseEnvFile()`: unit tests for all supported syntax (basic, comments, blank lines, quotes, export prefix, no-equals lines, empty values, duplicate keys)
+- Merge logic: extract env_file loading + merging into a testable helper function so it can be tested without the full CLI context
+- Verify inline environment values take precedence over env_file values
+- Verify template resolution works on env_file values (e.g., `PORT={{.Port.myservice}}`)
