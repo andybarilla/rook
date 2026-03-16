@@ -120,3 +120,65 @@ func (r *DockerRunner) Logs(handle RunHandle) (io.ReadCloser, error) {
 	}
 	return io.NopCloser(bytes.NewReader(output)), nil
 }
+
+// FindContainers returns container names matching the given prefix.
+func FindContainers(prefix string) ([]string, error) {
+	cmd := exec.Command("docker", "ps", "-a",
+		"--filter", fmt.Sprintf("name=%s", prefix),
+		"--format", "{{.Names}}")
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("listing containers: %w", err)
+	}
+	raw := strings.TrimSpace(string(output))
+	if raw == "" {
+		return nil, nil
+	}
+	return strings.Split(raw, "\n"), nil
+}
+
+// ContainerStatus checks the status of a container by name.
+func ContainerStatus(containerName string) ServiceStatus {
+	output, err := exec.Command("docker", "inspect", "-f", "{{.State.Status}}", containerName).Output()
+	if err != nil {
+		return StatusStopped
+	}
+	switch strings.TrimSpace(string(output)) {
+	case "running":
+		return StatusRunning
+	case "exited":
+		out, _ := exec.Command("docker", "inspect", "-f", "{{.State.ExitCode}}", containerName).Output()
+		if strings.TrimSpace(string(out)) != "0" {
+			return StatusCrashed
+		}
+		return StatusStopped
+	default:
+		return StatusStopped
+	}
+}
+
+// StopContainer stops and removes a container by name.
+func StopContainer(name string) {
+	exec.Command("docker", "stop", name).Run()
+	exec.Command("docker", "rm", name).Run()
+}
+
+// StreamLogs returns a streaming reader for a container's logs.
+func (r *DockerRunner) StreamLogs(handle RunHandle) (io.ReadCloser, *exec.Cmd, error) {
+	r.mu.Lock()
+	containerName, ok := r.containers[handle.ID]
+	r.mu.Unlock()
+	if !ok {
+		containerName = r.containerName(handle.ID)
+	}
+	cmd := exec.Command("docker", "logs", "-f", "--follow", containerName)
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, nil, err
+	}
+	cmd.Stderr = cmd.Stdout
+	if err := cmd.Start(); err != nil {
+		return nil, nil, fmt.Errorf("streaming logs for %s: %w", containerName, err)
+	}
+	return stdout, cmd, nil
+}
