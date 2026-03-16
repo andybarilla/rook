@@ -3,6 +3,7 @@ package orchestrator
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/andybarilla/rook/internal/health"
@@ -304,4 +305,45 @@ func (o *Orchestrator) Status(ws workspace.Workspace) (map[string]runner.Service
 	}
 
 	return result, nil
+}
+
+// Reconnect discovers already-running Docker containers for a workspace
+// and populates the orchestrator's handle map so subsequent operations
+// (Up, Down, Status) are aware of them.
+func (o *Orchestrator) Reconnect(ws workspace.Workspace) error {
+	rc, ok := o.containerRunner.(runner.Reconnectable)
+	if !ok {
+		return nil // runner doesn't support reconnection
+	}
+
+	prefix := rc.Prefix() + "_"
+	containers, err := runner.FindContainers(prefix)
+	if err != nil {
+		return fmt.Errorf("finding containers for %s: %w", ws.Name, err)
+	}
+
+	o.mu.Lock()
+	if o.handles[ws.Name] == nil {
+		o.handles[ws.Name] = make(map[string]runner.RunHandle)
+	}
+	o.mu.Unlock()
+
+	for _, containerName := range containers {
+		if !strings.HasPrefix(containerName, prefix) {
+			continue
+		}
+		if runner.ContainerStatus(containerName) != runner.StatusRunning {
+			continue
+		}
+		serviceName := strings.TrimPrefix(containerName, prefix)
+		if _, exists := ws.Services[serviceName]; !exists {
+			continue
+		}
+		handle := rc.Adopt(serviceName)
+		o.mu.Lock()
+		o.handles[ws.Name][serviceName] = handle
+		o.mu.Unlock()
+	}
+
+	return nil
 }

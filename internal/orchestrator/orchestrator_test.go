@@ -3,6 +3,7 @@ package orchestrator_test
 import (
 	"context"
 	"io"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -216,5 +217,53 @@ func TestOrchestrator_Down(t *testing.T) {
 	orch.Down(context.Background(), ws)
 	if len(mock.stopped) != 2 {
 		t.Fatalf("expected 2 stopped, got %d", len(mock.stopped))
+	}
+}
+
+// mockReconnectable implements runner.Reconnectable for testing.
+type mockReconnectable struct {
+	mockRunner
+	prefix  string
+	adopted []string
+}
+
+func (m *mockReconnectable) Prefix() string { return m.prefix }
+func (m *mockReconnectable) Adopt(serviceName string) runner.RunHandle {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.adopted = append(m.adopted, serviceName)
+	return runner.RunHandle{ID: serviceName, Type: "docker"}
+}
+
+func TestOrchestrator_Reconnect_NonReconnectable(t *testing.T) {
+	mock := &mockRunner{}
+	orch := orchestrator.New(mock, mock, nil)
+	ws := workspace.Workspace{
+		Name: "test", Root: t.TempDir(),
+		Services: map[string]workspace.Service{"app": {Command: "air"}},
+	}
+	err := orch.Reconnect(ws)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestOrchestrator_Reconnect_NoContainers(t *testing.T) {
+	if exec.Command("docker", "info").Run() != nil {
+		t.Skip("docker not available")
+	}
+	mock := &mockReconnectable{prefix: "rook_test"}
+	orch := orchestrator.New(mock, &mock.mockRunner, nil)
+	ws := workspace.Workspace{
+		Name: "test", Root: t.TempDir(),
+		Services: map[string]workspace.Service{"postgres": {Image: "postgres:16"}},
+	}
+	err := orch.Reconnect(ws)
+	if err != nil {
+		t.Fatal(err)
+	}
+	statuses, _ := orch.Status(ws)
+	if statuses["postgres"] != runner.StatusStopped {
+		t.Errorf("expected stopped, got %s", statuses["postgres"])
 	}
 }
