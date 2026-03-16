@@ -47,11 +47,21 @@ func newUpCmd() *cobra.Command {
 				profile = "default"
 			}
 
-			// Generate .env files
+			// Allocate ports first so templates can resolve
 			portMap := make(map[string]int)
-			for name := range ws.Services {
-				if result := cctx.portAlloc.Get(ws.Name, name); result.OK {
-					portMap[name] = result.Port
+			for name, svc := range ws.Services {
+				if svc.PinPort > 0 {
+					port, err := cctx.portAlloc.AllocatePinned(ws.Name, name, svc.PinPort)
+					if err != nil {
+						return fmt.Errorf("pinning port for %s: %w", name, err)
+					}
+					portMap[name] = port
+				} else if len(svc.Ports) > 0 {
+					port, err := cctx.portAlloc.Allocate(ws.Name, name, svc.Ports[0])
+					if err != nil {
+						return fmt.Errorf("allocating port for %s: %w", name, err)
+					}
+					portMap[name] = port
 				}
 			}
 			for name, svc := range ws.Services {
