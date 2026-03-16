@@ -23,6 +23,7 @@ type composeService struct {
 	Volumes     []string `yaml:"volumes"`
 	DependsOn   any      `yaml:"depends_on"`
 	Command     any      `yaml:"command"`
+	EnvFile     any      `yaml:"env_file"`
 }
 
 var composeFileNames = []string{
@@ -112,6 +113,13 @@ func (d *ComposeDiscoverer) Discover(dir string) (*DiscoveryResult, error) {
 					parts[i] = fmt.Sprintf("%v", p)
 				}
 				svc.Command = strings.Join(parts, " ")
+			}
+		}
+
+		// Extract env_file (simple string form only)
+		if cs.EnvFile != nil {
+			if envStr, ok := cs.EnvFile.(string); ok {
+				svc.EnvFile = envStr
 			}
 		}
 

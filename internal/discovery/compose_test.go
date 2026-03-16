@@ -196,4 +196,32 @@ services:
 			t.Errorf("expected depends_on [db], got %v", web.DependsOn)
 		}
 	})
+
+	t.Run("env_file", func(t *testing.T) {
+		dir := t.TempDir()
+		compose := `
+services:
+  api:
+    build: .
+    env_file: .env
+  db:
+    image: postgres:16
+`
+		os.WriteFile(filepath.Join(dir, "docker-compose.yml"), []byte(compose), 0644)
+
+		result, err := d.Discover(dir)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		api := result.Services["api"]
+		if api.EnvFile != ".env" {
+			t.Errorf("expected env_file '.env', got '%s'", api.EnvFile)
+		}
+
+		db := result.Services["db"]
+		if db.EnvFile != "" {
+			t.Errorf("expected empty env_file for db, got '%s'", db.EnvFile)
+		}
+	})
 }

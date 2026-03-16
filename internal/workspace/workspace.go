@@ -27,6 +27,7 @@ type Service struct {
 	DependsOn   []string          `yaml:"depends_on,omitempty"`
 	Healthcheck any               `yaml:"healthcheck,omitempty"`
 	Volumes     []string          `yaml:"volumes,omitempty"`
+	EnvFile     string            `yaml:"env_file,omitempty"`
 	Build       string            `yaml:"build,omitempty"`
 	ForceBuild  bool              `yaml:"-"`
 }

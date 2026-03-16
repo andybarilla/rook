@@ -107,6 +107,11 @@ func (r *DockerRunner) Start(ctx context.Context, name string, svc workspace.Ser
 		args = append(args, "-p", fmt.Sprintf("%d:%d", port, svc.Ports[0]))
 	}
 
+	if svc.EnvFile != "" {
+		envFilePath := filepath.Join(workDir, svc.EnvFile)
+		args = append(args, "--env-file", envFilePath)
+	}
+
 	for k, v := range svc.Environment {
 		args = append(args, "-e", fmt.Sprintf("%s=%s", k, v))
 	}
