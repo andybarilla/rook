@@ -249,8 +249,9 @@ func TestOrchestrator_Reconnect_NonReconnectable(t *testing.T) {
 }
 
 func TestOrchestrator_Reconnect_NoContainers(t *testing.T) {
-	if exec.Command("docker", "info").Run() != nil {
-		t.Skip("docker not available")
+	runner.DetectRuntime()
+	if exec.Command(runner.ContainerRuntime, "info").Run() != nil {
+		t.Skip("container runtime not available")
 	}
 	mock := &mockReconnectable{prefix: "rook_test"}
 	orch := orchestrator.New(mock, &mock.mockRunner, nil)

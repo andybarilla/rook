@@ -10,7 +10,10 @@ import (
 	"github.com/andybarilla/rook/internal/workspace"
 )
 
-func dockerAvailable() bool { return exec.Command("docker", "info").Run() == nil }
+func dockerAvailable() bool {
+	runner.DetectRuntime()
+	return exec.Command(runner.ContainerRuntime, "info").Run() == nil
+}
 
 func TestDockerRunner_StartAndStop(t *testing.T) {
 	if !dockerAvailable() {

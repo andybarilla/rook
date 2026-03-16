@@ -30,6 +30,7 @@ func configDir() string {
 }
 
 func main() {
+	runner.DetectRuntime()
 	cfgDir := configDir()
 	os.MkdirAll(cfgDir, 0755)
 

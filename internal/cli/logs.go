@@ -50,7 +50,7 @@ func newLogsCmd() *cobra.Command {
 				idx := i
 				cName := containerName
 
-				logCmd := exec.Command("docker", "logs", "-f", "--follow", cName)
+				logCmd := exec.Command(runner.ContainerRuntime, "logs", "-f", "--follow", cName)
 				stdout, err := logCmd.StdoutPipe()
 				if err != nil {
 					continue
@@ -79,7 +79,7 @@ func newLogsCmd() *cobra.Command {
 }
 
 func streamSingleContainer(containerName string) error {
-	cmd := exec.Command("docker", "logs", "-f", "--follow", containerName)
+	cmd := exec.Command(runner.ContainerRuntime, "logs", "-f", "--follow", containerName)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Start(); err != nil {

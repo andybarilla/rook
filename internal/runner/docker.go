@@ -12,6 +12,23 @@ import (
 	"github.com/andybarilla/rook/internal/workspace"
 )
 
+// ContainerRuntime is the detected container runtime binary ("podman" or "docker").
+// Set once at startup via DetectRuntime().
+var ContainerRuntime = "docker"
+
+// DetectRuntime checks for podman first, then docker, and sets ContainerRuntime.
+func DetectRuntime() string {
+	if _, err := exec.LookPath("podman"); err == nil {
+		ContainerRuntime = "podman"
+		return ContainerRuntime
+	}
+	if _, err := exec.LookPath("docker"); err == nil {
+		ContainerRuntime = "docker"
+		return ContainerRuntime
+	}
+	return ContainerRuntime
+}
+
 type DockerRunner struct {
 	mu         sync.Mutex
 	prefix     string
@@ -43,7 +60,7 @@ func (r *DockerRunner) Start(ctx context.Context, name string, svc workspace.Ser
 	containerName := r.containerName(name)
 
 	// Check if container already exists
-	output, err := exec.Command("docker", "inspect", "-f", "{{.State.Status}}", containerName).Output()
+	output, err := exec.Command(ContainerRuntime, "inspect", "-f", "{{.State.Status}}", containerName).Output()
 	if err == nil {
 		state := strings.TrimSpace(string(output))
 		if state == "running" {
@@ -52,7 +69,7 @@ func (r *DockerRunner) Start(ctx context.Context, name string, svc workspace.Ser
 			return RunHandle{ID: name, Type: "docker"}, nil
 		}
 		// Container exists but not running — remove it
-		exec.Command("docker", "rm", "-f", containerName).Run()
+		exec.Command(ContainerRuntime, "rm", "-f", containerName).Run()
 	}
 
 	// Create new container
@@ -76,12 +93,12 @@ func (r *DockerRunner) Start(ctx context.Context, name string, svc workspace.Ser
 		args = append(args, "sh", "-c", svc.Command)
 	}
 
-	cmd := exec.CommandContext(ctx, "docker", args...)
+	cmd := exec.CommandContext(ctx, ContainerRuntime, args...)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 
 	if _, err := cmd.Output(); err != nil {
-		return RunHandle{}, fmt.Errorf("docker run %s: %s: %w", containerName, stderr.String(), err)
+		return RunHandle{}, fmt.Errorf("%s run %s: %s: %w", ContainerRuntime, containerName, stderr.String(), err)
 	}
 
 	r.containers[name] = containerName
@@ -95,8 +112,8 @@ func (r *DockerRunner) Stop(handle RunHandle) error {
 	if !ok {
 		return nil
 	}
-	exec.Command("docker", "stop", containerName).Run()
-	exec.Command("docker", "rm", containerName).Run()
+	exec.Command(ContainerRuntime, "stop", containerName).Run()
+	exec.Command(ContainerRuntime, "rm", containerName).Run()
 	return nil
 }
 
@@ -108,7 +125,7 @@ func (r *DockerRunner) Status(handle RunHandle) (ServiceStatus, error) {
 		return StatusStopped, nil
 	}
 
-	output, err := exec.Command("docker", "inspect", "-f", "{{.State.Status}}", containerName).Output()
+	output, err := exec.Command(ContainerRuntime, "inspect", "-f", "{{.State.Status}}", containerName).Output()
 	if err != nil {
 		return StatusStopped, nil
 	}
@@ -117,7 +134,7 @@ func (r *DockerRunner) Status(handle RunHandle) (ServiceStatus, error) {
 	case "running":
 		return StatusRunning, nil
 	case "exited":
-		out, _ := exec.Command("docker", "inspect", "-f", "{{.State.ExitCode}}", containerName).Output()
+		out, _ := exec.Command(ContainerRuntime, "inspect", "-f", "{{.State.ExitCode}}", containerName).Output()
 		if strings.TrimSpace(string(out)) != "0" {
 			return StatusCrashed, nil
 		}
@@ -135,7 +152,7 @@ func (r *DockerRunner) Logs(handle RunHandle) (io.ReadCloser, error) {
 		return nil, fmt.Errorf("no container for %s", handle.ID)
 	}
 
-	output, err := exec.Command("docker", "logs", containerName).Output()
+	output, err := exec.Command(ContainerRuntime, "logs", containerName).Output()
 	if err != nil {
 		return nil, fmt.Errorf("logs for %s: %w", containerName, err)
 	}
@@ -144,7 +161,7 @@ func (r *DockerRunner) Logs(handle RunHandle) (io.ReadCloser, error) {
 
 // FindContainers returns container names matching the given prefix.
 func FindContainers(prefix string) ([]string, error) {
-	cmd := exec.Command("docker", "ps", "-a",
+	cmd := exec.Command(ContainerRuntime, "ps", "-a",
 		"--filter", fmt.Sprintf("name=%s", prefix),
 		"--format", "{{.Names}}")
 	output, err := cmd.Output()
@@ -160,7 +177,7 @@ func FindContainers(prefix string) ([]string, error) {
 
 // ContainerStatus checks the status of a container by name.
 func ContainerStatus(containerName string) ServiceStatus {
-	output, err := exec.Command("docker", "inspect", "-f", "{{.State.Status}}", containerName).Output()
+	output, err := exec.Command(ContainerRuntime, "inspect", "-f", "{{.State.Status}}", containerName).Output()
 	if err != nil {
 		return StatusStopped
 	}
@@ -168,7 +185,7 @@ func ContainerStatus(containerName string) ServiceStatus {
 	case "running":
 		return StatusRunning
 	case "exited":
-		out, _ := exec.Command("docker", "inspect", "-f", "{{.State.ExitCode}}", containerName).Output()
+		out, _ := exec.Command(ContainerRuntime, "inspect", "-f", "{{.State.ExitCode}}", containerName).Output()
 		if strings.TrimSpace(string(out)) != "0" {
 			return StatusCrashed
 		}
@@ -180,8 +197,8 @@ func ContainerStatus(containerName string) ServiceStatus {
 
 // StopContainer stops and removes a container by name.
 func StopContainer(name string) {
-	exec.Command("docker", "stop", name).Run()
-	exec.Command("docker", "rm", name).Run()
+	exec.Command(ContainerRuntime, "stop", name).Run()
+	exec.Command(ContainerRuntime, "rm", name).Run()
 }
 
 // StreamLogs returns a streaming reader for a container's logs.
@@ -192,7 +209,7 @@ func (r *DockerRunner) StreamLogs(handle RunHandle) (io.ReadCloser, *exec.Cmd, e
 	if !ok {
 		containerName = r.containerName(handle.ID)
 	}
-	cmd := exec.Command("docker", "logs", "-f", "--follow", containerName)
+	cmd := exec.Command(ContainerRuntime, "logs", "-f", "--follow", containerName)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return nil, nil, err
