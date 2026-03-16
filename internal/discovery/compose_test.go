@@ -282,10 +282,9 @@ services:
 		}
 	})
 
-	t.Run("devcontainer_merges_root_depends_on", func(t *testing.T) {
+	t.Run("devcontainer_merges_root_depends_on_same_name", func(t *testing.T) {
 		dir := t.TempDir()
 
-		// Root compose with depends_on
 		rootCompose := `
 services:
   api:
@@ -300,14 +299,12 @@ services:
 `
 		os.WriteFile(filepath.Join(dir, "docker-compose.yml"), []byte(rootCompose), 0644)
 
-		// Devcontainer compose without depends_on
 		os.MkdirAll(filepath.Join(dir, ".devcontainer"), 0755)
 		devCompose := `
 services:
   api:
     build:
       context: ..
-      dockerfile: .devcontainer/Dockerfile
     command: air
   postgres:
     image: postgres:16-alpine
@@ -325,14 +322,64 @@ services:
 		if len(api.DependsOn) != 2 {
 			t.Fatalf("expected 2 depends_on, got %d: %v", len(api.DependsOn), api.DependsOn)
 		}
+	})
 
-		// Verify postgres and redis are in depends_on (order may vary)
+	t.Run("devcontainer_merges_root_depends_on_different_name", func(t *testing.T) {
+		dir := t.TempDir()
+
+		// Root compose has "api" with depends_on
+		rootCompose := `
+services:
+  api:
+    build: .
+    depends_on:
+      - postgres
+      - redis
+  worker:
+    build: .
+    command: ./server -worker
+    depends_on:
+      - postgres
+      - redis
+  postgres:
+    image: postgres:16-alpine
+  redis:
+    image: redis:7-alpine
+`
+		os.WriteFile(filepath.Join(dir, "docker-compose.yml"), []byte(rootCompose), 0644)
+
+		// Devcontainer compose has "app" (standard devcontainer name) with no depends_on
+		os.MkdirAll(filepath.Join(dir, ".devcontainer"), 0755)
+		devCompose := `
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    command: air
+  postgres:
+    image: postgres:16-alpine
+  redis:
+    image: redis:7-alpine
+`
+		os.WriteFile(filepath.Join(dir, ".devcontainer", "docker-compose.yml"), []byte(devCompose), 0644)
+
+		result, err := d.Discover(dir)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		app := result.Services["app"]
+		if len(app.DependsOn) != 2 {
+			t.Fatalf("expected 2 depends_on for app, got %d: %v", len(app.DependsOn), app.DependsOn)
+		}
+
 		deps := make(map[string]bool)
-		for _, d := range api.DependsOn {
+		for _, d := range app.DependsOn {
 			deps[d] = true
 		}
 		if !deps["postgres"] || !deps["redis"] {
-			t.Errorf("expected depends_on [postgres, redis], got %v", api.DependsOn)
+			t.Errorf("expected depends_on [postgres, redis], got %v", app.DependsOn)
 		}
 	})
 }

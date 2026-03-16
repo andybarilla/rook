@@ -240,19 +240,61 @@ func mergeRootDependsOn(dir string, result *DiscoveryResult) {
 		return
 	}
 
+	// Direct name match: merge depends_on for services with the same name
 	for name, cs := range cf.Services {
 		svc, exists := result.Services[name]
-		if !exists {
-			continue
-		}
-		// Only merge if the devcontainer service has no depends_on
-		if len(svc.DependsOn) > 0 {
+		if !exists || len(svc.DependsOn) > 0 {
 			continue
 		}
 		deps := parseDependsOn(cs.DependsOn)
 		if len(deps) > 0 {
 			svc.DependsOn = deps
 			result.Services[name] = svc
+		}
+	}
+
+	// Primary service match: devcontainer typically names the build service "app"
+	// while root compose uses the actual name (e.g., "api"). If the devcontainer
+	// has a build service with no depends_on, find the root's build service and
+	// carry over its dependencies.
+	for devName, devSvc := range result.Services {
+		if devSvc.Build == "" || len(devSvc.DependsOn) > 0 {
+			continue
+		}
+		// Find a root build service with depends_on (skip if names match — already handled)
+		for rootName, rootCs := range cf.Services {
+			if rootName == devName {
+				continue
+			}
+			// Check if this root service has a build context
+			hasBuild := false
+			if rootCs.Build != nil {
+				switch rootCs.Build.(type) {
+				case string:
+					hasBuild = true
+				case map[string]any:
+					hasBuild = true
+				}
+			}
+			if !hasBuild {
+				continue
+			}
+			deps := parseDependsOn(rootCs.DependsOn)
+			if len(deps) == 0 {
+				continue
+			}
+			// Filter to only deps that exist in the devcontainer result
+			var validDeps []string
+			for _, dep := range deps {
+				if _, exists := result.Services[dep]; exists {
+					validDeps = append(validDeps, dep)
+				}
+			}
+			if len(validDeps) > 0 {
+				devSvc.DependsOn = validDeps
+				result.Services[devName] = devSvc
+				break // only match one root build service
+			}
 		}
 	}
 }
