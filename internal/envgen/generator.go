@@ -67,6 +67,44 @@ func ResolveTemplatesWithServices(env map[string]string, portMap map[string]int,
 	return result, nil
 }
 
+// ResolveWithHostMap resolves templates using explicit host and port maps.
+// This is used for container-to-container networking where hosts are container
+// names and ports are internal container ports.
+func ResolveWithHostMap(env map[string]string, portMap map[string]int, hostMap map[string]string) (map[string]string, error) {
+	data := templateData{
+		Port: make(map[string]string),
+		Host: make(map[string]string),
+	}
+
+	for name, host := range hostMap {
+		data.Host[name] = host
+	}
+	for name, port := range portMap {
+		data.Port[name] = strconv.Itoa(port)
+	}
+
+	result := make(map[string]string, len(env))
+	for k, v := range env {
+		if !strings.Contains(v, "{{") {
+			result[k] = v
+			continue
+		}
+
+		tmpl, err := template.New(k).Parse(v)
+		if err != nil {
+			return nil, fmt.Errorf("parsing template for %s: %w", k, err)
+		}
+
+		var buf bytes.Buffer
+		if err := tmpl.Execute(&buf, data); err != nil {
+			return nil, fmt.Errorf("executing template for %s: %w", k, err)
+		}
+		result[k] = buf.String()
+	}
+
+	return result, nil
+}
+
 func WriteEnvFile(path string, vars map[string]string) error {
 	keys := make([]string, 0, len(vars))
 	for k := range vars {

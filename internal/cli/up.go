@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"strings"
 	"sync"
 	"syscall"
 
@@ -65,33 +64,34 @@ func newUpCmd() *cobra.Command {
 					portMap[name] = port
 				}
 			}
+			// Build container-aware host/port maps for template resolution
+			containerPrefix := fmt.Sprintf("rook_%s_", wsName)
+			containerPortMap := make(map[string]int)
+			containerHostMap := make(map[string]string)
+			for svcName, s := range ws.Services {
+				if s.IsContainer() {
+					// Container-to-container: use container name + internal port
+					containerHostMap[svcName] = containerPrefix + svcName
+					if len(s.Ports) > 0 {
+						containerPortMap[svcName] = s.Ports[0] // internal port
+					}
+				} else {
+					containerHostMap[svcName] = "localhost"
+					if p, ok := portMap[svcName]; ok {
+						containerPortMap[svcName] = p
+					}
+				}
+			}
+
 			for name, svc := range ws.Services {
 				if len(svc.Environment) > 0 {
-					// Container services use container networking:
-					// hosts resolve to container names, ports to internal ports
-					isContainer := svc.IsContainer()
 					var resolved map[string]string
 					var err error
-					if isContainer {
-						resolved, err = envgen.ResolveTemplatesWithServices(
-							svc.Environment, portMap, true, ws.Services,
-						)
-						// Fix host names to use container names (not service names)
-						// The devcontainer mode sets host=serviceName, but we need
-						// host=containerName for podman/docker networking
-						containerPrefix := fmt.Sprintf("rook_%s_", wsName)
-						for k, v := range resolved {
-							for svcName, s := range ws.Services {
-								if s.IsContainer() {
-									// Replace bare service name with container name
-									old := svcName
-									new := containerPrefix + svcName
-									v = strings.ReplaceAll(v, "://"+old+":", "://"+new+":")
-								}
-							}
-							resolved[k] = v
-						}
+					if svc.IsContainer() {
+						// Container services use container networking
+						resolved, err = envgen.ResolveWithHostMap(svc.Environment, containerPortMap, containerHostMap)
 					} else {
+						// Process services use localhost + allocated ports
 						resolved, err = envgen.ResolveTemplates(svc.Environment, portMap, false)
 					}
 					if err != nil {
