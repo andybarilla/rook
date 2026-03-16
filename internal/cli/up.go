@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"strings"
 	"sync"
 	"syscall"
 
@@ -100,6 +102,64 @@ func newUpCmd() *cobra.Command {
 					svc.Environment = resolved
 					ws.Services[name] = svc
 				}
+			}
+
+			// Resolve templates in mounted config files (e.g., Caddyfile with {{.Host.api}})
+			resolvedDir := filepath.Join(ws.Root, ".rook", "resolved")
+			os.MkdirAll(resolvedDir, 0755)
+			for name, svc := range ws.Services {
+				if !svc.IsContainer() || len(svc.Volumes) == 0 {
+					continue
+				}
+				for i, vol := range svc.Volumes {
+					parts := strings.SplitN(vol, ":", 2)
+					if len(parts) != 2 {
+						continue
+					}
+					hostPath := parts[0]
+					containerPath := parts[1]
+
+					// Only process relative file paths (not named volumes)
+					if !strings.HasPrefix(hostPath, "./") && !strings.HasPrefix(hostPath, "/") {
+						continue
+					}
+
+					// Resolve relative to workspace root
+					absPath := hostPath
+					if strings.HasPrefix(hostPath, "./") {
+						absPath = filepath.Join(ws.Root, hostPath)
+					}
+
+					// Only process files (not directories)
+					info, err := os.Stat(absPath)
+					if err != nil || info.IsDir() {
+						continue
+					}
+
+					// Read the file and check for templates
+					content, err := os.ReadFile(absPath)
+					if err != nil || !strings.Contains(string(content), "{{") {
+						continue
+					}
+
+					// Resolve templates
+					resolved, err := envgen.ResolveFileTemplate(string(content), containerPortMap, containerHostMap)
+					if err != nil {
+						fmt.Fprintf(os.Stderr, "warning: cannot resolve templates in %s: %v\n", hostPath, err)
+						continue
+					}
+
+					// Write resolved copy
+					resolvedPath := filepath.Join(resolvedDir, fmt.Sprintf("%s_%s", name, filepath.Base(hostPath)))
+					if err := os.WriteFile(resolvedPath, []byte(resolved), info.Mode()); err != nil {
+						fmt.Fprintf(os.Stderr, "warning: cannot write resolved %s: %v\n", hostPath, err)
+						continue
+					}
+
+					// Replace volume mount with resolved path
+					svc.Volumes[i] = resolvedPath + ":" + containerPath
+				}
+				ws.Services[name] = svc
 			}
 
 			if build {

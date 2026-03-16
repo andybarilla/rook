@@ -105,6 +105,33 @@ func ResolveWithHostMap(env map[string]string, portMap map[string]int, hostMap m
 	return result, nil
 }
 
+// ResolveFileTemplate resolves {{.Host.x}} and {{.Port.x}} templates in a
+// file's content string. Used for config files like Caddyfile that need
+// container names and ports resolved before mounting.
+func ResolveFileTemplate(content string, portMap map[string]int, hostMap map[string]string) (string, error) {
+	data := templateData{
+		Port: make(map[string]string),
+		Host: make(map[string]string),
+	}
+	for name, host := range hostMap {
+		data.Host[name] = host
+	}
+	for name, port := range portMap {
+		data.Port[name] = strconv.Itoa(port)
+	}
+
+	tmpl, err := template.New("file").Parse(content)
+	if err != nil {
+		return "", fmt.Errorf("parsing template: %w", err)
+	}
+
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, data); err != nil {
+		return "", fmt.Errorf("executing template: %w", err)
+	}
+	return buf.String(), nil
+}
+
 func WriteEnvFile(path string, vars map[string]string) error {
 	keys := make([]string, 0, len(vars))
 	for k := range vars {
