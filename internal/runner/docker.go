@@ -90,8 +90,13 @@ func (r *DockerRunner) Start(ctx context.Context, name string, svc workspace.Ser
 				return RunHandle{}, fmt.Errorf("cannot build %s: workspace root is empty", name)
 			}
 			buildCtx := filepath.Join(workDir, svc.Build)
+			buildArgs := []string{"build", "-t", imageTag}
+			if svc.Dockerfile != "" {
+				buildArgs = append(buildArgs, "-f", filepath.Join(workDir, svc.Dockerfile))
+			}
+			buildArgs = append(buildArgs, buildCtx)
 			fmt.Fprintf(os.Stderr, "Building %s from %s...\n", name, buildCtx)
-			buildCmd := exec.CommandContext(ctx, ContainerRuntime, "build", "-t", imageTag, buildCtx)
+			buildCmd := exec.CommandContext(ctx, ContainerRuntime, buildArgs...)
 			buildCmd.Stdout = os.Stderr
 			buildCmd.Stderr = os.Stderr
 			if err := buildCmd.Run(); err != nil {

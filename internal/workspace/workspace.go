@@ -29,6 +29,7 @@ type Service struct {
 	Volumes     []string          `yaml:"volumes,omitempty"`
 	EnvFile     string            `yaml:"env_file,omitempty"`
 	Build       string            `yaml:"build,omitempty"`
+	Dockerfile  string            `yaml:"dockerfile,omitempty"`
 	ForceBuild  bool              `yaml:"-"`
 }
 

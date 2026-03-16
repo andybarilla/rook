@@ -261,6 +261,10 @@ services:
 		if app.Build != "." {
 			t.Errorf("expected build '.', got '%s'", app.Build)
 		}
+		// dockerfile: .devcontainer/Dockerfile relative to .devcontainer/ resolved to project root
+		if app.Dockerfile != ".devcontainer/Dockerfile" {
+			t.Errorf("expected dockerfile '.devcontainer/Dockerfile', got '%s'", app.Dockerfile)
+		}
 		if app.Command != "/workspaces/app/.devcontainer/start.sh" {
 			t.Errorf("expected command, got '%s'", app.Command)
 		}

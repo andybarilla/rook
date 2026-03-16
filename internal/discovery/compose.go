@@ -152,7 +152,16 @@ func (d *ComposeDiscoverer) Discover(dir string) (*DiscoveryResult, error) {
 						svc.Build = ctx
 					}
 				}
-				// TODO: support "dockerfile" field for non-default Dockerfile paths
+				if df, ok := v["dockerfile"].(string); ok {
+					// Dockerfile path is relative to the build context, not the compose dir.
+					// Since we've already resolved build context to be relative to project root,
+					// resolve dockerfile relative to the build context.
+					if svc.Build != "" {
+						svc.Dockerfile = filepath.Join(svc.Build, df)
+					} else {
+						svc.Dockerfile = df
+					}
+				}
 			}
 		}
 
