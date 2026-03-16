@@ -10,9 +10,10 @@ import (
 type ServiceStatus string
 
 const (
-	StatusRunning ServiceStatus = "running"
-	StatusStopped ServiceStatus = "stopped"
-	StatusCrashed ServiceStatus = "crashed"
+	StatusStarting ServiceStatus = "starting"
+	StatusRunning  ServiceStatus = "running"
+	StatusStopped  ServiceStatus = "stopped"
+	StatusCrashed  ServiceStatus = "crashed"
 )
 
 type RunHandle struct {
