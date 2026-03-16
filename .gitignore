@@ -1,7 +1,10 @@
 .worktrees/
 /rook
+/rook-gui
 .idea/
 .vscode/
 .DS_Store
 *.env
 .superpowers/
+node_modules/
+**/dist/
