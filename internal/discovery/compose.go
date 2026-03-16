@@ -94,6 +94,27 @@ func (d *ComposeDiscoverer) Discover(dir string) (*DiscoveryResult, error) {
 			}
 		}
 
+		// Extract build context (simple string form only)
+		if cs.Build != nil {
+			if buildStr, ok := cs.Build.(string); ok {
+				svc.Build = buildStr
+			}
+		}
+
+		// Extract command
+		if cs.Command != nil {
+			switch v := cs.Command.(type) {
+			case string:
+				svc.Command = v
+			case []any:
+				parts := make([]string, len(v))
+				for i, p := range v {
+					parts[i] = fmt.Sprintf("%v", p)
+				}
+				svc.Command = strings.Join(parts, " ")
+			}
+		}
+
 		svc.Environment = parseEnvironment(cs.Environment)
 		svc.DependsOn = parseDependsOn(cs.DependsOn)
 		result.Services[name] = svc

@@ -136,6 +136,42 @@ services:
 		}
 	})
 
+	t.Run("build context and command", func(t *testing.T) {
+		dir := t.TempDir()
+		compose := `
+services:
+  api:
+    build: .
+    ports:
+      - "8080:8080"
+  worker:
+    build: .
+    command: ["./server", "-worker"]
+`
+		os.WriteFile(filepath.Join(dir, "docker-compose.yml"), []byte(compose), 0644)
+		d := NewComposeDiscoverer()
+		result, err := d.Discover(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		api := result.Services["api"]
+		if api.Build != "." {
+			t.Errorf("expected build '.', got '%s'", api.Build)
+		}
+		if !api.IsContainer() {
+			t.Error("api with build should be container")
+		}
+
+		worker := result.Services["worker"]
+		if worker.Build != "." {
+			t.Errorf("expected build '.', got '%s'", worker.Build)
+		}
+		if worker.Command != "./server -worker" {
+			t.Errorf("expected command './server -worker', got '%s'", worker.Command)
+		}
+	})
+
 	t.Run("map format", func(t *testing.T) {
 		content := `
 services:
