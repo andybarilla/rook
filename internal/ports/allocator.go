@@ -3,6 +3,7 @@ package ports
 import (
 	"encoding/json"
 	"fmt"
+	"net"
 	"os"
 	"sync"
 )
@@ -86,8 +87,19 @@ func (a *FileAllocator) findIndex(workspace, service string) int {
 	return -1
 }
 
+// portAvailable checks if a port is free on the system by attempting to listen on it.
+func portAvailable(port int) bool {
+	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	if err != nil {
+		return false
+	}
+	ln.Close()
+	return true
+}
+
 // Allocate assigns a port for the given workspace and service.
-// If preferred is non-zero and available, it will be used.
+// If preferred is non-zero, available in the allocator, and free on the system, it will be used.
+// If the preferred port is taken on the system, a port from the allocator range is assigned instead.
 // If the workspace/service already has an allocation, the existing port is returned.
 func (a *FileAllocator) Allocate(workspace, service string, preferred int) (int, error) {
 	a.mu.Lock()
@@ -97,12 +109,12 @@ func (a *FileAllocator) Allocate(workspace, service string, preferred int) (int,
 		return a.entries[idx].Port, nil
 	}
 
-	if preferred > 0 && !a.used[preferred] {
+	if preferred > 0 && !a.used[preferred] && portAvailable(preferred) {
 		return a.assign(workspace, service, preferred, false)
 	}
 
 	for p := a.minPort; p <= a.maxPort; p++ {
-		if !a.used[p] {
+		if !a.used[p] && portAvailable(p) {
 			return a.assign(workspace, service, p, false)
 		}
 	}
