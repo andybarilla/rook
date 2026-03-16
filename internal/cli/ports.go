@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/andybarilla/rook/internal/ports"
@@ -9,11 +10,23 @@ import (
 )
 
 func newPortsCmd() *cobra.Command {
-	return &cobra.Command{
+	var reset bool
+
+	cmd := &cobra.Command{
 		Use:   "ports",
 		Short: "Show global port allocation table",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			alloc, err := ports.NewFileAllocator(filepath.Join(configDir(), "ports.json"), 10000, 60000)
+			portsPath := filepath.Join(configDir(), "ports.json")
+
+			if reset {
+				if err := os.Remove(portsPath); err != nil && !os.IsNotExist(err) {
+					return fmt.Errorf("removing ports file: %w", err)
+				}
+				fmt.Println("Port allocations cleared. Ports will be re-allocated on next `rook up`.")
+				return nil
+			}
+
+			alloc, err := ports.NewFileAllocator(portsPath, 10000, 60000)
 			if err != nil {
 				return err
 			}
@@ -37,4 +50,7 @@ func newPortsCmd() *cobra.Command {
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVar(&reset, "reset", false, "Clear all port allocations (re-allocated on next rook up)")
+	return cmd
 }

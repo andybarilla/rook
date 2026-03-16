@@ -9,7 +9,7 @@ import (
 
 func TestAllocate_AssignsFromRange(t *testing.T) {
 	dir := t.TempDir()
-	a, err := ports.NewFileAllocator(filepath.Join(dir, "ports.json"), 10000, 10010)
+	a, err := ports.NewFileAllocator(filepath.Join(dir, "ports.json"), 49100, 49110)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -17,26 +17,26 @@ func TestAllocate_AssignsFromRange(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if port < 10000 || port > 10010 {
+	if port < 49100 || port > 49110 {
 		t.Errorf("port %d outside range", port)
 	}
 }
 
 func TestAllocate_PreferredPort(t *testing.T) {
 	dir := t.TempDir()
-	a, _ := ports.NewFileAllocator(filepath.Join(dir, "ports.json"), 10000, 10010)
-	port, _ := a.Allocate("ws1", "app", 10005)
-	if port != 10005 {
-		t.Errorf("expected 10005, got %d", port)
+	a, _ := ports.NewFileAllocator(filepath.Join(dir, "ports.json"), 49100, 49110)
+	port, _ := a.Allocate("ws1", "app", 49105)
+	if port != 49105 {
+		t.Errorf("expected 49105, got %d", port)
 	}
 }
 
 func TestAllocate_StablePorts(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "ports.json")
-	a1, _ := ports.NewFileAllocator(path, 10000, 10010)
+	a1, _ := ports.NewFileAllocator(path, 49100, 49110)
 	port1, _ := a1.Allocate("ws1", "postgres", 0)
-	a2, _ := ports.NewFileAllocator(path, 10000, 10010)
+	a2, _ := ports.NewFileAllocator(path, 49100, 49110)
 	port2 := a2.Get("ws1", "postgres")
 	if !port2.OK {
 		t.Fatal("expected port to persist")
@@ -48,7 +48,7 @@ func TestAllocate_StablePorts(t *testing.T) {
 
 func TestAllocate_NoConflicts(t *testing.T) {
 	dir := t.TempDir()
-	a, _ := ports.NewFileAllocator(filepath.Join(dir, "ports.json"), 10000, 10002)
+	a, _ := ports.NewFileAllocator(filepath.Join(dir, "ports.json"), 49200, 49202)
 	a.Allocate("ws1", "a", 0)
 	a.Allocate("ws1", "b", 0)
 	a.Allocate("ws1", "c", 0)
@@ -60,9 +60,9 @@ func TestAllocate_NoConflicts(t *testing.T) {
 
 func TestAllocate_PinnedConflict(t *testing.T) {
 	dir := t.TempDir()
-	a, _ := ports.NewFileAllocator(filepath.Join(dir, "ports.json"), 10000, 10010)
-	a.AllocatePinned("ws1", "app", 8080)
-	_, err := a.AllocatePinned("ws2", "app", 8080)
+	a, _ := ports.NewFileAllocator(filepath.Join(dir, "ports.json"), 49100, 49110)
+	a.AllocatePinned("ws1", "app", 49180)
+	_, err := a.AllocatePinned("ws2", "app", 49180)
 	if err == nil {
 		t.Fatal("expected error for pinned conflict")
 	}
@@ -70,7 +70,7 @@ func TestAllocate_PinnedConflict(t *testing.T) {
 
 func TestRelease(t *testing.T) {
 	dir := t.TempDir()
-	a, _ := ports.NewFileAllocator(filepath.Join(dir, "ports.json"), 10000, 10001)
+	a, _ := ports.NewFileAllocator(filepath.Join(dir, "ports.json"), 49300, 49301)
 	a.Allocate("ws1", "a", 0)
 	a.Allocate("ws1", "b", 0)
 	a.Release("ws1", "a")
@@ -82,7 +82,7 @@ func TestRelease(t *testing.T) {
 
 func TestAll(t *testing.T) {
 	dir := t.TempDir()
-	a, _ := ports.NewFileAllocator(filepath.Join(dir, "ports.json"), 10000, 10010)
+	a, _ := ports.NewFileAllocator(filepath.Join(dir, "ports.json"), 49100, 49110)
 	a.Allocate("ws1", "postgres", 0)
 	a.Allocate("ws2", "redis", 0)
 	all := a.All()
