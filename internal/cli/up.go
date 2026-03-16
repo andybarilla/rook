@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 
@@ -66,12 +67,36 @@ func newUpCmd() *cobra.Command {
 			}
 			for name, svc := range ws.Services {
 				if len(svc.Environment) > 0 {
-					resolved, err := envgen.ResolveTemplates(svc.Environment, portMap, false)
+					// Container services use container networking:
+					// hosts resolve to container names, ports to internal ports
+					isContainer := svc.IsContainer()
+					var resolved map[string]string
+					var err error
+					if isContainer {
+						resolved, err = envgen.ResolveTemplatesWithServices(
+							svc.Environment, portMap, true, ws.Services,
+						)
+						// Fix host names to use container names (not service names)
+						// The devcontainer mode sets host=serviceName, but we need
+						// host=containerName for podman/docker networking
+						containerPrefix := fmt.Sprintf("rook_%s_", wsName)
+						for k, v := range resolved {
+							for svcName, s := range ws.Services {
+								if s.IsContainer() {
+									// Replace bare service name with container name
+									old := svcName
+									new := containerPrefix + svcName
+									v = strings.ReplaceAll(v, "://"+old+":", "://"+new+":")
+								}
+							}
+							resolved[k] = v
+						}
+					} else {
+						resolved, err = envgen.ResolveTemplates(svc.Environment, portMap, false)
+					}
 					if err != nil {
 						return fmt.Errorf("resolving env for %s: %w", name, err)
 					}
-					// Update service environment with resolved values so the
-					// orchestrator passes resolved values to the runner
 					svc.Environment = resolved
 					ws.Services[name] = svc
 				}

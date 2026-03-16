@@ -100,8 +100,12 @@ func (r *DockerRunner) Start(ctx context.Context, name string, svc workspace.Ser
 		}
 	}
 
+	// Ensure workspace network exists
+	networkName := r.prefix // e.g., "rook_kern-app"
+	exec.Command(ContainerRuntime, "network", "create", networkName).Run() // ignore error if exists
+
 	// Create new container
-	args := []string{"run", "-d", "--name", containerName}
+	args := []string{"run", "-d", "--name", containerName, "--network", networkName}
 
 	if port, ok := ports[name]; ok && len(svc.Ports) > 0 {
 		args = append(args, "-p", fmt.Sprintf("%d:%d", port, svc.Ports[0]))
