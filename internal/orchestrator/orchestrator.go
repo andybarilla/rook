@@ -3,8 +3,10 @@ package orchestrator
 import (
 	"context"
 	"fmt"
+	"io"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/andybarilla/rook/internal/health"
 	"github.com/andybarilla/rook/internal/ports"
@@ -125,6 +127,28 @@ func (o *Orchestrator) Up(ctx context.Context, ws workspace.Workspace, profileNa
 		o.mu.Lock()
 		o.handles[ws.Name][name] = handle
 		o.mu.Unlock()
+
+		// Brief pause to catch immediate crashes (e.g., missing env vars)
+		if svc.IsContainer() {
+			time.Sleep(500 * time.Millisecond)
+			status, _ := r.Status(handle)
+			if status == runner.StatusCrashed || status == runner.StatusStopped {
+				// Fetch last logs for the error message
+				var lastLogs string
+				if logReader, err := r.Logs(handle); err == nil {
+					if data, err := io.ReadAll(logReader); err == nil {
+						lines := strings.Split(strings.TrimSpace(string(data)), "\n")
+						// Show last 5 lines
+						if len(lines) > 5 {
+							lines = lines[len(lines)-5:]
+						}
+						lastLogs = "\n  " + strings.Join(lines, "\n  ")
+					}
+					logReader.Close()
+				}
+				return fmt.Errorf("service %s crashed immediately after starting%s", name, lastLogs)
+			}
+		}
 
 		// Wait for health check if defined
 		if svc.Healthcheck != nil {
