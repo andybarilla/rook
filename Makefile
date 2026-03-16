@@ -10,7 +10,7 @@ build-cli:
 # Build GUI (requires frontend build first)
 build-gui: deps-gui
 	cd cmd/rook-gui/frontend && npx vite build
-	go build -tags production -o bin/rook-gui ./cmd/rook-gui
+	go build -tags "production,webkit2_41" -o bin/rook-gui ./cmd/rook-gui
 
 # Install both to $GOPATH/bin
 install: install-cli install-gui
@@ -22,7 +22,7 @@ install-cli:
 # Install GUI to $GOPATH/bin (requires frontend build first)
 install-gui: deps-gui
 	cd cmd/rook-gui/frontend && npx vite build
-	go install -tags production ./cmd/rook-gui
+	go install -tags "production,webkit2_41" ./cmd/rook-gui
 
 # Install frontend dependencies
 deps-gui:
