@@ -5,7 +5,9 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -64,12 +66,38 @@ func (r *DockerRunner) Start(ctx context.Context, name string, svc workspace.Ser
 	if err == nil {
 		state := strings.TrimSpace(string(output))
 		if state == "running" {
-			// Adopt the running container
 			r.containers[name] = containerName
 			return RunHandle{ID: name, Type: "docker"}, nil
 		}
-		// Container exists but not running — remove it
 		exec.Command(ContainerRuntime, "rm", "-f", containerName).Run()
+	}
+
+	// Determine the image to use
+	imageTag := svc.Image
+	if svc.Build != "" {
+		wsName := strings.TrimPrefix(r.prefix, "rook_")
+		imageTag = fmt.Sprintf("rook-%s-%s:latest", wsName, name)
+
+		needsBuild := svc.ForceBuild
+		if !needsBuild {
+			if err := exec.Command(ContainerRuntime, "image", "inspect", imageTag).Run(); err != nil {
+				needsBuild = true
+			}
+		}
+
+		if needsBuild {
+			if workDir == "" {
+				return RunHandle{}, fmt.Errorf("cannot build %s: workspace root is empty", name)
+			}
+			buildCtx := filepath.Join(workDir, svc.Build)
+			fmt.Fprintf(os.Stderr, "Building %s from %s...\n", name, buildCtx)
+			buildCmd := exec.CommandContext(ctx, ContainerRuntime, "build", "-t", imageTag, buildCtx)
+			buildCmd.Stdout = os.Stderr
+			buildCmd.Stderr = os.Stderr
+			if err := buildCmd.Run(); err != nil {
+				return RunHandle{}, fmt.Errorf("building %s: %w", name, err)
+			}
+		}
 	}
 
 	// Create new container
@@ -87,7 +115,7 @@ func (r *DockerRunner) Start(ctx context.Context, name string, svc workspace.Ser
 		args = append(args, "-v", vol)
 	}
 
-	args = append(args, svc.Image)
+	args = append(args, imageTag)
 
 	if svc.Command != "" {
 		args = append(args, "sh", "-c", svc.Command)
