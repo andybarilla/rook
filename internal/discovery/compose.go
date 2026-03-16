@@ -27,6 +27,8 @@ type composeService struct {
 }
 
 var composeFileNames = []string{
+	".devcontainer/docker-compose.yml",
+	".devcontainer/docker-compose.yaml",
 	"docker-compose.yml",
 	"docker-compose.yaml",
 	"compose.yml",
@@ -66,6 +68,9 @@ func (d *ComposeDiscoverer) Discover(dir string) (*DiscoveryResult, error) {
 		return nil, fmt.Errorf("no compose file found")
 	}
 
+	// Compose file dir — paths in the file are relative to this
+	composeDir := filepath.Dir(path)
+
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -76,15 +81,34 @@ func (d *ComposeDiscoverer) Discover(dir string) (*DiscoveryResult, error) {
 		return nil, err
 	}
 
+	sourceName := "docker-compose"
+	if strings.Contains(path, ".devcontainer") {
+		sourceName = "devcontainer-compose"
+	}
+
 	result := &DiscoveryResult{
-		Source:   "docker-compose",
+		Source:   sourceName,
 		Services: make(map[string]workspace.Service),
 	}
 
 	for name, cs := range cf.Services {
 		svc := workspace.Service{
-			Image:   cs.Image,
-			Volumes: cs.Volumes,
+			Image: cs.Image,
+		}
+
+		// Resolve volume paths relative to compose file directory
+		for _, v := range cs.Volumes {
+			parts := strings.SplitN(v, ":", 2)
+			if len(parts) == 2 && (strings.HasPrefix(parts[0], "./") || strings.HasPrefix(parts[0], "..")) {
+				// Resolve relative path, then make it relative to project root
+				absPath := filepath.Join(composeDir, parts[0])
+				relPath, err := filepath.Rel(dir, absPath)
+				if err == nil {
+					svc.Volumes = append(svc.Volumes, "./"+relPath+":"+parts[1])
+					continue
+				}
+			}
+			svc.Volumes = append(svc.Volumes, v)
 		}
 
 		for _, p := range cs.Ports {
@@ -95,10 +119,30 @@ func (d *ComposeDiscoverer) Discover(dir string) (*DiscoveryResult, error) {
 			}
 		}
 
-		// Extract build context (simple string form only)
+		// Extract build context (string or object form)
 		if cs.Build != nil {
-			if buildStr, ok := cs.Build.(string); ok {
-				svc.Build = buildStr
+			switch v := cs.Build.(type) {
+			case string:
+				// Resolve relative to compose file dir, then make relative to project root
+				absCtx := filepath.Join(composeDir, v)
+				relCtx, err := filepath.Rel(dir, absCtx)
+				if err == nil {
+					svc.Build = relCtx
+				} else {
+					svc.Build = v
+				}
+			case map[string]any:
+				// Object form: { context: .., dockerfile: .devcontainer/Dockerfile }
+				if ctx, ok := v["context"].(string); ok {
+					absCtx := filepath.Join(composeDir, ctx)
+					relCtx, err := filepath.Rel(dir, absCtx)
+					if err == nil {
+						svc.Build = relCtx
+					} else {
+						svc.Build = ctx
+					}
+				}
+				// TODO: support "dockerfile" field for non-default Dockerfile paths
 			}
 		}
 
@@ -116,10 +160,16 @@ func (d *ComposeDiscoverer) Discover(dir string) (*DiscoveryResult, error) {
 			}
 		}
 
-		// Extract env_file (simple string form only)
+		// Extract env_file (simple string form only), resolve relative to compose dir
 		if cs.EnvFile != nil {
 			if envStr, ok := cs.EnvFile.(string); ok {
-				svc.EnvFile = envStr
+				absEnv := filepath.Join(composeDir, envStr)
+				relEnv, err := filepath.Rel(dir, absEnv)
+				if err == nil {
+					svc.EnvFile = relEnv
+				} else {
+					svc.EnvFile = envStr
+				}
 			}
 		}
 

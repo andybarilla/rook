@@ -224,4 +224,57 @@ services:
 			t.Errorf("expected empty env_file for db, got '%s'", db.EnvFile)
 		}
 	})
+
+	t.Run("devcontainer_compose", func(t *testing.T) {
+		dir := t.TempDir()
+		os.MkdirAll(filepath.Join(dir, ".devcontainer"), 0755)
+		compose := `
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    volumes:
+      - ..:/workspaces/app:cached
+    command: /workspaces/app/.devcontainer/start.sh
+    env_file: ../.env
+    ports:
+      - "8080:8080"
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: app
+`
+		os.WriteFile(filepath.Join(dir, ".devcontainer", "docker-compose.yml"), []byte(compose), 0644)
+
+		result, err := d.Discover(dir)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if result.Source != "devcontainer-compose" {
+			t.Errorf("expected source devcontainer-compose, got %s", result.Source)
+		}
+
+		app := result.Services["app"]
+		// build context: .. relative to .devcontainer/ = project root = "."
+		if app.Build != "." {
+			t.Errorf("expected build '.', got '%s'", app.Build)
+		}
+		if app.Command != "/workspaces/app/.devcontainer/start.sh" {
+			t.Errorf("expected command, got '%s'", app.Command)
+		}
+		// env_file: ../.env relative to .devcontainer/ = .env
+		if app.EnvFile != ".env" {
+			t.Errorf("expected env_file '.env', got '%s'", app.EnvFile)
+		}
+		if len(app.Ports) == 0 || app.Ports[0] != 8080 {
+			t.Errorf("expected port 8080, got %v", app.Ports)
+		}
+
+		pg := result.Services["postgres"]
+		if pg.Image != "postgres:16-alpine" {
+			t.Errorf("expected postgres image, got '%s'", pg.Image)
+		}
+	})
 }
