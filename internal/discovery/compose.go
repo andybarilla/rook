@@ -119,6 +119,13 @@ func (d *ComposeDiscoverer) Discover(dir string) (*DiscoveryResult, error) {
 			}
 		}
 
+		// Infer default ports for well-known images when no ports are defined
+		if len(svc.Ports) == 0 && svc.Image != "" {
+			if port := defaultPortForImage(svc.Image); port > 0 {
+				svc.Ports = append(svc.Ports, port)
+			}
+		}
+
 		// Extract build context (string or object form)
 		if cs.Build != nil {
 			switch v := cs.Build.(type) {
@@ -224,4 +231,32 @@ func parseDependsOn(deps any) []string {
 		return result
 	}
 	return nil
+}
+
+// defaultPortForImage returns the well-known default port for common Docker images.
+// Returns 0 if the image is not recognized.
+func defaultPortForImage(image string) int {
+	// Strip tag (e.g., "postgres:16-alpine" → "postgres")
+	name := strings.Split(image, ":")[0]
+	// Strip registry prefix (e.g., "docker.io/library/postgres" → "postgres")
+	parts := strings.Split(name, "/")
+	name = parts[len(parts)-1]
+
+	defaults := map[string]int{
+		"postgres":  5432,
+		"pgvector":  5432,
+		"mysql":     3306,
+		"mariadb":   3306,
+		"redis":     6379,
+		"mongo":     27017,
+		"rabbitmq":  5672,
+		"nats":      4222,
+		"memcached": 11211,
+		"minio":     9000,
+		"nginx":     80,
+		"caddy":     80,
+		"httpd":     80,
+		"traefik":   80,
+	}
+	return defaults[name]
 }

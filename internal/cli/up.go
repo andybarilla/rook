@@ -76,6 +76,10 @@ func newUpCmd() *cobra.Command {
 					containerHostMap[svcName] = containerPrefix + svcName
 					if len(s.Ports) > 0 {
 						containerPortMap[svcName] = s.Ports[0] // internal port
+					} else if p, ok := portMap[svcName]; ok {
+						// Fallback: use allocated port (e.g., service defined ports
+						// in a previous init but devcontainer compose omits them)
+						containerPortMap[svcName] = p
 					}
 				} else {
 					containerHostMap[svcName] = "localhost"
