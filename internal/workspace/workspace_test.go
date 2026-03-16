@@ -26,6 +26,26 @@ func TestServiceIsProcess(t *testing.T) {
 	}
 }
 
+func TestServiceIsBuildContainer(t *testing.T) {
+	svc := workspace.Service{Build: "."}
+	if !svc.IsContainer() {
+		t.Error("service with build should be a container")
+	}
+	if svc.IsProcess() {
+		t.Error("service with build should not be a process")
+	}
+}
+
+func TestServiceBuildWithCommand(t *testing.T) {
+	svc := workspace.Service{Build: ".", Command: "./server -worker"}
+	if !svc.IsContainer() {
+		t.Error("service with build+command should be a container")
+	}
+	if svc.IsProcess() {
+		t.Error("service with build+command should not be a process")
+	}
+}
+
 func TestWorkspaceServiceNames(t *testing.T) {
 	ws := workspace.Workspace{
 		Name: "test",

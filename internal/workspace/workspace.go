@@ -27,10 +27,12 @@ type Service struct {
 	DependsOn   []string          `yaml:"depends_on,omitempty"`
 	Healthcheck any               `yaml:"healthcheck,omitempty"`
 	Volumes     []string          `yaml:"volumes,omitempty"`
+	Build       string            `yaml:"build,omitempty"`
+	ForceBuild  bool              `yaml:"-"`
 }
 
-func (s Service) IsContainer() bool { return s.Image != "" }
-func (s Service) IsProcess() bool   { return s.Command != "" && s.Image == "" }
+func (s Service) IsContainer() bool { return s.Image != "" || s.Build != "" }
+func (s Service) IsProcess() bool   { return s.Command != "" && s.Image == "" && s.Build == "" }
 
 type Manifest struct {
 	Name     string              `yaml:"name"`
