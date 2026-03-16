@@ -197,7 +197,64 @@ func (d *ComposeDiscoverer) Discover(dir string) (*DiscoveryResult, error) {
 		result.Services[name] = svc
 	}
 
+	// When using devcontainer compose, merge depends_on from root compose
+	// (devcontainer compose typically omits dependency declarations)
+	if strings.Contains(path, ".devcontainer") {
+		mergeRootDependsOn(dir, result)
+	}
+
 	return result, nil
+}
+
+// mergeRootDependsOn looks for a root docker-compose.yml and merges any
+// depends_on declarations into the discovered services. This is needed because
+// devcontainer compose files typically omit depends_on since the devcontainer
+// runtime handles service ordering.
+func mergeRootDependsOn(dir string, result *DiscoveryResult) {
+	rootNames := []string{
+		"docker-compose.yml",
+		"docker-compose.yaml",
+		"compose.yml",
+		"compose.yaml",
+	}
+
+	var rootPath string
+	for _, name := range rootNames {
+		p := filepath.Join(dir, name)
+		if _, err := os.Stat(p); err == nil {
+			rootPath = p
+			break
+		}
+	}
+	if rootPath == "" {
+		return
+	}
+
+	data, err := os.ReadFile(rootPath)
+	if err != nil {
+		return
+	}
+
+	var cf composeFile
+	if err := yaml.Unmarshal(data, &cf); err != nil {
+		return
+	}
+
+	for name, cs := range cf.Services {
+		svc, exists := result.Services[name]
+		if !exists {
+			continue
+		}
+		// Only merge if the devcontainer service has no depends_on
+		if len(svc.DependsOn) > 0 {
+			continue
+		}
+		deps := parseDependsOn(cs.DependsOn)
+		if len(deps) > 0 {
+			svc.DependsOn = deps
+			result.Services[name] = svc
+		}
+	}
 }
 
 func parseEnvironment(env any) map[string]string {

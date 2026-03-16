@@ -281,4 +281,58 @@ services:
 			t.Errorf("expected postgres image, got '%s'", pg.Image)
 		}
 	})
+
+	t.Run("devcontainer_merges_root_depends_on", func(t *testing.T) {
+		dir := t.TempDir()
+
+		// Root compose with depends_on
+		rootCompose := `
+services:
+  api:
+    build: .
+    depends_on:
+      - postgres
+      - redis
+  postgres:
+    image: postgres:16-alpine
+  redis:
+    image: redis:7-alpine
+`
+		os.WriteFile(filepath.Join(dir, "docker-compose.yml"), []byte(rootCompose), 0644)
+
+		// Devcontainer compose without depends_on
+		os.MkdirAll(filepath.Join(dir, ".devcontainer"), 0755)
+		devCompose := `
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    command: air
+  postgres:
+    image: postgres:16-alpine
+  redis:
+    image: redis:7-alpine
+`
+		os.WriteFile(filepath.Join(dir, ".devcontainer", "docker-compose.yml"), []byte(devCompose), 0644)
+
+		result, err := d.Discover(dir)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		api := result.Services["api"]
+		if len(api.DependsOn) != 2 {
+			t.Fatalf("expected 2 depends_on, got %d: %v", len(api.DependsOn), api.DependsOn)
+		}
+
+		// Verify postgres and redis are in depends_on (order may vary)
+		deps := make(map[string]bool)
+		for _, d := range api.DependsOn {
+			deps[d] = true
+		}
+		if !deps["postgres"] || !deps["redis"] {
+			t.Errorf("expected depends_on [postgres, redis], got %v", api.DependsOn)
+		}
+	})
 }
