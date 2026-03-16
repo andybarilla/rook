@@ -26,15 +26,36 @@ func (r *DockerRunner) containerName(name string) string {
 	return fmt.Sprintf("%s_%s", r.prefix, name)
 }
 
+func (r *DockerRunner) Prefix() string { return r.prefix }
+
+func (r *DockerRunner) Adopt(serviceName string) RunHandle {
+	containerName := r.containerName(serviceName)
+	r.mu.Lock()
+	r.containers[serviceName] = containerName
+	r.mu.Unlock()
+	return RunHandle{ID: serviceName, Type: "docker"}
+}
+
 func (r *DockerRunner) Start(ctx context.Context, name string, svc workspace.Service, ports PortMap, workDir string) (RunHandle, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	containerName := r.containerName(name)
 
-	// Remove any existing container with the same name
-	exec.CommandContext(ctx, "docker", "rm", "-f", containerName).Run()
+	// Check if container already exists
+	output, err := exec.Command("docker", "inspect", "-f", "{{.State.Status}}", containerName).Output()
+	if err == nil {
+		state := strings.TrimSpace(string(output))
+		if state == "running" {
+			// Adopt the running container
+			r.containers[name] = containerName
+			return RunHandle{ID: name, Type: "docker"}, nil
+		}
+		// Container exists but not running — remove it
+		exec.Command("docker", "rm", "-f", containerName).Run()
+	}
 
+	// Create new container
 	args := []string{"run", "-d", "--name", containerName}
 
 	if port, ok := ports[name]; ok && len(svc.Ports) > 0 {

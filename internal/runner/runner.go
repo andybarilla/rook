@@ -29,3 +29,10 @@ type Runner interface {
 	Status(handle RunHandle) (ServiceStatus, error)
 	Logs(handle RunHandle) (io.ReadCloser, error)
 }
+
+// Reconnectable is implemented by runners that support discovering and adopting
+// already-running services (e.g., DockerRunner for Docker containers).
+type Reconnectable interface {
+	Prefix() string
+	Adopt(serviceName string) RunHandle
+}
