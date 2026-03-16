@@ -30,7 +30,8 @@ type Service struct {
 	EnvFile     string            `yaml:"env_file,omitempty"`
 	Build       string            `yaml:"build,omitempty"`
 	Dockerfile  string            `yaml:"dockerfile,omitempty"`
-	ForceBuild  bool              `yaml:"-"`
+	ForceBuild     bool   `yaml:"-"`
+	ResolvedEnvFile string `yaml:"-"`
 }
 
 func (s Service) IsContainer() bool { return s.Image != "" || s.Build != "" }

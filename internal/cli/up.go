@@ -108,9 +108,24 @@ func newUpCmd() *cobra.Command {
 				}
 			}
 
-			// Resolve templates in mounted config files (e.g., Caddyfile with {{.Host.api}})
+			// Write resolved env files so they override values from mounted .env files
+			// (Makefiles that -include .env bypass container -e flags)
 			resolvedDir := filepath.Join(ws.Root, ".rook", "resolved")
 			os.MkdirAll(resolvedDir, 0755)
+			for name, svc := range ws.Services {
+				if !svc.IsContainer() || len(svc.Environment) == 0 {
+					continue
+				}
+				envPath := filepath.Join(resolvedDir, name+".env")
+				if err := envgen.WriteEnvFile(envPath, svc.Environment); err != nil {
+					fmt.Fprintf(os.Stderr, "warning: cannot write resolved env for %s: %v\n", name, err)
+					continue
+				}
+				svc.ResolvedEnvFile = envPath
+				ws.Services[name] = svc
+			}
+
+			// Resolve templates in mounted config files (e.g., Caddyfile with {{.Host.api}})
 			for name, svc := range ws.Services {
 				if !svc.IsContainer() || len(svc.Volumes) == 0 {
 					continue

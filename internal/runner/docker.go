@@ -132,6 +132,23 @@ func (r *DockerRunner) Start(ctx context.Context, name string, svc workspace.Ser
 		args = append(args, "-e", fmt.Sprintf("%s=%s", k, v))
 	}
 
+	// Mount resolved env file over the .env inside the container so that
+	// Makefiles that `-include .env` get the rook-resolved values
+	if svc.ResolvedEnvFile != "" && svc.EnvFile != "" {
+		// Determine where .env is inside the container by finding the
+		// volume mount that maps the workspace root
+		for _, vol := range svc.Volumes {
+			volParts := strings.SplitN(vol, ":", 2)
+			if len(volParts) == 2 {
+				containerDir := strings.Split(volParts[1], ":")[0] // strip :cached etc
+				// Mount the resolved env file at the same location as the original
+				envMount := fmt.Sprintf("%s:%s/%s", svc.ResolvedEnvFile, containerDir, svc.EnvFile)
+				args = append(args, "-v", envMount)
+				break
+			}
+		}
+	}
+
 	for _, vol := range svc.Volumes {
 		args = append(args, "-v", vol)
 	}
