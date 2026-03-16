@@ -106,6 +106,17 @@ func newUpCmd() *cobra.Command {
 					svc.Environment = resolved
 					ws.Services[name] = svc
 				}
+
+				// Load env_file for process services
+				if svc.IsProcess() && svc.EnvFile != "" {
+					envFilePath := filepath.Join(ws.Root, svc.EnvFile)
+					merged, err := envgen.LoadProcessEnvFile(envFilePath, svc.Environment, portMap)
+					if err != nil {
+						return fmt.Errorf("loading env_file for %s: %w", name, err)
+					}
+					svc.Environment = merged
+					ws.Services[name] = svc
+				}
 			}
 
 			// Write resolved env files so they override values from mounted .env files
