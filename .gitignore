@@ -1,6 +1,7 @@
 .worktrees/
 /rook
 /rook-gui
+/bin/
 .idea/
 .vscode/
 .DS_Store
