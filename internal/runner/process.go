@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"sync"
+	"time"
 
 	"github.com/andybarilla/rook/internal/workspace"
 )
@@ -109,4 +110,42 @@ func (r *ProcessRunner) Logs(handle RunHandle) (io.ReadCloser, error) {
 	copy(data, entry.output.Bytes())
 	entry.mu.Unlock()
 	return io.NopCloser(bytes.NewReader(data)), nil
+}
+
+// StreamLogs returns a streaming reader that polls the process output buffer.
+func (r *ProcessRunner) StreamLogs(handle RunHandle) (io.ReadCloser, error) {
+	r.mu.Lock()
+	entry, ok := r.entries[handle.ID]
+	r.mu.Unlock()
+	if !ok {
+		return nil, fmt.Errorf("no process for %s", handle.ID)
+	}
+	pr, pw := io.Pipe()
+	go func() {
+		defer pw.Close()
+		lastLen := 0
+		for {
+			entry.mu.Lock()
+			data := entry.output.Bytes()
+			currentLen := len(data)
+			entry.mu.Unlock()
+			if currentLen > lastLen {
+				pw.Write(data[lastLen:currentLen])
+				lastLen = currentLen
+			}
+			select {
+			case <-entry.done:
+				entry.mu.Lock()
+				data = entry.output.Bytes()
+				entry.mu.Unlock()
+				if len(data) > lastLen {
+					pw.Write(data[lastLen:])
+				}
+				return
+			default:
+				time.Sleep(100 * time.Millisecond)
+			}
+		}
+	}()
+	return pr, nil
 }
