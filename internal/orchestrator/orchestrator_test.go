@@ -107,6 +107,80 @@ func TestOrchestrator_IncrementalProfileSwitch(t *testing.T) {
 	}
 }
 
+func TestOrchestrator_StartService(t *testing.T) {
+	mock := &mockRunner{}
+	ws := workspace.Workspace{
+		Name: "test", Root: t.TempDir(),
+		Services: map[string]workspace.Service{
+			"postgres": {Image: "postgres:16"},
+			"app":      {Command: "air", DependsOn: []string{"postgres"}},
+		},
+	}
+	orch := orchestrator.New(mock, mock, nil)
+	err := orch.StartService(context.Background(), ws, "postgres")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(mock.started) != 1 || mock.started[0] != "postgres" {
+		t.Errorf("expected [postgres], got %v", mock.started)
+	}
+}
+
+func TestOrchestrator_StopService(t *testing.T) {
+	mock := &mockRunner{}
+	ws := workspace.Workspace{
+		Name: "test", Root: t.TempDir(),
+		Services: map[string]workspace.Service{
+			"postgres": {Image: "postgres:16"},
+			"app":      {Command: "air"},
+		},
+		Profiles: map[string][]string{"default": {"postgres", "app"}},
+	}
+	orch := orchestrator.New(mock, mock, nil)
+	orch.Up(context.Background(), ws, "default")
+	mock.stopped = nil
+	err := orch.StopService(context.Background(), ws, "postgres")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(mock.stopped) != 1 || mock.stopped[0] != "postgres" {
+		t.Errorf("expected [postgres], got %v", mock.stopped)
+	}
+}
+
+func TestOrchestrator_RestartService(t *testing.T) {
+	mock := &mockRunner{}
+	ws := workspace.Workspace{
+		Name: "test", Root: t.TempDir(),
+		Services: map[string]workspace.Service{"app": {Command: "air"}},
+		Profiles: map[string][]string{"default": {"app"}},
+	}
+	orch := orchestrator.New(mock, mock, nil)
+	orch.Up(context.Background(), ws, "default")
+	mock.started = nil
+	mock.stopped = nil
+	err := orch.RestartService(context.Background(), ws, "app")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(mock.stopped) != 1 {
+		t.Errorf("expected 1 stopped, got %d", len(mock.stopped))
+	}
+	if len(mock.started) != 1 {
+		t.Errorf("expected 1 started, got %d", len(mock.started))
+	}
+}
+
+func TestOrchestrator_StartService_Unknown(t *testing.T) {
+	mock := &mockRunner{}
+	ws := workspace.Workspace{Name: "test", Root: t.TempDir(), Services: map[string]workspace.Service{}}
+	orch := orchestrator.New(mock, mock, nil)
+	err := orch.StartService(context.Background(), ws, "nonexistent")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
 func TestOrchestrator_Down(t *testing.T) {
 	mock := &mockRunner{}
 	ws := workspace.Workspace{

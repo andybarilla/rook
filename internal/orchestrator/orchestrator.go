@@ -160,6 +160,104 @@ func (o *Orchestrator) Down(ctx context.Context, ws workspace.Workspace) error {
 	return nil
 }
 
+// StartService starts a single service by name. It builds a workspace-wide
+// portMap so that env templates can resolve all service ports, not just the
+// target service's port.
+func (o *Orchestrator) StartService(ctx context.Context, ws workspace.Workspace, serviceName string) error {
+	svc, ok := ws.Services[serviceName]
+	if !ok {
+		return fmt.Errorf("unknown service: %q", serviceName)
+	}
+
+	o.mu.Lock()
+	if o.handles[ws.Name] == nil {
+		o.handles[ws.Name] = make(map[string]runner.RunHandle)
+	}
+	if _, running := o.handles[ws.Name][serviceName]; running {
+		o.mu.Unlock()
+		return nil
+	}
+	o.mu.Unlock()
+
+	portMap := make(runner.PortMap)
+	if o.portAllocator != nil {
+		if len(svc.Ports) > 0 {
+			if svc.PinPort > 0 {
+				port, err := o.portAllocator.AllocatePinned(ws.Name, serviceName, svc.PinPort)
+				if err != nil {
+					return fmt.Errorf("pinning port for %s: %w", serviceName, err)
+				}
+				portMap[serviceName] = port
+			} else {
+				port, err := o.portAllocator.Allocate(ws.Name, serviceName, svc.Ports[0])
+				if err != nil {
+					return fmt.Errorf("allocating port for %s: %w", serviceName, err)
+				}
+				portMap[serviceName] = port
+			}
+		}
+		for name := range ws.Services {
+			if name == serviceName {
+				continue
+			}
+			if result := o.portAllocator.Get(ws.Name, name); result.OK {
+				portMap[name] = result.Port
+			}
+		}
+	}
+
+	var r runner.Runner
+	if svc.IsContainer() {
+		r = o.containerRunner
+	} else {
+		r = o.processRunner
+	}
+	handle, err := r.Start(ctx, serviceName, svc, portMap, ws.Root)
+	if err != nil {
+		return fmt.Errorf("starting %s: %w", serviceName, err)
+	}
+	o.mu.Lock()
+	o.handles[ws.Name][serviceName] = handle
+	o.mu.Unlock()
+	return nil
+}
+
+// StopService stops a single service by name.
+func (o *Orchestrator) StopService(ctx context.Context, ws workspace.Workspace, serviceName string) error {
+	o.mu.Lock()
+	handles, ok := o.handles[ws.Name]
+	if !ok {
+		o.mu.Unlock()
+		return nil
+	}
+	handle, running := handles[serviceName]
+	o.mu.Unlock()
+	if !running {
+		return nil
+	}
+	var r runner.Runner
+	if handle.Type == "process" {
+		r = o.processRunner
+	} else {
+		r = o.containerRunner
+	}
+	if err := r.Stop(handle); err != nil {
+		return fmt.Errorf("stopping %s: %w", serviceName, err)
+	}
+	o.mu.Lock()
+	delete(o.handles[ws.Name], serviceName)
+	o.mu.Unlock()
+	return nil
+}
+
+// RestartService stops and then starts a single service by name.
+func (o *Orchestrator) RestartService(ctx context.Context, ws workspace.Workspace, serviceName string) error {
+	if err := o.StopService(ctx, ws, serviceName); err != nil {
+		return err
+	}
+	return o.StartService(ctx, ws, serviceName)
+}
+
 // Status returns the status of all services in the workspace.
 func (o *Orchestrator) Status(ws workspace.Workspace) (map[string]runner.ServiceStatus, error) {
 	o.mu.Lock()
