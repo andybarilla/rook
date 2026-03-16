@@ -60,10 +60,10 @@ func newUpCmd() *cobra.Command {
 					if err != nil {
 						return fmt.Errorf("resolving env for %s: %w", name, err)
 					}
-					envPath := fmt.Sprintf("%s/.env.%s", ws.Root, name)
-					if err := envgen.WriteEnvFile(envPath, resolved); err != nil {
-						return fmt.Errorf("writing env for %s: %w", name, err)
-					}
+					// Update service environment with resolved values so the
+					// orchestrator passes resolved values to the runner
+					svc.Environment = resolved
+					ws.Services[name] = svc
 				}
 			}
 
