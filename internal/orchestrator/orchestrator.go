@@ -138,9 +138,9 @@ func (o *Orchestrator) Up(ctx context.Context, ws workspace.Workspace, profileNa
 				if logReader, err := r.Logs(handle); err == nil {
 					if data, err := io.ReadAll(logReader); err == nil {
 						lines := strings.Split(strings.TrimSpace(string(data)), "\n")
-						// Show last 5 lines
-						if len(lines) > 5 {
-							lines = lines[len(lines)-5:]
+						// Show last 20 lines
+						if len(lines) > 20 {
+							lines = lines[len(lines)-20:]
 						}
 						lastLogs = "\n  " + strings.Join(lines, "\n  ")
 					}

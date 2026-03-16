@@ -14,6 +14,7 @@ func NewRootCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "rook",
 		Short: "Local development workspace manager",
+		SilenceUsage: true,
 	}
 	cmd.PersistentFlags().BoolVar(&jsonOutput, "json", false, "Output in JSON format")
 	cmd.AddCommand(
