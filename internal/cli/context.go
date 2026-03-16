@@ -45,9 +45,13 @@ func (c *cliContext) resolveWorkspaceName(args []string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("getting working directory: %w", err)
 	}
-	m, err := workspace.ParseManifest(filepath.Join(cwd, "rook.yaml"))
-	if err != nil {
+	manifestPath := filepath.Join(cwd, "rook.yaml")
+	if _, statErr := os.Stat(manifestPath); os.IsNotExist(statErr) {
 		return "", fmt.Errorf("no workspace specified and no rook.yaml in current directory")
+	}
+	m, err := workspace.ParseManifest(manifestPath)
+	if err != nil {
+		return "", fmt.Errorf("rook.yaml in current directory has errors: %w", err)
 	}
 	return m.Name, nil
 }
