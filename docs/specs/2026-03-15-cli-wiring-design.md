@@ -23,6 +23,8 @@ type cliContext struct {
 
 A `newCLIContext()` constructor creates all dependencies from `$XDG_CONFIG_HOME/rook/`. A `loadWorkspace(name string)` helper resolves a workspace by name or by looking for `rook.yaml` in the current directory when no name is given.
 
+**Docker prefix:** `newCLIContext` does NOT create a single `DockerRunner`. Instead, `loadWorkspace` creates a workspace-scoped `DockerRunner` with prefix `rook_<workspace-name>`, producing container names `rook_<workspace>_<service>`. This ensures container names are unique across workspaces and discoverable by the `down`/`status`/`logs` commands.
+
 ## Commands
 
 ### `rook up [workspace] [profile]`
@@ -34,7 +36,7 @@ Starts services for a workspace profile and stays in the foreground streaming lo
 - `profile` — profile name (optional; defaults to `"default"`, falls back to `"all"` if no `"default"` profile exists)
 
 **Flags:**
-- `-d`, `--detach` — start services and exit immediately. Docker containers persist; process services will die when the CLI exits.
+- `-d`, `--detach` — start services and exit immediately. Docker containers persist; process services will die when the CLI exits. Registered via `cmd.Flags().BoolP("detach", "d", false, "...")` before the `RunE` function.
 
 **Foreground mode (default):**
 1. Resolve workspace and profile
@@ -51,7 +53,10 @@ Starts services for a workspace profile and stays in the foreground streaming lo
 2. Print summary of started services and their ports
 3. Exit immediately
 
-**Log streaming** uses goroutines reading from each runner's `Logs()` (for process services) or `docker logs -f` (for containers), multiplexing to stdout with per-service color codes. Colors cycle through: green, yellow, blue, purple, cyan, red — assigned by service index.
+**Log streaming** bypasses the `Runner.Logs()` interface (which returns snapshots, not streams). Instead:
+- **Process services:** The `ProcessRunner` is extended with a `StreamLogs(handle RunHandle) (io.ReadCloser, error)` method that returns a pipe connected to the process's stdout/stderr. This is a new method on `ProcessRunner` (not the `Runner` interface) to avoid a breaking change.
+- **Docker containers:** Log streaming calls `docker logs -f --follow <container>` via `exec.Command` directly, returning the command's stdout pipe.
+- A multiplexer goroutine reads from all service streams, prefixes each line with `[service-name]`, and writes to stdout with per-service ANSI colors. Colors cycle through: green, yellow, blue, purple, cyan, red — assigned by service index.
 
 ### `rook down [workspace]`
 
@@ -75,8 +80,9 @@ Restarts services.
 - `service` — specific service name (optional; if omitted, restarts all running services)
 
 **Behavior:**
-- Docker-only mode: finds containers by naming convention, stops and re-starts them.
-- If `service` is specified, only restart that one container.
+- Uses the orchestrator's `RestartService` method (stop + start through the proper lifecycle, including port allocation and handle tracking).
+- Docker-only limitation: when no foreground `rook up` is running, the orchestrator has no in-memory handles. In this case, `restart` finds containers by naming convention, stops them via `docker stop/rm`, then starts them via `orch.StartService` to re-establish proper state.
+- If `service` is specified, only restart that one service.
 - Reports what was restarted.
 
 ### `rook status [workspace]`
@@ -105,6 +111,7 @@ app         process     unknown     10002
 Status detection:
 - Container services: check Docker via `docker inspect` using naming convention
 - Process services: show `unknown` (cannot detect without foreground process)
+- Workspace-level status: `running` if all container services are running, `partial` if some are, `stopped` if none are. Process-only workspaces show `unknown`.
 
 Supports `--json` flag for structured output.
 
@@ -128,7 +135,7 @@ The orchestrator's `Up` method currently starts all services without waiting for
 
 1. After calling `runner.Start()` for a service, check if it has a healthcheck defined
 2. If yes, parse the healthcheck using `health.ParseFromService(svc.Healthcheck)` to get the `Check` and `Config`
-3. Call `health.WaitUntilHealthy(ctx, check, config.Interval)` with a timeout derived from `config.Timeout`
+3. Create a timeout context: `hctx, cancel := context.WithTimeout(ctx, config.Timeout)` and call `health.WaitUntilHealthy(hctx, check, config.Interval)`. Cancel after the call returns.
 4. If the health check passes, proceed to start the next service
 5. If it times out, return an error identifying the failed service — the caller decides whether to stop or leave running services up
 
@@ -138,7 +145,9 @@ This change is in the orchestrator itself, not in the CLI layer. The CLI's `up` 
 
 Rook-managed containers follow the convention: `rook_<workspace>_<service>`
 
-This is already used by `DockerRunner`. The `down`, `restart`, `status`, and `logs` commands use this convention to discover containers without needing the orchestrator's in-memory state.
+The `DockerRunner` is constructed with prefix `rook_<workspace>` (set in `newCLIContext`/`loadWorkspace`), which produces names `rook_<workspace>_<service>`. The `down`, `restart`, `status`, and `logs` commands use this convention to discover containers without needing the orchestrator's in-memory state.
+
+Note: The existing `logs.go` stub uses `Use: "logs <workspace> [service]"` — this should be updated to `"logs [workspace] [service]"` to match the optional-workspace convention used by other commands.
 
 A new helper `internal/runner/docker.go` function `FindContainers(prefix string) []string` lists containers matching the `rook_<workspace>_` prefix using `docker ps -a --filter name=<prefix> --format {{.Names}}`.
 
