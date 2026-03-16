@@ -185,7 +185,7 @@ func (r *DockerRunner) Logs(handle RunHandle) (io.ReadCloser, error) {
 		return nil, fmt.Errorf("no container for %s", handle.ID)
 	}
 
-	output, err := exec.Command(ContainerRuntime, "logs", containerName).Output()
+	output, err := exec.Command(ContainerRuntime, "logs", containerName).CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("logs for %s: %w", containerName, err)
 	}

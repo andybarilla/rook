@@ -130,7 +130,7 @@ func (o *Orchestrator) Up(ctx context.Context, ws workspace.Workspace, profileNa
 
 		// Brief pause to catch immediate crashes (e.g., missing env vars)
 		if svc.IsContainer() {
-			time.Sleep(500 * time.Millisecond)
+			time.Sleep(1 * time.Second)
 			status, _ := r.Status(handle)
 			if status == runner.StatusCrashed || status == runner.StatusStopped {
 				// Fetch last logs for the error message
