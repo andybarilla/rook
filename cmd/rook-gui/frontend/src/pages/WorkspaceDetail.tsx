@@ -4,6 +4,7 @@ import { ServiceList } from '../components/ServiceList'
 import { ProfileSwitcher } from '../components/ProfileSwitcher'
 import { LogViewer } from '../components/LogViewer'
 import { EnvViewer } from '../components/EnvViewer'
+import { ManifestEditor } from '../components/ManifestEditor'
 
 interface WorkspaceDetailProps { name: string }
 
@@ -65,12 +66,7 @@ export function WorkspaceDetail({ name }: WorkspaceDetailProps) {
         )}
         {tab === 'logs' && <LogViewer workspaceName={name} services={detail.services.map(s => s.name)} />}
         {tab === 'environment' && <EnvViewer workspaceName={name} />}
-        {tab === 'settings' && (
-          <div className="p-4 text-rook-muted text-sm">
-            <p>The visual manifest editor is planned for a future update.</p>
-            <p className="mt-2">Edit <code className="text-rook-text-secondary">rook.yaml</code> directly in your project directory.</p>
-          </div>
-        )}
+        {tab === 'settings' && <ManifestEditor workspaceName={name} />}
       </div>
     </div>
   )
