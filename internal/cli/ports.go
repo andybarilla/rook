@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/andybarilla/rook/internal/ports"
+	"github.com/andybarilla/rook/internal/runner"
 	"github.com/spf13/cobra"
 )
 
@@ -19,6 +20,20 @@ func newPortsCmd() *cobra.Command {
 			portsPath := filepath.Join(configDir(), "ports.json")
 
 			if reset {
+				// Stop all rook containers first — stale containers on old ports
+				// would be adopted by reconnect, causing port mismatches
+				cctx, err := newCLIContext()
+				if err == nil {
+					for _, e := range cctx.registry.List() {
+						prefix := fmt.Sprintf("rook_%s_", e.Name)
+						containers, _ := runner.FindContainers(prefix)
+						for _, c := range containers {
+							fmt.Printf("Stopping %s...\n", c)
+							runner.StopContainer(c)
+						}
+					}
+				}
+
 				if err := os.Remove(portsPath); err != nil && !os.IsNotExist(err) {
 					return fmt.Errorf("removing ports file: %w", err)
 				}
