@@ -55,3 +55,33 @@ func TestResolveTemplates_NoTemplates(t *testing.T) {
 		t.Errorf("got %s", result["STATIC"])
 	}
 }
+
+func TestExpandShellVars_Default(t *testing.T) {
+	result := envgen.ExpandShellVars("${ROOK_TEST_UNSET_VAR:-kern}")
+	if result != "kern" {
+		t.Errorf("expected 'kern', got '%s'", result)
+	}
+}
+
+func TestExpandShellVars_EnvSet(t *testing.T) {
+	t.Setenv("ROOK_TEST_SET_VAR", "fromenv")
+	result := envgen.ExpandShellVars("${ROOK_TEST_SET_VAR:-default}")
+	if result != "fromenv" {
+		t.Errorf("expected 'fromenv', got '%s'", result)
+	}
+}
+
+func TestExpandShellVars_NoDefault(t *testing.T) {
+	result := envgen.ExpandShellVars("${ROOK_TEST_UNSET_VAR}")
+	if result != "" {
+		t.Errorf("expected empty, got '%s'", result)
+	}
+}
+
+func TestExpandShellVars_InContext(t *testing.T) {
+	result := envgen.ExpandShellVars("postgres://${ROOK_TEST_UNSET_USER:-kern}:${ROOK_TEST_UNSET_PASS:-kern}@localhost:5432")
+	expected := "postgres://kern:kern@localhost:5432"
+	if result != expected {
+		t.Errorf("expected '%s', got '%s'", expected, result)
+	}
+}

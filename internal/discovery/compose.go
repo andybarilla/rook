@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/andybarilla/rook/internal/envgen"
 	"github.com/andybarilla/rook/internal/workspace"
 	"gopkg.in/yaml.v3"
 )
@@ -112,6 +113,8 @@ func (d *ComposeDiscoverer) Discover(dir string) (*DiscoveryResult, error) {
 		}
 
 		for _, p := range cs.Ports {
+			// Expand shell vars like ${POSTGRES_PORT:-5432}
+			p = envgen.ExpandShellVars(p)
 			parts := strings.Split(p, ":")
 			portStr := strings.Split(parts[len(parts)-1], "/")[0]
 			if port, err := strconv.Atoi(portStr); err == nil {
@@ -196,13 +199,13 @@ func parseEnvironment(env any) map[string]string {
 	switch v := env.(type) {
 	case map[string]any:
 		for k, val := range v {
-			result[k] = fmt.Sprintf("%v", val)
+			result[k] = envgen.ExpandShellVars(fmt.Sprintf("%v", val))
 		}
 	case []any:
 		for _, item := range v {
 			parts := strings.SplitN(fmt.Sprintf("%v", item), "=", 2)
 			if len(parts) == 2 {
-				result[parts[0]] = parts[1]
+				result[parts[0]] = envgen.ExpandShellVars(parts[1])
 			}
 		}
 	}

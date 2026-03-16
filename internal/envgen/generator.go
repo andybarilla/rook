@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -11,6 +12,32 @@ import (
 
 	"github.com/andybarilla/rook/internal/workspace"
 )
+
+// shellVarPattern matches ${VAR:-default}, ${VAR-default}, ${VAR}, and $VAR patterns.
+var shellVarPattern = regexp.MustCompile(`\$\{([A-Za-z_][A-Za-z0-9_]*)(?::?-([^}]*))?\}|\$([A-Za-z_][A-Za-z0-9_]*)`)
+
+// ExpandShellVars expands shell-style variable references in a string.
+// Supports: ${VAR:-default}, ${VAR-default}, ${VAR}, $VAR
+// Looks up values from os.Environ(), falls back to default if provided.
+func ExpandShellVars(s string) string {
+	return shellVarPattern.ReplaceAllStringFunc(s, func(match string) string {
+		sub := shellVarPattern.FindStringSubmatch(match)
+		// sub[1] = VAR name from ${VAR...} form
+		// sub[2] = default value (if any)
+		// sub[3] = VAR name from $VAR form
+		varName := sub[1]
+		if varName == "" {
+			varName = sub[3]
+		}
+		if val, ok := os.LookupEnv(varName); ok && val != "" {
+			return val
+		}
+		if sub[2] != "" {
+			return sub[2]
+		}
+		return ""
+	})
+}
 
 type templateData struct {
 	Port map[string]string
