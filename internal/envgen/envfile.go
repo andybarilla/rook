@@ -49,3 +49,32 @@ func ParseEnvFile(path string) (map[string]string, error) {
 	}
 	return result, nil
 }
+
+// LoadProcessEnvFile reads an env file, expands shell vars, resolves
+// templates (using localhost + allocated ports for process services),
+// and merges with inline environment. Inline values take precedence.
+func LoadProcessEnvFile(path string, inlineEnv map[string]string, portMap map[string]int) (map[string]string, error) {
+	fileVars, err := ParseEnvFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	// Expand shell vars in each value
+	for k, v := range fileVars {
+		fileVars[k] = ExpandShellVars(v)
+	}
+
+	// Resolve templates (process services use localhost)
+	fileVars, err = ResolveTemplates(fileVars, portMap, false)
+	if err != nil {
+		return nil, fmt.Errorf("resolving env file templates: %w", err)
+	}
+
+	// Merge: start with file vars, overlay inline (inline wins)
+	result := fileVars
+	for k, v := range inlineEnv {
+		result[k] = v
+	}
+
+	return result, nil
+}

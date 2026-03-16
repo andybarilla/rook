@@ -120,6 +120,52 @@ func TestParseEnvFile_FileNotFound(t *testing.T) {
 	}
 }
 
+func TestLoadProcessEnvFile_MergesIntoEnvironment(t *testing.T) {
+	path := writeEnvFile(t, "FROM_FILE=file_val\nSHARED=from_file\n")
+	env := map[string]string{"SHARED": "from_inline", "INLINE_ONLY": "yes"}
+	portMap := map[string]int{"web": 10000}
+
+	result, err := envgen.LoadProcessEnvFile(path, env, portMap)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result["SHARED"] != "from_inline" {
+		t.Errorf("SHARED: got %q, want 'from_inline'", result["SHARED"])
+	}
+	if result["FROM_FILE"] != "file_val" {
+		t.Errorf("FROM_FILE: got %q", result["FROM_FILE"])
+	}
+	if result["INLINE_ONLY"] != "yes" {
+		t.Errorf("INLINE_ONLY: got %q", result["INLINE_ONLY"])
+	}
+}
+
+func TestLoadProcessEnvFile_ResolvesTemplates(t *testing.T) {
+	path := writeEnvFile(t, "API_URL=http://{{.Host.api}}:{{.Port.api}}/v1\n")
+	portMap := map[string]int{"api": 10001}
+
+	result, err := envgen.LoadProcessEnvFile(path, nil, portMap)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result["API_URL"] != "http://localhost:10001/v1" {
+		t.Errorf("API_URL: got %q", result["API_URL"])
+	}
+}
+
+func TestLoadProcessEnvFile_ExpandsShellVars(t *testing.T) {
+	path := writeEnvFile(t, "DB_USER=${ROOK_TEST_UNSET_USER:-defaultuser}\n")
+	portMap := map[string]int{}
+
+	result, err := envgen.LoadProcessEnvFile(path, nil, portMap)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result["DB_USER"] != "defaultuser" {
+		t.Errorf("DB_USER: got %q", result["DB_USER"])
+	}
+}
+
 func writeEnvFile(t *testing.T, content string) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), ".env")
