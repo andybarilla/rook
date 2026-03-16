@@ -75,15 +75,24 @@ rook list                     # List registered workspaces
 - Container naming: `rook_<workspace>_<service>` — used for discovery, reconnection, status checks
 - Container reconnection: `DockerRunner.Adopt` + `Orchestrator.Reconnect` re-discover running containers on CLI restart
 - `env_file` support: passes `--env-file` to container runtime for loading project `.env` files
+- Resolved env file mount: writes `.rook/resolved/<service>.env` with resolved templates and mounts over the container's `.env` so Makefiles that `-include .env` get rook-resolved values
 - Health checks integrated into startup: orchestrator waits for health before starting dependents
 - Crash detection: 1-second pause after container start, checks status and shows last 20 log lines on crash
+- Shell variable expansion: `${VAR:-default}` in compose environment and port values
+- Default port inference: well-known images (postgres, redis, mysql, etc.) get default ports even without explicit port mappings
+- Devcontainer compose priority: `.devcontainer/docker-compose.yml` is discovered before root compose
+- Devcontainer depends_on merge: dependencies from root compose are merged into devcontainer services, including across name mismatches (e.g., `app` vs `api`)
+- Devcontainer script copy: start scripts are copied to `.rook/` during init with a warning to review for devcontainer-specific code
+- Dockerfile field: supports `dockerfile` in compose build object form (e.g., `.devcontainer/Dockerfile`)
+- Multiple port mapping: all declared ports are mapped, not just the first
 
 ## What's Not Yet Implemented
 
 - Process `env_file` support (loading .env into process services)
 - `rook discover` command (re-scan and show changes)
 - Auto-rebuild detection (prompt when Dockerfile changes)
-- Automatic .env variable injection (update project .env with rook-allocated ports)
+- Auto-scaffold project config on `rook init` (add `.rook/` to .gitignore, generate CLAUDE.md blurb)
+- Force rook ports flag (ignore preferred ports from compose, always use rook range)
 - `rook down --volumes` (remove container volumes on teardown)
 - GUI visual manifest editor (Settings tab is a placeholder)
 - GUI system tray (waiting for Wails v3)
