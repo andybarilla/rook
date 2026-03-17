@@ -8,7 +8,9 @@ import (
 )
 
 func newDownCmd() *cobra.Command {
-	return &cobra.Command{
+	var removeVolumes bool
+
+	cmd := &cobra.Command{
 		Use:   "down [workspace]",
 		Short: "Stop all services in workspace",
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -31,10 +33,14 @@ func newDownCmd() *cobra.Command {
 			}
 			for _, name := range containers {
 				fmt.Printf("Stopping %s...\n", name)
-				runner.StopContainer(name)
+				runner.StopContainerWithVolumes(name, removeVolumes)
 			}
 			fmt.Printf("Stopped %d container(s) for %s.\n", len(containers), wsName)
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVarP(&removeVolumes, "volumes", "v", false, "Remove anonymous volumes associated with containers")
+
+	return cmd
 }

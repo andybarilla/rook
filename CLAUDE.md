@@ -50,6 +50,7 @@ rook logs [workspace] [svc]   # Tail container logs
 rook ports                    # Show global port allocation table
 rook ports --reset            # Clear allocations and stop containers
 rook env <workspace>          # Show resolved environment variables
+rook check-builds [workspace] # Check which services need rebuilding
 rook list                     # List registered workspaces
 ```
 
@@ -85,14 +86,12 @@ rook list                     # List registered workspaces
 - Devcontainer script copy: start scripts are copied to `.rook/` during init with a warning to review for devcontainer-specific code
 - Dockerfile field: supports `dockerfile` in compose build object form (e.g., `.devcontainer/Dockerfile`)
 - Multiple port mapping: all declared ports are mapped, not just the first
+- Auto-rebuild detection: `rook up` checks for stale builds (Dockerfile changes, context file changes, missing images) and prompts to rebuild; cache stored in `.rook/build-cache.json`
 
 ## What's Not Yet Implemented
 
-- `rook discover` command (re-scan and show changes)
-- Auto-rebuild detection (prompt when Dockerfile changes)
 - Auto-scaffold project config on `rook init` (add `.rook/` to .gitignore, generate CLAUDE.md blurb)
 - Force rook ports flag (ignore preferred ports from compose, always use rook range)
-- `rook down --volumes` (remove container volumes on teardown)
 - GUI visual manifest editor (Settings tab is a placeholder)
 - GUI system tray (waiting for Wails v3)
 - File watching / live reload
