@@ -14,10 +14,10 @@ import (
 // stubRegistry implements registry.Registry for testing.
 type stubRegistry struct{}
 
-func (r *stubRegistry) Register(name, path string) error          { return nil }
-func (r *stubRegistry) Remove(name string)                        {}
-func (r *stubRegistry) Get(name string) (registry.Entry, error)   { return registry.Entry{}, nil }
-func (r *stubRegistry) List() []registry.Entry                    { return nil }
+func (r *stubRegistry) Register(name, path string) error        { return nil }
+func (r *stubRegistry) Remove(name string)                      {}
+func (r *stubRegistry) Get(name string) (registry.Entry, error) { return registry.Entry{}, nil }
+func (r *stubRegistry) List() []registry.Entry                  { return nil }
 
 // stubPortAlloc implements ports.PortAllocator for testing.
 type stubPortAlloc struct{}
@@ -93,5 +93,30 @@ func TestPreviewManifest(t *testing.T) {
 	}
 	if parsed.Name != "test" {
 		t.Fatalf("expected name 'test', got %q", parsed.Name)
+	}
+}
+
+func TestSettingsTypes_Exist(t *testing.T) {
+	s := api.Settings{AutoRebuild: true}
+	if !s.AutoRebuild {
+		t.Error("AutoRebuild should be true")
+	}
+
+	bs := api.BuildStatus{
+		Name:     "web",
+		HasBuild: true,
+		Status:   "needs_rebuild",
+		Reasons:  []string{"Dockerfile modified"},
+	}
+	if bs.Name != "web" {
+		t.Error("BuildStatus name mismatch")
+	}
+
+	bcr := api.BuildCheckResult{
+		Services: []api.BuildStatus{bs},
+		HasStale: true,
+	}
+	if !bcr.HasStale {
+		t.Error("BuildCheckResult.HasStale should be true")
 	}
 }
