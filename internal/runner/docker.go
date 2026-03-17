@@ -303,3 +303,14 @@ func (r *DockerRunner) StreamLogs(handle RunHandle) (io.ReadCloser, *exec.Cmd, e
 	}
 	return stdout, cmd, nil
 }
+
+// GetImageID returns the Docker image ID for a service's built image.
+// Used by the build cache to detect external image changes.
+func (r *DockerRunner) GetImageID(serviceName string) (string, error) {
+	imageTag := fmt.Sprintf("rook-%s-%s:latest", strings.TrimPrefix(r.prefix, "rook_"), serviceName)
+	output, err := exec.Command(ContainerRuntime, "inspect", "--format", "{{.Id}}", imageTag).Output()
+	if err != nil {
+		return "", fmt.Errorf("inspecting image %s: %w", imageTag, err)
+	}
+	return strings.TrimSpace(string(output)), nil
+}
