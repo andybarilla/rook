@@ -94,3 +94,62 @@ func TestHashFile_Missing(t *testing.T) {
 		t.Error("expected error for missing file")
 	}
 }
+
+func TestCache_UpdateAfterBuild(t *testing.T) {
+	dir := t.TempDir()
+	createTestFile(t, dir, "Dockerfile", "FROM alpine")
+	createTestFile(t, dir, "main.go", "package main")
+
+	cache := &buildcache.Cache{Version: 1, Services: map[string]buildcache.ServiceCache{}}
+
+	err := cache.UpdateAfterBuild("api", dir, dir, "Dockerfile", "sha256:newimage")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if cache.Services["api"].ImageID != "sha256:newimage" {
+		t.Errorf("image ID: got %s", cache.Services["api"].ImageID)
+	}
+	if cache.Services["api"].DockerfileHash == "" {
+		t.Error("expected Dockerfile hash to be set")
+	}
+	if len(cache.Services["api"].ContextFiles) == 0 {
+		t.Error("expected context files to be populated")
+	}
+	if _, exists := cache.Services["api"].ContextFiles["main.go"]; !exists {
+		t.Error("expected main.go in context files")
+	}
+}
+
+func TestCache_UpdateAfterBuild_RelativeBuildContext(t *testing.T) {
+	dir := t.TempDir()
+	createTestFile(t, dir, "docker/Dockerfile.dev", "FROM alpine")
+	createTestFile(t, dir, "app/main.go", "package main")
+
+	cache := &buildcache.Cache{Version: 1, Services: map[string]buildcache.ServiceCache{}}
+
+	err := cache.UpdateAfterBuild("api", dir, filepath.Join(dir, "app"), "docker/Dockerfile.dev", "sha256:newimage")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if cache.Services["api"].ImageID != "sha256:newimage" {
+		t.Errorf("image ID: got %s", cache.Services["api"].ImageID)
+	}
+	// Should have files from the build context (app/), not workspace root
+	if _, exists := cache.Services["api"].ContextFiles["main.go"]; !exists {
+		t.Error("expected main.go in context files (relative to build context)")
+	}
+}
+
+func createTestFile(t *testing.T, dir, name, content string) string {
+	t.Helper()
+	path := filepath.Join(dir, name)
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}

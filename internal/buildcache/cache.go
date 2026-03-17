@@ -56,3 +56,71 @@ func (c *Cache) Save(path string) error {
 	}
 	return os.WriteFile(path, data, 0644)
 }
+
+// UpdateAfterBuild refreshes the cache entry for a service after a successful build.
+// workDir is the workspace root path.
+// buildCtx is the build context directory path (can be relative or absolute).
+// dockerfile is the relative path to the Dockerfile from workDir (or "Dockerfile" if default).
+// imageID is the Docker image ID of the built image.
+func (c *Cache) UpdateAfterBuild(service, workDir, buildCtx, dockerfile, imageID string) error {
+	// Hash Dockerfile (path is relative to workDir)
+	dockerfilePath := filepath.Join(workDir, dockerfile)
+	dockerfileHash, err := HashFile(dockerfilePath)
+	if err != nil {
+		return fmt.Errorf("hashing Dockerfile: %w", err)
+	}
+
+	// Resolve build context to absolute path
+	if !filepath.IsAbs(buildCtx) {
+		buildCtx = filepath.Join(workDir, buildCtx)
+	}
+
+	// Parse .dockerignore
+	ignorePatterns, err := ParseDockerignore(buildCtx)
+	if err != nil {
+		return fmt.Errorf("parsing .dockerignore: %w", err)
+	}
+
+	// Walk build context
+	contextFiles := make(map[string]FileEntry)
+	err = filepath.Walk(buildCtx, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+
+		relPath, err := filepath.Rel(buildCtx, path)
+		if err != nil {
+			return err
+		}
+
+		// Skip .dockerignore patterns
+		if MatchesPatterns(relPath, ignorePatterns) {
+			return nil
+		}
+
+		hash, err := HashFile(path)
+		if err != nil {
+			return fmt.Errorf("hashing %s: %w", relPath, err)
+		}
+
+		contextFiles[relPath] = FileEntry{
+			Mtime: info.ModTime().Unix(),
+			Hash:  hash,
+		}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("walking build context: %w", err)
+	}
+
+	c.Services[service] = ServiceCache{
+		ImageID:        imageID,
+		DockerfileHash: dockerfileHash,
+		ContextFiles:   contextFiles,
+	}
+
+	return nil
+}
