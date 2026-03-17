@@ -12,8 +12,8 @@ var jsonOutput bool
 
 func NewRootCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "rook",
-		Short: "Local development workspace manager",
+		Use:          "rook",
+		Short:        "Local development workspace manager",
 		SilenceUsage: true,
 	}
 	cmd.PersistentFlags().BoolVar(&jsonOutput, "json", false, "Output in JSON format")
@@ -28,6 +28,7 @@ func NewRootCmd() *cobra.Command {
 		newPortsCmd(),
 		newLogsCmd(),
 		newEnvCmd(),
+		NewCheckBuildsCmd(),
 	)
 	return cmd
 }
