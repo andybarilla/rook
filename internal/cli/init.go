@@ -14,6 +14,7 @@ import (
 )
 
 func newInitCmd() *cobra.Command {
+	var warns warnings
 	return &cobra.Command{
 		Use:   "init <path>",
 		Short: "Initialize a workspace from a project directory",
@@ -114,7 +115,7 @@ func newInitCmd() *cobra.Command {
 				result.Services[name] = svc
 
 				fmt.Printf("  Copied %s to .rook/%s\n", rel, scriptName)
-				fmt.Printf("  ⚠ Review .rook/%s and adjust for rook (e.g., remove devcontainer-specific wait loops)\n", scriptName)
+				warns.add("Review .rook/%s and adjust for rook (e.g., remove devcontainer-specific wait loops)", scriptName)
 			}
 
 			wsName := filepath.Base(dir)
@@ -169,6 +170,7 @@ func newInitCmd() *cobra.Command {
 				}
 			}
 			fmt.Printf("Workspace %q registered from %s\n", m.Name, dir)
+			warns.print(os.Stderr)
 			return nil
 		},
 	}

@@ -27,6 +27,8 @@ func newUpCmd() *cobra.Command {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
+			var warns warnings
+
 			cctx, err := newCLIContext()
 			if err != nil {
 				return err
@@ -129,7 +131,7 @@ func newUpCmd() *cobra.Command {
 				}
 				envPath := filepath.Join(resolvedDir, name+".env")
 				if err := envgen.WriteEnvFile(envPath, svc.Environment); err != nil {
-					fmt.Fprintf(os.Stderr, "warning: cannot write resolved env for %s: %v\n", name, err)
+					warns.add("cannot write resolved env for %s: %v", name, err)
 					continue
 				}
 				svc.ResolvedEnvFile = envPath
@@ -175,14 +177,14 @@ func newUpCmd() *cobra.Command {
 					// Resolve templates
 					resolved, err := envgen.ResolveFileTemplate(string(content), containerPortMap, containerHostMap)
 					if err != nil {
-						fmt.Fprintf(os.Stderr, "warning: cannot resolve templates in %s: %v\n", hostPath, err)
+						warns.add("cannot resolve templates in %s: %v", hostPath, err)
 						continue
 					}
 
 					// Write resolved copy
 					resolvedPath := filepath.Join(resolvedDir, fmt.Sprintf("%s_%s", name, filepath.Base(hostPath)))
 					if err := os.WriteFile(resolvedPath, []byte(resolved), info.Mode()); err != nil {
-						fmt.Fprintf(os.Stderr, "warning: cannot write resolved %s: %v\n", hostPath, err)
+						warns.add("cannot write resolved %s: %v", hostPath, err)
 						continue
 					}
 
@@ -203,7 +205,7 @@ func newUpCmd() *cobra.Command {
 
 			orch := cctx.newOrchestrator(wsName)
 			if err := orch.Reconnect(*ws); err != nil {
-				fmt.Fprintf(os.Stderr, "warning: reconnect failed: %v\n", err)
+				warns.add("reconnect failed: %v", err)
 			}
 			fmt.Printf("Starting %s (profile: %s)...\n", wsName, profile)
 			if err := orch.Up(ctx, *ws, profile); err != nil {
@@ -220,6 +222,7 @@ func newUpCmd() *cobra.Command {
 			}
 
 			if detach {
+				warns.print(os.Stderr)
 				fmt.Println("Services started in detach mode.")
 				return nil
 			}
@@ -244,7 +247,7 @@ func newUpCmd() *cobra.Command {
 					handle := runner.RunHandle{ID: svcName, Type: "docker"}
 					reader, logCmd, err := docker.StreamLogs(handle)
 					if err != nil {
-						fmt.Fprintf(os.Stderr, "warning: cannot stream logs for %s: %v\n", svcName, err)
+						warns.add("cannot stream logs for %s: %v", svcName, err)
 						continue
 					}
 					wg.Add(1)
@@ -258,7 +261,7 @@ func newUpCmd() *cobra.Command {
 				} else {
 					reader, err := cctx.process.StreamLogs(runner.RunHandle{ID: svcName, Type: "process"})
 					if err != nil {
-						fmt.Fprintf(os.Stderr, "warning: cannot stream logs for %s: %v\n", svcName, err)
+						warns.add("cannot stream logs for %s: %v", svcName, err)
 						continue
 					}
 					wg.Add(1)
@@ -268,6 +271,8 @@ func newUpCmd() *cobra.Command {
 					}()
 				}
 			}
+
+			warns.print(os.Stderr)
 
 			sigCh := make(chan os.Signal, 1)
 			signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)

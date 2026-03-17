@@ -74,7 +74,7 @@ rook list                     # List registered workspaces
 - Container networking: all workspace containers run on a shared `rook_<workspace>` network
 - Container naming: `rook_<workspace>_<service>` — used for discovery, reconnection, status checks
 - Container reconnection: `DockerRunner.Adopt` + `Orchestrator.Reconnect` re-discover running containers on CLI restart
-- `env_file` support: passes `--env-file` to container runtime for loading project `.env` files
+- `env_file` support: containers get `--env-file` passed to runtime; process services get env_file parsed, shell-expanded, template-resolved, and merged into environment (inline wins on conflict)
 - Resolved env file mount: writes `.rook/resolved/<service>.env` with resolved templates and mounts over the container's `.env` so Makefiles that `-include .env` get rook-resolved values
 - Health checks integrated into startup: orchestrator waits for health before starting dependents
 - Crash detection: 1-second pause after container start, checks status and shows last 20 log lines on crash
@@ -88,7 +88,6 @@ rook list                     # List registered workspaces
 
 ## What's Not Yet Implemented
 
-- Process `env_file` support (loading .env into process services)
 - `rook discover` command (re-scan and show changes)
 - Auto-rebuild detection (prompt when Dockerfile changes)
 - Auto-scaffold project config on `rook init` (add `.rook/` to .gitignore, generate CLAUDE.md blurb)
@@ -98,3 +97,4 @@ rook list                     # List registered workspaces
 - GUI system tray (waiting for Wails v3)
 - File watching / live reload
 - `rookd` daemon for headless/remote management
+- Shared build / image alias (so multiple services can reference one built image without rebuilding)
