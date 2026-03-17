@@ -90,6 +90,10 @@ rook list                     # List registered workspaces
 
 ## What's Not Yet Implemented
 
+<<<<<<< Updated upstream
+=======
+- Auto-rebuild detection (prompt when Dockerfile changes)
+>>>>>>> Stashed changes
 - Auto-scaffold project config on `rook init` (add `.rook/` to .gitignore, generate CLAUDE.md blurb)
 - Force rook ports flag (ignore preferred ports from compose, always use rook range)
 - GUI visual manifest editor (Settings tab is a placeholder)
