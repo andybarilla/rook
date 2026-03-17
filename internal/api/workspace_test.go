@@ -1,6 +1,8 @@
 package api_test
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/andybarilla/rook/internal/api"
@@ -118,5 +120,42 @@ func TestSettingsTypes_Exist(t *testing.T) {
 	}
 	if !bcr.HasStale {
 		t.Error("BuildCheckResult.HasStale should be true")
+	}
+}
+
+func TestGetSettings_ReturnsDefaults(t *testing.T) {
+	a := newTestAPI()
+	s := a.GetSettings()
+	if !s.AutoRebuild {
+		t.Error("expected AutoRebuild to be true by default")
+	}
+}
+
+func TestSaveSettings_PersistsSettings(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "settings.json")
+
+	reg := &stubRegistry{}
+	alloc := &stubPortAlloc{}
+	orch := orchestrator.New(nil, nil, nil)
+	a := api.NewWorkspaceAPIWithSettings(reg, alloc, orch, nil, path)
+
+	// Modify and save
+	s := a.GetSettings()
+	s.AutoRebuild = false
+	if err := a.SaveSettings(s); err != nil {
+		t.Fatalf("SaveSettings failed: %v", err)
+	}
+
+	// Verify file was written
+	if _, err := os.Stat(path); err != nil {
+		t.Fatalf("settings file not created: %v", err)
+	}
+
+	// Load fresh and verify
+	a2 := api.NewWorkspaceAPIWithSettings(reg, alloc, orch, nil, path)
+	loaded := a2.GetSettings()
+	if loaded.AutoRebuild {
+		t.Error("expected AutoRebuild to be false after save")
 	}
 }

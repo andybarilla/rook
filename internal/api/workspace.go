@@ -14,6 +14,7 @@ import (
 	"github.com/andybarilla/rook/internal/ports"
 	"github.com/andybarilla/rook/internal/registry"
 	"github.com/andybarilla/rook/internal/runner"
+	"github.com/andybarilla/rook/internal/settings"
 	"github.com/andybarilla/rook/internal/workspace"
 )
 
@@ -26,6 +27,7 @@ type WorkspaceAPI struct {
 	logBuffer      *LogBuffer
 	emitter        EventEmitter
 	activeProfiles map[string]string
+	settingsPath   string
 }
 
 // NewWorkspaceAPI creates a new WorkspaceAPI with the given dependencies.
@@ -38,6 +40,20 @@ func NewWorkspaceAPI(reg registry.Registry, alloc ports.PortAllocator, orch *orc
 		logBuffer:      NewLogBuffer(10000),
 		emitter:        NoopEmitter{},
 		activeProfiles: make(map[string]string),
+	}
+}
+
+// NewWorkspaceAPIWithSettings creates a new WorkspaceAPI with a settings file path.
+func NewWorkspaceAPIWithSettings(reg registry.Registry, alloc ports.PortAllocator, orch *orchestrator.Orchestrator, discoverers []discovery.Discoverer, settingsPath string) *WorkspaceAPI {
+	return &WorkspaceAPI{
+		registry:       reg,
+		portAlloc:      alloc,
+		orch:           orch,
+		discoverers:    discoverers,
+		logBuffer:      NewLogBuffer(10000),
+		emitter:        NoopEmitter{},
+		activeProfiles: make(map[string]string),
+		settingsPath:   settingsPath,
 	}
 }
 
@@ -337,6 +353,27 @@ func (w *WorkspaceAPI) PreviewManifest(manifest *Manifest) (string, error) {
 		return "", fmt.Errorf("marshaling manifest: %w", err)
 	}
 	return string(data), nil
+}
+
+// GetSettings returns current settings with defaults applied.
+func (w *WorkspaceAPI) GetSettings() *Settings {
+	if w.settingsPath == "" {
+		return &Settings{AutoRebuild: true}
+	}
+	s, err := settings.Load(w.settingsPath)
+	if err != nil {
+		return &Settings{AutoRebuild: true}
+	}
+	return &Settings{AutoRebuild: s.AutoRebuild}
+}
+
+// SaveSettings persists settings to the settings file.
+func (w *WorkspaceAPI) SaveSettings(s *Settings) error {
+	if w.settingsPath == "" {
+		return fmt.Errorf("settings path not configured")
+	}
+	internal := &settings.Settings{AutoRebuild: s.AutoRebuild}
+	return internal.Save(w.settingsPath)
 }
 
 // loadWorkspace reads the manifest from the registry path and converts to a Workspace.
