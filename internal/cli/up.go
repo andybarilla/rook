@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"os"
@@ -10,6 +11,7 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/andybarilla/rook/internal/buildcache"
 	"github.com/andybarilla/rook/internal/envgen"
 	"github.com/andybarilla/rook/internal/orchestrator"
 	"github.com/andybarilla/rook/internal/runner"
@@ -49,6 +51,93 @@ func newUpCmd() *cobra.Command {
 				profile = args[1]
 			} else if _, ok := ws.Profiles["default"]; ok {
 				profile = "default"
+			}
+
+			// Create docker runner for build cache checking (reused later for log streaming)
+			docker := runner.NewDockerRunner(fmt.Sprintf("rook_%s", wsName))
+
+			// Check for stale builds
+			cachePath := filepath.Join(ws.Root, ".rook", "build-cache.json")
+			cache, err := buildcache.Load(cachePath)
+			if err != nil {
+				return fmt.Errorf("loading build cache: %w", err)
+			}
+
+			staleServices := make(map[string][]string)
+			for name, svc := range ws.Services {
+				if svc.Build == "" {
+					continue
+				}
+				// Get current image ID (optional - may not exist yet)
+				currentImageID, _ := docker.GetImageID(name)
+				result, err := buildcache.DetectStale(cache, name, svc, ws.Root, currentImageID)
+				if err != nil {
+					return fmt.Errorf("checking %s: %w", name, err)
+				}
+				if result.NeedsRebuild {
+					staleServices[name] = result.Reasons
+				}
+			}
+
+			// Prompt to rebuild if any stale services
+			if len(staleServices) > 0 && !build {
+				fmt.Println("Checking for stale builds...")
+				fmt.Printf("\n%d service(s) need rebuild:\n", len(staleServices))
+				for name, reasons := range staleServices {
+					if len(reasons) > 0 {
+						fmt.Printf("  - %s (%s)\n", name, reasons[0])
+					} else {
+						fmt.Printf("  - %s\n", name)
+					}
+				}
+
+				// Check which services have missing images (must rebuild)
+				var missingImages, staleFiles []string
+				for name, reasons := range staleServices {
+					for _, r := range reasons {
+						if r == "image missing" {
+							missingImages = append(missingImages, name)
+							break
+						}
+					}
+					if _, isMissing := contains(reasons, "image missing"); !isMissing {
+						staleFiles = append(staleFiles, name)
+					}
+				}
+
+				// Auto-rebuild missing images
+				if len(missingImages) > 0 {
+					for _, name := range missingImages {
+						svc := ws.Services[name]
+						svc.ForceBuild = true
+						ws.Services[name] = svc
+					}
+					fmt.Printf("\nAuto-rebuilding %d service(s) with missing images...\n", len(missingImages))
+				}
+
+				// Prompt for file changes only in interactive mode
+				if len(staleFiles) > 0 {
+					if !isTerminal(os.Stdin) {
+						fmt.Println("\nNon-interactive mode: skipping rebuild for stale files. Use --build to force.")
+					} else {
+						fmt.Print("\nRebuild all? [Y/n]: ")
+
+						reader := bufio.NewReader(os.Stdin)
+						input, _ := reader.ReadString('\n')
+						input = strings.TrimSpace(strings.ToLower(input))
+
+						if input == "n" || input == "no" {
+							fmt.Println("Proceeding with existing images...")
+						} else {
+							// Mark stale services for rebuild
+							for name := range staleServices {
+								svc := ws.Services[name]
+								svc.ForceBuild = true
+								ws.Services[name] = svc
+							}
+						}
+					}
+				}
 			}
 
 			// Allocate ports first so templates can resolve
@@ -212,6 +301,30 @@ func newUpCmd() *cobra.Command {
 				return err
 			}
 
+			// Update build cache for all services with build contexts
+			for name, svc := range ws.Services {
+				if svc.Build == "" {
+					continue
+				}
+				imageID, err := docker.GetImageID(name)
+				if err != nil {
+					// Image might not exist yet if build failed or was skipped
+					continue
+				}
+				buildCtx := filepath.Join(ws.Root, svc.Build)
+				dockerfile := "Dockerfile"
+				if svc.Dockerfile != "" {
+					dockerfile = svc.Dockerfile
+				}
+				if err := cache.UpdateAfterBuild(name, ws.Root, buildCtx, dockerfile, imageID); err != nil {
+					warns.add("cannot update build cache for %s: %v", name, err)
+					continue
+				}
+			}
+			if err := cache.Save(cachePath); err != nil {
+				warns.add("cannot save build cache: %v", err)
+			}
+
 			services, _ := orchestrator.TopoSort(ws.Services, ws.ServiceNames())
 			for _, name := range services {
 				if port, ok := portMap[name]; ok {
@@ -229,7 +342,7 @@ func newUpCmd() *cobra.Command {
 
 			fmt.Print("\nStreaming logs (Ctrl+C to stop)...\n\n")
 			mux := newLogMux(os.Stdout)
-			docker := runner.NewDockerRunner(fmt.Sprintf("rook_%s", wsName))
+			docker = runner.NewDockerRunner(fmt.Sprintf("rook_%s", wsName))
 
 			var wg sync.WaitGroup
 			statuses, _ := orch.Status(*ws)
@@ -290,4 +403,23 @@ func newUpCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&detach, "detach", "d", false, "Start services and exit immediately")
 	cmd.Flags().BoolVar(&build, "build", false, "Force rebuild of services with build context")
 	return cmd
+}
+
+// isTerminal checks if a file descriptor is a terminal.
+func isTerminal(f *os.File) bool {
+	fi, err := f.Stat()
+	if err != nil {
+		return false
+	}
+	return (fi.Mode() & os.ModeCharDevice) != 0
+}
+
+// contains checks if a slice contains a string.
+func contains(slice []string, item string) (int, bool) {
+	for i, s := range slice {
+		if s == item {
+			return i, true
+		}
+	}
+	return -1, false
 }
