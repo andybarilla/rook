@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
 
@@ -29,6 +30,7 @@ type WorkspaceAPI struct {
 	emitter        EventEmitter
 	activeProfiles map[string]string
 	settingsPath   string
+	portsPath      string // path to ports.json
 }
 
 // NewWorkspaceAPI creates a new WorkspaceAPI with the given dependencies.
@@ -55,6 +57,21 @@ func NewWorkspaceAPIWithSettings(reg registry.Registry, alloc ports.PortAllocato
 		emitter:        NoopEmitter{},
 		activeProfiles: make(map[string]string),
 		settingsPath:   settingsPath,
+	}
+}
+
+// NewWorkspaceAPIFull creates a new WorkspaceAPI with both settings and ports file paths.
+func NewWorkspaceAPIFull(reg registry.Registry, alloc ports.PortAllocator, orch *orchestrator.Orchestrator, discoverers []discovery.Discoverer, settingsPath, portsPath string) *WorkspaceAPI {
+	return &WorkspaceAPI{
+		registry:       reg,
+		portAlloc:      alloc,
+		orch:           orch,
+		discoverers:    discoverers,
+		logBuffer:      NewLogBuffer(10000),
+		emitter:        NoopEmitter{},
+		activeProfiles: make(map[string]string),
+		settingsPath:   settingsPath,
+		portsPath:      portsPath,
 	}
 }
 
@@ -225,11 +242,23 @@ func (w *WorkspaceAPI) SaveManifest(name string, manifest *Manifest) error {
 }
 
 // StartWorkspace starts all services for the given profile.
-func (w *WorkspaceAPI) StartWorkspace(name, profile string) error {
+// forceBuild forces rebuild of services with build contexts.
+func (w *WorkspaceAPI) StartWorkspace(name, profile string, forceBuild bool) error {
 	ws, err := w.loadWorkspace(name)
 	if err != nil {
 		return err
 	}
+
+	// Mark services for forced rebuild
+	if forceBuild {
+		for svcName, svc := range ws.Services {
+			if svc.Build != "" {
+				svc.ForceBuild = true
+				ws.Services[svcName] = svc
+			}
+		}
+	}
+
 	if err := w.orch.Up(context.Background(), *ws, profile); err != nil {
 		return err
 	}
@@ -294,6 +323,27 @@ func (w *WorkspaceAPI) RestartService(ws, svc string) error {
 // GetPorts returns all port allocations.
 func (w *WorkspaceAPI) GetPorts() []PortEntry {
 	return w.portAlloc.All()
+}
+
+// ResetPorts stops all rook containers and clears port allocations.
+func (w *WorkspaceAPI) ResetPorts() error {
+	// Stop all rook containers
+	for _, e := range w.registry.List() {
+		prefix := fmt.Sprintf("rook_%s_", e.Name)
+		containers, _ := runner.FindContainers(prefix)
+		for _, c := range containers {
+			runner.StopContainer(c)
+		}
+	}
+
+	// Delete the ports file
+	if w.portsPath != "" {
+		if err := os.Remove(w.portsPath); err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("removing ports file: %w", err)
+		}
+	}
+
+	return nil
 }
 
 // GetEnv resolves environment templates for a workspace and returns them grouped by service.

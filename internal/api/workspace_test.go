@@ -216,3 +216,38 @@ func TestCheckBuilds_EmptyWorkspace(t *testing.T) {
 		t.Error("expected HasStale to be false for empty workspace")
 	}
 }
+
+func TestResetPorts_ClearsPortsFile(t *testing.T) {
+	dir := t.TempDir()
+	portsPath := filepath.Join(dir, "ports.json")
+	registryPath := filepath.Join(dir, "workspaces.json")
+	settingsPath := filepath.Join(dir, "settings.json")
+
+	// Create ports file with some content
+	os.WriteFile(portsPath, []byte(`[{"workspace":"test","service":"web","port":3000}]`), 0644)
+
+	reg, _ := registry.NewFileRegistry(registryPath)
+	alloc, _ := ports.NewFileAllocator(portsPath, 10000, 60000)
+	orch := orchestrator.New(nil, nil, alloc)
+	a := api.NewWorkspaceAPIFull(reg, alloc, orch, nil, settingsPath, portsPath)
+
+	err := a.ResetPorts()
+	if err != nil {
+		t.Fatalf("ResetPorts failed: %v", err)
+	}
+
+	// Verify ports file was deleted
+	if _, err := os.Stat(portsPath); !os.IsNotExist(err) {
+		t.Error("expected ports file to be deleted")
+	}
+}
+
+func TestStartWorkspace_AcceptsForceBuild(t *testing.T) {
+	// Test that the signature accepts the forceBuild parameter
+	a := newTestAPI()
+
+	// This should compile - if the signature doesn't have forceBuild, it won't
+	_ = func() {
+		var _ func(string, string, bool) error = a.StartWorkspace
+	}
+}
