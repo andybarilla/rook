@@ -106,7 +106,7 @@ func (r *DockerRunner) Start(ctx context.Context, name string, svc workspace.Ser
 	}
 
 	// Ensure workspace network exists
-	networkName := r.prefix // e.g., "rook_kern-app"
+	networkName := r.prefix                                                // e.g., "rook_kern-app"
 	exec.Command(ContainerRuntime, "network", "create", networkName).Run() // ignore error if exists
 
 	// Create new container
@@ -263,8 +263,25 @@ func ContainerStatus(containerName string) ServiceStatus {
 
 // StopContainer stops and removes a container by name.
 func StopContainer(name string) {
+	StopContainerWithVolumes(name, false)
+}
+
+// StopContainerWithVolumes stops and removes a container by name.
+// If removeVolumes is true, also removes anonymous volumes associated with the container.
+func StopContainerWithVolumes(name string, removeVolumes bool) {
 	exec.Command(ContainerRuntime, "stop", name).Run()
-	exec.Command(ContainerRuntime, "rm", name).Run()
+	args := BuildRemoveArgs(name, removeVolumes)
+	exec.Command(ContainerRuntime, args...).Run()
+}
+
+// BuildRemoveArgs builds the arguments for the container remove command.
+func BuildRemoveArgs(name string, removeVolumes bool) []string {
+	args := []string{"rm"}
+	if removeVolumes {
+		args = append(args, "-v")
+	}
+	args = append(args, name)
+	return args
 }
 
 // StreamLogs returns a streaming reader for a container's logs.
