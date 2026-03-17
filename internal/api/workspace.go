@@ -3,17 +3,20 @@ package api
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/andybarilla/rook/internal/buildcache"
 	"github.com/andybarilla/rook/internal/discovery"
 	"github.com/andybarilla/rook/internal/envgen"
 	"github.com/andybarilla/rook/internal/orchestrator"
 	"github.com/andybarilla/rook/internal/ports"
 	"github.com/andybarilla/rook/internal/registry"
 	"github.com/andybarilla/rook/internal/runner"
+	"github.com/andybarilla/rook/internal/settings"
 	"github.com/andybarilla/rook/internal/workspace"
 )
 
@@ -26,6 +29,8 @@ type WorkspaceAPI struct {
 	logBuffer      *LogBuffer
 	emitter        EventEmitter
 	activeProfiles map[string]string
+	settingsPath   string
+	portsPath      string // path to ports.json
 }
 
 // NewWorkspaceAPI creates a new WorkspaceAPI with the given dependencies.
@@ -38,6 +43,35 @@ func NewWorkspaceAPI(reg registry.Registry, alloc ports.PortAllocator, orch *orc
 		logBuffer:      NewLogBuffer(10000),
 		emitter:        NoopEmitter{},
 		activeProfiles: make(map[string]string),
+	}
+}
+
+// NewWorkspaceAPIWithSettings creates a new WorkspaceAPI with a settings file path.
+func NewWorkspaceAPIWithSettings(reg registry.Registry, alloc ports.PortAllocator, orch *orchestrator.Orchestrator, discoverers []discovery.Discoverer, settingsPath string) *WorkspaceAPI {
+	return &WorkspaceAPI{
+		registry:       reg,
+		portAlloc:      alloc,
+		orch:           orch,
+		discoverers:    discoverers,
+		logBuffer:      NewLogBuffer(10000),
+		emitter:        NoopEmitter{},
+		activeProfiles: make(map[string]string),
+		settingsPath:   settingsPath,
+	}
+}
+
+// NewWorkspaceAPIFull creates a new WorkspaceAPI with both settings and ports file paths.
+func NewWorkspaceAPIFull(reg registry.Registry, alloc ports.PortAllocator, orch *orchestrator.Orchestrator, discoverers []discovery.Discoverer, settingsPath, portsPath string) *WorkspaceAPI {
+	return &WorkspaceAPI{
+		registry:       reg,
+		portAlloc:      alloc,
+		orch:           orch,
+		discoverers:    discoverers,
+		logBuffer:      NewLogBuffer(10000),
+		emitter:        NoopEmitter{},
+		activeProfiles: make(map[string]string),
+		settingsPath:   settingsPath,
+		portsPath:      portsPath,
 	}
 }
 
@@ -119,6 +153,7 @@ func (w *WorkspaceAPI) GetWorkspace(name string) (*WorkspaceDetail, error) {
 			Command:   svc.Command,
 			DependsOn: svc.DependsOn,
 			Status:    runner.StatusStopped,
+			HasBuild:  svc.Build != "",
 		}
 		if s, ok := statuses[svcName]; ok {
 			si.Status = s
@@ -208,11 +243,23 @@ func (w *WorkspaceAPI) SaveManifest(name string, manifest *Manifest) error {
 }
 
 // StartWorkspace starts all services for the given profile.
-func (w *WorkspaceAPI) StartWorkspace(name, profile string) error {
+// forceBuild forces rebuild of services with build contexts.
+func (w *WorkspaceAPI) StartWorkspace(name, profile string, forceBuild bool) error {
 	ws, err := w.loadWorkspace(name)
 	if err != nil {
 		return err
 	}
+
+	// Mark services for forced rebuild
+	if forceBuild {
+		for svcName, svc := range ws.Services {
+			if svc.Build != "" {
+				svc.ForceBuild = true
+				ws.Services[svcName] = svc
+			}
+		}
+	}
+
 	if err := w.orch.Up(context.Background(), *ws, profile); err != nil {
 		return err
 	}
@@ -279,6 +326,32 @@ func (w *WorkspaceAPI) GetPorts() []PortEntry {
 	return w.portAlloc.All()
 }
 
+// ResetPorts stops all rook containers and clears port allocations.
+func (w *WorkspaceAPI) ResetPorts() error {
+	// Stop all rook containers
+	for _, e := range w.registry.List() {
+		prefix := fmt.Sprintf("rook_%s_", e.Name)
+		containers, _ := runner.FindContainers(prefix)
+		for _, c := range containers {
+			runner.StopContainer(c)
+		}
+	}
+
+	// Clear in-memory port allocations
+	if fa, ok := w.portAlloc.(*ports.FileAllocator); ok {
+		fa.Clear()
+	}
+
+	// Delete the ports file
+	if w.portsPath != "" {
+		if err := os.Remove(w.portsPath); err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("removing ports file: %w", err)
+		}
+	}
+
+	return nil
+}
+
 // GetEnv resolves environment templates for a workspace and returns them grouped by service.
 func (w *WorkspaceAPI) GetEnv(name string) (map[string][]EnvVar, error) {
 	ws, err := w.loadWorkspace(name)
@@ -337,6 +410,83 @@ func (w *WorkspaceAPI) PreviewManifest(manifest *Manifest) (string, error) {
 		return "", fmt.Errorf("marshaling manifest: %w", err)
 	}
 	return string(data), nil
+}
+
+// GetSettings returns current settings with defaults applied.
+func (w *WorkspaceAPI) GetSettings() *Settings {
+	if w.settingsPath == "" {
+		return &Settings{AutoRebuild: true}
+	}
+	s, err := settings.Load(w.settingsPath)
+	if err != nil {
+		return &Settings{AutoRebuild: true}
+	}
+	return &Settings{AutoRebuild: s.AutoRebuild}
+}
+
+// SaveSettings persists settings to the settings file.
+func (w *WorkspaceAPI) SaveSettings(s *Settings) error {
+	if w.settingsPath == "" {
+		return fmt.Errorf("settings path not configured")
+	}
+	internal := &settings.Settings{AutoRebuild: s.AutoRebuild}
+	return internal.Save(w.settingsPath)
+}
+
+// CheckBuilds returns build status for all services in a workspace.
+func (w *WorkspaceAPI) CheckBuilds(name string) (*BuildCheckResult, error) {
+	ws, err := w.loadWorkspace(name)
+	if err != nil {
+		return nil, err
+	}
+
+	cachePath := filepath.Join(ws.Root, ".rook", ".cache", "build-cache.json")
+	cache, err := buildcache.Load(cachePath)
+	if err != nil {
+		return nil, fmt.Errorf("loading build cache: %w", err)
+	}
+
+	docker := runner.NewDockerRunner(fmt.Sprintf("rook_%s", name))
+
+	services := make([]BuildStatus, 0, len(ws.Services))
+	hasStale := false
+
+	for svcName, svc := range ws.Services {
+		bs := BuildStatus{
+			Name:     svcName,
+			HasBuild: svc.Build != "",
+			Status:   "no_build_context",
+		}
+
+		if svc.Build != "" {
+			currentImageID, _ := docker.GetImageID(svcName)
+			result, err := buildcache.DetectStale(cache, svcName, svc, ws.Root, currentImageID)
+			if err != nil {
+				return nil, fmt.Errorf("checking %s: %w", svcName, err)
+			}
+
+			if result.NeedsRebuild {
+				bs.Status = "needs_rebuild"
+				bs.Reasons = result.Reasons
+				hasStale = true
+			} else {
+				bs.Status = "up_to_date"
+			}
+		}
+
+		services = append(services, bs)
+	}
+
+	// Sort: needs_rebuild first, then up_to_date, then no_build_context
+	sort.Slice(services, func(i, j int) bool {
+		order := map[string]int{"needs_rebuild": 0, "up_to_date": 1, "no_build_context": 2}
+		return order[services[i].Status] < order[services[j].Status]
+	})
+
+	return &BuildCheckResult{
+		Services: services,
+		HasStale: hasStale,
+	}, nil
 }
 
 // loadWorkspace reads the manifest from the registry path and converts to a Workspace.

@@ -194,3 +194,11 @@ func (a *FileAllocator) All() []PortEntry {
 	copy(out, a.entries)
 	return out
 }
+
+// Clear removes all port allocations from memory.
+func (a *FileAllocator) Clear() {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.entries = nil
+	a.used = make(map[int]bool)
+}

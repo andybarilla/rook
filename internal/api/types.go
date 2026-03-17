@@ -8,12 +8,14 @@ import (
 
 // ServiceInfo is a summary of a single service for list views.
 type ServiceInfo struct {
-	Name      string           `json:"name"`
-	Image     string           `json:"image,omitempty"`
-	Command   string           `json:"command,omitempty"`
-	Status    runner.ServiceStatus `json:"status"`
-	Port      int              `json:"port,omitempty"`
-	DependsOn []string         `json:"dependsOn,omitempty"`
+	Name        string               `json:"name"`
+	Image       string               `json:"image,omitempty"`
+	Command     string               `json:"command,omitempty"`
+	Status      runner.ServiceStatus `json:"status"`
+	Port        int                  `json:"port,omitempty"`
+	DependsOn   []string             `json:"dependsOn,omitempty"`
+	HasBuild    bool                 `json:"hasBuild"`
+	BuildStatus string               `json:"buildStatus,omitempty"` // "up_to_date", "needs_rebuild", or empty
 }
 
 // WorkspaceInfo is a summary of a workspace for list views.
@@ -56,9 +58,9 @@ type WorkspaceChangedEvent struct {
 
 // DiscoverResult wraps discovery output for the API layer.
 type DiscoverResult struct {
-	Source   string              `json:"source"`
+	Source   string                       `json:"source"`
 	Services map[string]workspace.Service `json:"services"`
-	Groups   map[string][]string `json:"groups,omitempty"`
+	Groups   map[string][]string          `json:"groups,omitempty"`
 }
 
 // EnvVar represents a single environment variable with its template and resolved value.
@@ -73,3 +75,22 @@ type PortEntry = ports.PortEntry
 
 // Manifest is a type alias for the workspace package Manifest.
 type Manifest = workspace.Manifest
+
+// Settings holds user preferences for the GUI.
+type Settings struct {
+	AutoRebuild bool `json:"autoRebuild"`
+}
+
+// BuildStatus describes the build state of a single service.
+type BuildStatus struct {
+	Name     string   `json:"name"`
+	HasBuild bool     `json:"hasBuild"`
+	Status   string   `json:"status"` // "up_to_date", "needs_rebuild", "no_build_context"
+	Reasons  []string `json:"reasons,omitempty"`
+}
+
+// BuildCheckResult contains build status for all services in a workspace.
+type BuildCheckResult struct {
+	Services []BuildStatus `json:"services"`
+	HasStale bool          `json:"hasStale"`
+}

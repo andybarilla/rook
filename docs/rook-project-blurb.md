@@ -20,6 +20,7 @@ This project uses [Rook](https://github.com/andybarilla/rook) for local developm
 
 **Files:**
 - `rook.yaml` — workspace manifest (services, ports, profiles, dependencies)
-- `.rook/` — generated resolved config files (gitignored)
+- `.rook/scripts/` — devcontainer scripts copied during init (checked into git)
+- `.rook/.cache/` — generated files (gitignored via `.rook/.gitignore`)
 - `~/.config/rook/ports.json` — global port allocations
 - `~/.config/rook/workspaces.json` — registered workspace registry

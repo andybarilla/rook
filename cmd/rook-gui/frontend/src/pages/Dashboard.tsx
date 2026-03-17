@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import { WorkspaceInfo, usePorts } from '../hooks/useWails'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 
 interface DashboardProps {
   workspaces: WorkspaceInfo[]
@@ -6,9 +8,26 @@ interface DashboardProps {
 
 export function Dashboard({ workspaces }: DashboardProps) {
   const ports = usePorts()
+  const [showResetConfirm, setShowResetConfirm] = useState(false)
+  const [resetting, setResetting] = useState(false)
   const runningCount = workspaces.reduce((sum, ws) => sum + ws.runningCount, 0)
   const totalServices = workspaces.reduce((sum, ws) => sum + ws.serviceCount, 0)
   const stoppedCount = totalServices - runningCount
+
+  const handleResetPorts = async () => {
+    setResetting(true)
+    try {
+      await window.go.api.WorkspaceAPI.ResetPorts()
+      setShowResetConfirm(false)
+      // Refresh the page to show cleared ports
+      window.location.reload()
+    } catch (e) {
+      console.error('Reset ports failed:', e)
+      alert('Failed to reset ports: ' + e)
+    } finally {
+      setResetting(false)
+    }
+  }
 
   return (
     <div className="p-4">
@@ -22,7 +41,7 @@ export function Dashboard({ workspaces }: DashboardProps) {
         <StatCard label="Ports Used" value={ports.length} color="text-rook-partial" />
       </div>
       <p className="text-[10px] uppercase tracking-wider text-rook-text-secondary mb-2">Port Allocations</p>
-      <div className="bg-rook-card rounded-md text-xs overflow-hidden">
+      <div className="bg-rook-card rounded-md text-xs overflow-hidden mb-4">
         <div className="grid grid-cols-[1fr_1fr_80px] px-2.5 py-2 text-rook-muted border-b border-rook-border">
           <span>Workspace</span><span>Service</span><span>Port</span>
         </div>
@@ -38,6 +57,22 @@ export function Dashboard({ workspaces }: DashboardProps) {
           ))
         )}
       </div>
+      <button
+        onClick={() => setShowResetConfirm(true)}
+        className="text-[10px] text-rook-crashed hover:underline"
+      >
+        Reset Ports
+      </button>
+
+      <ConfirmDialog
+        open={showResetConfirm}
+        title="Reset Port Allocations"
+        message="This will stop all running containers and clear port allocations. Continue?"
+        confirmLabel={resetting ? 'Resetting...' : 'Reset Ports'}
+        variant="danger"
+        onConfirm={handleResetPorts}
+        onCancel={() => setShowResetConfirm(false)}
+      />
     </div>
   )
 }

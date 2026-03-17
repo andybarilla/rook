@@ -35,7 +35,8 @@ func main() {
 	os.MkdirAll(cfgDir, 0755)
 
 	reg, _ := registry.NewFileRegistry(filepath.Join(cfgDir, "workspaces.json"))
-	alloc, _ := ports.NewFileAllocator(filepath.Join(cfgDir, "ports.json"), 10000, 60000)
+	portsPath := filepath.Join(cfgDir, "ports.json")
+	alloc, _ := ports.NewFileAllocator(portsPath, 10000, 60000)
 
 	processRunner := runner.NewProcessRunner()
 	dockerRunner := runner.NewDockerRunner("rook")
@@ -47,7 +48,8 @@ func main() {
 		discovery.NewMiseDiscoverer(),
 	}
 
-	wsAPI := api.NewWorkspaceAPI(reg, alloc, orch, discoverers)
+	settingsPath := filepath.Join(cfgDir, "settings.json")
+	wsAPI := api.NewWorkspaceAPIFull(reg, alloc, orch, discoverers, settingsPath, portsPath)
 
 	err := wails.Run(&options.App{
 		Title:     "Rook",

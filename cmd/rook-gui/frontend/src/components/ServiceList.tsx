@@ -1,5 +1,6 @@
 import { ServiceInfo } from '../hooks/useWails'
 import { StatusDot } from './StatusDot'
+import { BuildStatusBadge } from './BuildStatusBadge'
 
 interface ServiceListProps {
   services: ServiceInfo[]
@@ -16,6 +17,9 @@ export function ServiceList({ services, onStart, onStop, onRestart }: ServiceLis
         <div key={svc.name} className="bg-rook-card rounded-md px-3 py-2.5 flex justify-between items-center">
           <div className="flex items-center gap-2">
             <StatusDot status={svc.status} size="md" />
+            {svc.hasBuild && svc.buildStatus && (
+              <BuildStatusBadge status={svc.buildStatus} />
+            )}
             <div>
               <div className="text-rook-text font-semibold text-sm">{svc.name}</div>
               <div className="text-rook-muted text-[10px]">{svc.image || `${svc.command} (process)`}</div>

@@ -15,6 +15,8 @@ export interface ServiceInfo {
   status: 'starting' | 'running' | 'stopped' | 'crashed'
   port?: number
   dependsOn?: string[]
+  hasBuild: boolean
+  buildStatus?: 'up_to_date' | 'needs_rebuild' | 'no_build_context'
 }
 
 export interface WorkspaceDetail {
@@ -54,6 +56,23 @@ export interface LogEvent {
   timestamp: number
 }
 
+// New types for settings and builds
+export interface Settings {
+  autoRebuild: boolean
+}
+
+export interface BuildStatus {
+  name: string
+  hasBuild: boolean
+  status: 'up_to_date' | 'needs_rebuild' | 'no_build_context'
+  reasons?: string[]
+}
+
+export interface BuildCheckResult {
+  services: BuildStatus[]
+  hasStale: boolean
+}
+
 // Wails runtime globals
 declare global {
   interface Window {
@@ -64,7 +83,7 @@ declare global {
           GetWorkspace(name: string): Promise<WorkspaceDetail>
           AddWorkspace(path: string): Promise<any>
           RemoveWorkspace(name: string): Promise<void>
-          StartWorkspace(name: string, profile: string): Promise<void>
+          StartWorkspace(name: string, profile: string, forceBuild: boolean): Promise<void>
           StopWorkspace(name: string): Promise<void>
           StartService(workspace: string, service: string): Promise<void>
           StopService(workspace: string, service: string): Promise<void>
@@ -74,6 +93,10 @@ declare global {
           GetLogs(workspace: string, service: string, lines: number): Promise<LogLine[]>
           PreviewManifest(manifest: any): Promise<string>
           SaveManifest(name: string, manifest: any): Promise<void>
+          GetSettings(): Promise<Settings>
+          SaveSettings(settings: Settings): Promise<void>
+          CheckBuilds(workspace: string): Promise<BuildCheckResult>
+          ResetPorts(): Promise<void>
         }
       }
     }
