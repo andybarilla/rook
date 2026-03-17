@@ -159,3 +159,60 @@ func TestSaveSettings_PersistsSettings(t *testing.T) {
 		t.Error("expected AutoRebuild to be false after save")
 	}
 }
+
+func TestCheckBuilds_MethodExists(t *testing.T) {
+	// This test verifies that the CheckBuilds method exists and has the correct signature
+	a := newTestAPI()
+
+	// This should compile - if the method doesn't exist, this will fail
+	var _ func(string) (*api.BuildCheckResult, error) = a.CheckBuilds
+}
+
+func TestCheckBuilds_EmptyWorkspace(t *testing.T) {
+	// This test verifies that CheckBuilds works with an empty workspace
+	dir := t.TempDir()
+	registryPath := filepath.Join(dir, "workspaces.json")
+
+	reg, err := registry.NewFileRegistry(registryPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Register a workspace
+	wsDir := filepath.Join(dir, "myproject")
+	os.MkdirAll(wsDir, 0755)
+
+	// Create rook.yaml
+	manifest := &workspace.Manifest{
+		Name:     "myproject",
+		Type:     workspace.TypeMulti,
+		Services: map[string]workspace.Service{}, // empty services
+	}
+	manifestData, err := yaml.Marshal(manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(wsDir, "rook.yaml"), manifestData, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	reg.Register("myproject", wsDir)
+
+	alloc := &stubPortAlloc{}
+	orch := orchestrator.New(nil, nil, nil)
+
+	// Create API
+	a := api.NewWorkspaceAPI(reg, alloc, orch, nil)
+
+	result, err := a.CheckBuilds("myproject")
+	if err != nil {
+		t.Fatalf("CheckBuilds failed: %v", err)
+	}
+
+	if len(result.Services) != 0 {
+		t.Errorf("expected 0 services, got %d", len(result.Services))
+	}
+	if result.HasStale {
+		t.Error("expected HasStale to be false for empty workspace")
+	}
+}

@@ -8,6 +8,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/andybarilla/rook/internal/buildcache"
 	"github.com/andybarilla/rook/internal/discovery"
 	"github.com/andybarilla/rook/internal/envgen"
 	"github.com/andybarilla/rook/internal/orchestrator"
@@ -374,6 +375,62 @@ func (w *WorkspaceAPI) SaveSettings(s *Settings) error {
 	}
 	internal := &settings.Settings{AutoRebuild: s.AutoRebuild}
 	return internal.Save(w.settingsPath)
+}
+
+// CheckBuilds returns build status for all services in a workspace.
+func (w *WorkspaceAPI) CheckBuilds(name string) (*BuildCheckResult, error) {
+	ws, err := w.loadWorkspace(name)
+	if err != nil {
+		return nil, err
+	}
+
+	cachePath := filepath.Join(ws.Root, ".rook", ".cache", "build-cache.json")
+	cache, err := buildcache.Load(cachePath)
+	if err != nil {
+		return nil, fmt.Errorf("loading build cache: %w", err)
+	}
+
+	docker := runner.NewDockerRunner(fmt.Sprintf("rook_%s", name))
+
+	services := make([]BuildStatus, 0, len(ws.Services))
+	hasStale := false
+
+	for svcName, svc := range ws.Services {
+		bs := BuildStatus{
+			Name:     svcName,
+			HasBuild: svc.Build != "",
+			Status:   "no_build_context",
+		}
+
+		if svc.Build != "" {
+			currentImageID, _ := docker.GetImageID(svcName)
+			result, err := buildcache.DetectStale(cache, svcName, svc, ws.Root, currentImageID)
+			if err != nil {
+				return nil, fmt.Errorf("checking %s: %w", svcName, err)
+			}
+
+			if result.NeedsRebuild {
+				bs.Status = "needs_rebuild"
+				bs.Reasons = result.Reasons
+				hasStale = true
+			} else {
+				bs.Status = "up_to_date"
+			}
+		}
+
+		services = append(services, bs)
+	}
+
+	// Sort: needs_rebuild first, then up_to_date, then no_build_context
+	sort.Slice(services, func(i, j int) bool {
+		order := map[string]int{"needs_rebuild": 0, "up_to_date": 1, "no_build_context": 2}
+		return order[services[i].Status] < order[services[j].Status]
+	})
+
+	return &BuildCheckResult{
+		Services: services,
+		HasStale: hasStale,
+	}, nil
 }
 
 // loadWorkspace reads the manifest from the registry path and converts to a Workspace.
