@@ -132,12 +132,7 @@ func newInitCmd() *cobra.Command {
 					fmt.Printf("  Copied %s to .rook/scripts/%s\n", rel, scriptName)
 					warns.add("Review .rook/scripts/%s and adjust for rook (e.g., remove devcontainer-specific wait loops)", scriptName)
 				}
-				// Ensure .rook/.gitignore exists with .cache/ entry
-				if err := ensureRookGitignore(rookDir); err != nil {
-					return fmt.Errorf("creating .rook/.gitignore: %w", err)
-				}
-
-				wsName := filepath.Base(dir)
+					wsName := filepath.Base(dir)
 				m := &workspace.Manifest{
 					Name:     wsName,
 					Type:     workspace.TypeSingle,
@@ -153,6 +148,12 @@ func newInitCmd() *cobra.Command {
 			m, err := workspace.ParseManifest(manifestPath)
 			if err != nil {
 				return err
+			}
+
+			// Ensure .rook/.gitignore exists with .cache/ entry (runs for all init paths)
+			rookDir := filepath.Join(dir, ".rook")
+			if err := ensureRookGitignore(rookDir); err != nil {
+				warns.add("cannot create .rook/.gitignore: %v", err)
 			}
 
 			cfgDir := configDir()

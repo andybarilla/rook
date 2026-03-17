@@ -41,6 +41,40 @@ services:
 	}
 }
 
+func TestInitCmd_GeneratesGitignore_ExistingManifest(t *testing.T) {
+	cfgDir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", cfgDir)
+
+	wsDir := t.TempDir()
+	// Create rook.yaml directly (skip auto-discovery)
+	manifestContent := `name: testws
+type: single
+services:
+  web:
+    image: nginx:latest
+    ports:
+      - 8080
+`
+	os.WriteFile(filepath.Join(wsDir, "rook.yaml"), []byte(manifestContent), 0644)
+
+	// Run init
+	initCmd := newInitCmd()
+	initCmd.SetArgs([]string{wsDir})
+	if err := initCmd.Execute(); err != nil {
+		t.Fatalf("init failed: %v", err)
+	}
+
+	// Check that .rook/.gitignore exists even without auto-discovery
+	gitignorePath := filepath.Join(wsDir, ".rook", ".gitignore")
+	content, err := os.ReadFile(gitignorePath)
+	if err != nil {
+		t.Fatalf("expected .rook/.gitignore to exist for pre-existing manifest: %v", err)
+	}
+	if !strings.Contains(string(content), ".cache/") {
+		t.Errorf("expected .rook/.gitignore to contain '.cache/', got: %s", string(content))
+	}
+}
+
 func TestInitCmd_CreatesScriptsDir(t *testing.T) {
 	cfgDir := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", cfgDir)

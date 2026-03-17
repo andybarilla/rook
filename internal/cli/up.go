@@ -57,8 +57,9 @@ func newUpCmd() *cobra.Command {
 			docker := runner.NewDockerRunner(fmt.Sprintf("rook_%s", wsName))
 
 			// Check for stale builds
-			cachePath := buildCachePath(ws.Root)
-			cache, err := buildcache.Load(cachePath)
+			loadCachePath := buildCachePath(ws.Root)
+			saveCachePath := filepath.Join(ws.Root, ".rook", ".cache", "build-cache.json")
+			cache, err := buildcache.Load(loadCachePath)
 			if err != nil {
 				return fmt.Errorf("loading build cache: %w", err)
 			}
@@ -321,7 +322,7 @@ func newUpCmd() *cobra.Command {
 					continue
 				}
 			}
-			if err := cache.Save(cachePath); err != nil {
+			if err := cache.Save(saveCachePath); err != nil {
 				warns.add("cannot save build cache: %v", err)
 			}
 
@@ -425,8 +426,17 @@ func contains(slice []string, item string) (int, bool) {
 }
 
 // buildCachePath returns the path to the build cache file.
+// Falls back to old location for migration from pre-.cache/ layout.
 func buildCachePath(wsRoot string) string {
-	return filepath.Join(wsRoot, ".rook", ".cache", "build-cache.json")
+	newPath := filepath.Join(wsRoot, ".rook", ".cache", "build-cache.json")
+	if _, err := os.Stat(newPath); err == nil {
+		return newPath
+	}
+	oldPath := filepath.Join(wsRoot, ".rook", "build-cache.json")
+	if _, err := os.Stat(oldPath); err == nil {
+		return oldPath
+	}
+	return newPath
 }
 
 // resolvedDirPath returns the path to the resolved files directory.
