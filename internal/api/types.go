@@ -8,12 +8,14 @@ import (
 
 // ServiceInfo is a summary of a single service for list views.
 type ServiceInfo struct {
-	Name      string               `json:"name"`
-	Image     string               `json:"image,omitempty"`
-	Command   string               `json:"command,omitempty"`
-	Status    runner.ServiceStatus `json:"status"`
-	Port      int                  `json:"port,omitempty"`
-	DependsOn []string             `json:"dependsOn,omitempty"`
+	Name        string               `json:"name"`
+	Image       string               `json:"image,omitempty"`
+	Command     string               `json:"command,omitempty"`
+	Status      runner.ServiceStatus `json:"status"`
+	Port        int                  `json:"port,omitempty"`
+	DependsOn   []string             `json:"dependsOn,omitempty"`
+	HasBuild    bool                 `json:"hasBuild"`
+	BuildStatus string               `json:"buildStatus,omitempty"` // "up_to_date", "needs_rebuild", or empty
 }
 
 // WorkspaceInfo is a summary of a workspace for list views.

@@ -15,6 +15,8 @@ export interface ServiceInfo {
   status: 'starting' | 'running' | 'stopped' | 'crashed'
   port?: number
   dependsOn?: string[]
+  hasBuild: boolean
+  buildStatus?: 'up_to_date' | 'needs_rebuild' | 'no_build_context'
 }
 
 export interface WorkspaceDetail {

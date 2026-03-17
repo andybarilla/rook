@@ -153,6 +153,7 @@ func (w *WorkspaceAPI) GetWorkspace(name string) (*WorkspaceDetail, error) {
 			Command:   svc.Command,
 			DependsOn: svc.DependsOn,
 			Status:    runner.StatusStopped,
+			HasBuild:  svc.Build != "",
 		}
 		if s, ok := statuses[svcName]; ok {
 			si.Status = s
