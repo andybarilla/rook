@@ -57,7 +57,7 @@ func newUpCmd() *cobra.Command {
 			docker := runner.NewDockerRunner(fmt.Sprintf("rook_%s", wsName))
 
 			// Check for stale builds
-			cachePath := filepath.Join(ws.Root, ".rook", "build-cache.json")
+			cachePath := buildCachePath(ws.Root)
 			cache, err := buildcache.Load(cachePath)
 			if err != nil {
 				return fmt.Errorf("loading build cache: %w", err)
@@ -212,7 +212,7 @@ func newUpCmd() *cobra.Command {
 
 			// Write resolved env files so they override values from mounted .env files
 			// (Makefiles that -include .env bypass container -e flags)
-			resolvedDir := filepath.Join(ws.Root, ".rook", "resolved")
+			resolvedDir := resolvedDirPath(ws.Root)
 			os.MkdirAll(resolvedDir, 0755)
 			for name, svc := range ws.Services {
 				if !svc.IsContainer() || len(svc.Environment) == 0 {
@@ -422,4 +422,14 @@ func contains(slice []string, item string) (int, bool) {
 		}
 	}
 	return -1, false
+}
+
+// buildCachePath returns the path to the build cache file.
+func buildCachePath(wsRoot string) string {
+	return filepath.Join(wsRoot, ".rook", ".cache", "build-cache.json")
+}
+
+// resolvedDirPath returns the path to the resolved files directory.
+func resolvedDirPath(wsRoot string) string {
+	return filepath.Join(wsRoot, ".rook", ".cache", "resolved")
 }
