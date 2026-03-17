@@ -336,6 +336,11 @@ func (w *WorkspaceAPI) ResetPorts() error {
 		}
 	}
 
+	// Clear in-memory port allocations
+	if fa, ok := w.portAlloc.(*ports.FileAllocator); ok {
+		fa.Clear()
+	}
+
 	// Delete the ports file
 	if w.portsPath != "" {
 		if err := os.Remove(w.portsPath); err != nil && !os.IsNotExist(err) {
