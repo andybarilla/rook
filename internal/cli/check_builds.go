@@ -65,7 +65,7 @@ func NewCheckBuildsCmd() *cobra.Command {
 			}
 
 			if jsonOutput {
-				return printCheckBuildsJSON(results, ws.Services)
+				return printCheckBuildsJSON(results, ws.Services, hasStale)
 			}
 			return printCheckBuildsText(results, ws.Services, hasStale)
 		},
@@ -106,7 +106,7 @@ type checkBuildsServiceStatus struct {
 	Reason string `json:"reason,omitempty"`
 }
 
-func printCheckBuildsJSON(results map[string]buildcache.StaleResult, services map[string]workspace.Service) error {
+func printCheckBuildsJSON(results map[string]buildcache.StaleResult, services map[string]workspace.Service, hasStale bool) error {
 	output := checkBuildsJSONOutput{Services: make(map[string]checkBuildsServiceStatus)}
 
 	for name, svc := range services {
@@ -129,5 +129,12 @@ func printCheckBuildsJSON(results map[string]buildcache.StaleResult, services ma
 
 	encoder := json.NewEncoder(os.Stdout)
 	encoder.SetIndent("", "  ")
-	return encoder.Encode(output)
+	if err := encoder.Encode(output); err != nil {
+		return err
+	}
+
+	if hasStale {
+		os.Exit(1)
+	}
+	return nil
 }

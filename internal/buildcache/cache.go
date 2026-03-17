@@ -75,6 +75,12 @@ func (c *Cache) UpdateAfterBuild(service, workDir, buildCtx, dockerfile, imageID
 		buildCtx = filepath.Join(workDir, buildCtx)
 	}
 
+	// Compute Dockerfile path relative to build context for skip comparison
+	dockerfileRelToCtx, err := filepath.Rel(buildCtx, dockerfilePath)
+	if err != nil {
+		return fmt.Errorf("computing Dockerfile relative path: %w", err)
+	}
+
 	// Parse .dockerignore
 	ignorePatterns, err := ParseDockerignore(buildCtx)
 	if err != nil {
@@ -98,6 +104,16 @@ func (c *Cache) UpdateAfterBuild(service, workDir, buildCtx, dockerfile, imageID
 
 		// Skip .dockerignore patterns
 		if MatchesPatterns(relPath, ignorePatterns) {
+			return nil
+		}
+
+		// Skip Dockerfile - it's tracked separately via DockerfileHash
+		if relPath == dockerfileRelToCtx {
+			return nil
+		}
+
+		// Skip .dockerignore - it's metadata, not build content
+		if relPath == ".dockerignore" {
 			return nil
 		}
 

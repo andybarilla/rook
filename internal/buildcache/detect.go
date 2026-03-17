@@ -53,6 +53,12 @@ func DetectStale(cache *Cache, service string, svc workspace.Service, workDir, c
 	}
 	dockerfilePath := filepath.Join(workDir, dockerfile)
 
+	// Compute Dockerfile path relative to build context for skip comparison
+	dockerfileRelToCtx, err := filepath.Rel(buildCtx, dockerfilePath)
+	if err != nil {
+		return nil, fmt.Errorf("computing Dockerfile relative path: %w", err)
+	}
+
 	// Check Dockerfile
 	dockerfileHash, err := HashFile(dockerfilePath)
 	if err != nil {
@@ -90,7 +96,7 @@ func DetectStale(cache *Cache, service string, svc workspace.Service, workDir, c
 		}
 
 		// Skip Dockerfile - it's checked separately via DockerfileHash
-		if relPath == dockerfile {
+		if relPath == dockerfileRelToCtx {
 			return nil
 		}
 
