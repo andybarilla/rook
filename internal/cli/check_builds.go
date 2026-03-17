@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/andybarilla/rook/internal/buildcache"
 	"github.com/andybarilla/rook/internal/runner"
@@ -34,7 +33,7 @@ func NewCheckBuildsCmd() *cobra.Command {
 				return err
 			}
 
-			cachePath := filepath.Join(ws.Root, ".rook", "build-cache.json")
+			cachePath := buildCachePath(ws.Root)
 			cache, err := buildcache.Load(cachePath)
 			if err != nil {
 				return fmt.Errorf("loading build cache: %w", err)
