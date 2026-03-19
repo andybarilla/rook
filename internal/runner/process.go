@@ -16,8 +16,7 @@ import (
 type processEntry struct {
 	cmd    *exec.Cmd
 	cancel context.CancelFunc
-	output *bytes.Buffer
-	mu     sync.Mutex
+	output *syncBuffer
 	done   chan struct{}
 	err    error
 }
@@ -39,7 +38,7 @@ func (r *ProcessRunner) Start(ctx context.Context, name string, svc workspace.Se
 	cmd := exec.CommandContext(procCtx, "sh", "-c", svc.Command)
 	cmd.Dir = workDir
 
-	var output bytes.Buffer
+	var output syncBuffer
 	cmd.Stdout = &output
 	cmd.Stderr = &output
 	cmd.Env = os.Environ()
@@ -105,10 +104,7 @@ func (r *ProcessRunner) Logs(handle RunHandle) (io.ReadCloser, error) {
 	if !ok {
 		return nil, fmt.Errorf("no logs for %s", handle.ID)
 	}
-	entry.mu.Lock()
-	data := make([]byte, entry.output.Len())
-	copy(data, entry.output.Bytes())
-	entry.mu.Unlock()
+	data := entry.output.Bytes()
 	return io.NopCloser(bytes.NewReader(data)), nil
 }
 
@@ -125,19 +121,14 @@ func (r *ProcessRunner) StreamLogs(handle RunHandle) (io.ReadCloser, error) {
 		defer pw.Close()
 		lastLen := 0
 		for {
-			entry.mu.Lock()
 			data := entry.output.Bytes()
-			currentLen := len(data)
-			entry.mu.Unlock()
-			if currentLen > lastLen {
-				pw.Write(data[lastLen:currentLen])
-				lastLen = currentLen
+			if len(data) > lastLen {
+				pw.Write(data[lastLen:])
+				lastLen = len(data)
 			}
 			select {
 			case <-entry.done:
-				entry.mu.Lock()
 				data = entry.output.Bytes()
-				entry.mu.Unlock()
 				if len(data) > lastLen {
 					pw.Write(data[lastLen:])
 				}
