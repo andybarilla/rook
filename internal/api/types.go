@@ -94,3 +94,19 @@ type BuildCheckResult struct {
 	Services []BuildStatus `json:"services"`
 	HasStale bool          `json:"hasStale"`
 }
+
+// DiscoverDiff represents detected changes between manifest and current discovery.
+type DiscoverDiff struct {
+	Source          string        `json:"source"`
+	NewServices     []ServiceDiff `json:"newServices"`
+	RemovedServices []ServiceDiff `json:"removedServices"`
+	HasChanges      bool          `json:"hasChanges"`
+}
+
+// ServiceDiff describes a single service change.
+type ServiceDiff struct {
+	Name   string `json:"name"`
+	Image  string `json:"image,omitempty"`
+	Build  string `json:"build,omitempty"`
+	Reason string `json:"reason,omitempty"`
+}

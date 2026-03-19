@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/andybarilla/rook/internal/api"
+	"github.com/andybarilla/rook/internal/discovery"
 	"github.com/andybarilla/rook/internal/orchestrator"
 	"github.com/andybarilla/rook/internal/ports"
 	"github.com/andybarilla/rook/internal/registry"
@@ -239,6 +240,285 @@ func TestResetPorts_ClearsPortsFile(t *testing.T) {
 	// Verify ports file was deleted
 	if _, err := os.Stat(portsPath); !os.IsNotExist(err) {
 		t.Error("expected ports file to be deleted")
+	}
+}
+
+func TestDiscoverWorkspace_NoChanges(t *testing.T) {
+	dir := t.TempDir()
+	registryPath := filepath.Join(dir, "workspaces.json")
+	settingsPath := filepath.Join(dir, "settings.json")
+
+	reg, _ := registry.NewFileRegistry(registryPath)
+
+	wsDir := filepath.Join(dir, "myproject")
+	os.MkdirAll(wsDir, 0755)
+
+	manifest := &workspace.Manifest{
+		Name:     "myproject",
+		Type:     workspace.TypeMulti,
+		Services: map[string]workspace.Service{},
+	}
+	manifestData, _ := yaml.Marshal(manifest)
+	os.WriteFile(filepath.Join(wsDir, "rook.yaml"), manifestData, 0644)
+
+	reg.Register("myproject", wsDir)
+
+	alloc := &stubPortAlloc{}
+	orch := orchestrator.New(nil, nil, nil)
+	a := api.NewWorkspaceAPIWithSettings(reg, alloc, orch, nil, settingsPath)
+
+	diff, err := a.DiscoverWorkspace("myproject")
+	if err != nil {
+		t.Fatalf("DiscoverWorkspace failed: %v", err)
+	}
+
+	if diff.HasChanges {
+		t.Error("expected no changes for empty workspace")
+	}
+}
+
+func TestDiscoverWorkspace_DetectsNewServices(t *testing.T) {
+	dir := t.TempDir()
+	registryPath := filepath.Join(dir, "workspaces.json")
+	settingsPath := filepath.Join(dir, "settings.json")
+
+	reg, _ := registry.NewFileRegistry(registryPath)
+
+	wsDir := filepath.Join(dir, "myproject")
+	os.MkdirAll(wsDir, 0755)
+
+	composeContent := `
+services:
+  web:
+    image: nginx:latest
+    ports:
+      - "3000:80"
+`
+	os.WriteFile(filepath.Join(wsDir, "docker-compose.yml"), []byte(composeContent), 0644)
+
+	manifest := &workspace.Manifest{
+		Name:     "myproject",
+		Type:     workspace.TypeMulti,
+		Services: map[string]workspace.Service{},
+	}
+	manifestData, _ := yaml.Marshal(manifest)
+	os.WriteFile(filepath.Join(wsDir, "rook.yaml"), manifestData, 0644)
+
+	reg.Register("myproject", wsDir)
+
+	alloc := &stubPortAlloc{}
+	orch := orchestrator.New(nil, nil, nil)
+	discoverers := []discovery.Discoverer{discovery.NewComposeDiscoverer()}
+	a := api.NewWorkspaceAPIWithSettings(reg, alloc, orch, discoverers, settingsPath)
+
+	diff, err := a.DiscoverWorkspace("myproject")
+	if err != nil {
+		t.Fatalf("DiscoverWorkspace failed: %v", err)
+	}
+
+	if !diff.HasChanges {
+		t.Error("expected changes detected")
+	}
+	if len(diff.NewServices) != 1 {
+		t.Errorf("expected 1 new service, got %d", len(diff.NewServices))
+	}
+	if diff.NewServices[0].Name != "web" {
+		t.Errorf("expected new service 'web', got %s", diff.NewServices[0].Name)
+	}
+}
+
+func TestDiscoverWorkspace_DetectsRemovedServices(t *testing.T) {
+	dir := t.TempDir()
+	registryPath := filepath.Join(dir, "workspaces.json")
+	settingsPath := filepath.Join(dir, "settings.json")
+
+	reg, _ := registry.NewFileRegistry(registryPath)
+
+	wsDir := filepath.Join(dir, "myproject")
+	os.MkdirAll(wsDir, 0755)
+
+	composeContent := `
+services:
+  web:
+    image: nginx:latest
+`
+	os.WriteFile(filepath.Join(wsDir, "docker-compose.yml"), []byte(composeContent), 0644)
+
+	manifest := &workspace.Manifest{
+		Name: "myproject",
+		Type: workspace.TypeMulti,
+		Services: map[string]workspace.Service{
+			"old-service": {Image: "nginx:old"},
+		},
+	}
+	manifestData, _ := yaml.Marshal(manifest)
+	os.WriteFile(filepath.Join(wsDir, "rook.yaml"), manifestData, 0644)
+
+	reg.Register("myproject", wsDir)
+
+	alloc := &stubPortAlloc{}
+	orch := orchestrator.New(nil, nil, nil)
+	discoverers := []discovery.Discoverer{discovery.NewComposeDiscoverer()}
+	a := api.NewWorkspaceAPIWithSettings(reg, alloc, orch, discoverers, settingsPath)
+
+	diff, err := a.DiscoverWorkspace("myproject")
+	if err != nil {
+		t.Fatalf("DiscoverWorkspace failed: %v", err)
+	}
+
+	if !diff.HasChanges {
+		t.Error("expected changes detected")
+	}
+	if len(diff.RemovedServices) != 1 {
+		t.Errorf("expected 1 removed service, got %d", len(diff.RemovedServices))
+	}
+	if diff.RemovedServices[0].Name != "old-service" {
+		t.Errorf("expected removed service 'old-service', got %s", diff.RemovedServices[0].Name)
+	}
+}
+
+func TestApplyDiscovery_AddsServices(t *testing.T) {
+	dir := t.TempDir()
+	registryPath := filepath.Join(dir, "workspaces.json")
+	portsPath := filepath.Join(dir, "ports.json")
+	settingsPath := filepath.Join(dir, "settings.json")
+
+	reg, _ := registry.NewFileRegistry(registryPath)
+
+	wsDir := filepath.Join(dir, "myproject")
+	os.MkdirAll(wsDir, 0755)
+
+	composeContent := `
+services:
+  web:
+    image: nginx:latest
+    ports:
+      - "3000:80"
+  db:
+    image: postgres:15
+    ports:
+      - "5432:5432"
+`
+	os.WriteFile(filepath.Join(wsDir, "docker-compose.yml"), []byte(composeContent), 0644)
+
+	manifest := &workspace.Manifest{
+		Name:     "myproject",
+		Type:     workspace.TypeMulti,
+		Services: map[string]workspace.Service{},
+	}
+	manifestData, _ := yaml.Marshal(manifest)
+	os.WriteFile(filepath.Join(wsDir, "rook.yaml"), manifestData, 0644)
+
+	reg.Register("myproject", wsDir)
+
+	alloc, _ := ports.NewFileAllocator(portsPath, 10000, 60000)
+	orch := orchestrator.New(nil, nil, alloc)
+	discoverers := []discovery.Discoverer{discovery.NewComposeDiscoverer()}
+	a := api.NewWorkspaceAPIFull(reg, alloc, orch, discoverers, settingsPath, portsPath)
+
+	err := a.ApplyDiscovery("myproject", []string{"web"}, []string{})
+	if err != nil {
+		t.Fatalf("ApplyDiscovery failed: %v", err)
+	}
+
+	manifestPath := filepath.Join(wsDir, "rook.yaml")
+	updated, err := workspace.ParseManifest(manifestPath)
+	if err != nil {
+		t.Fatalf("parsing updated manifest: %v", err)
+	}
+
+	if _, exists := updated.Services["web"]; !exists {
+		t.Error("expected web service to be added to manifest")
+	}
+}
+
+func TestApplyDiscovery_RemovesServices(t *testing.T) {
+	dir := t.TempDir()
+	registryPath := filepath.Join(dir, "workspaces.json")
+	portsPath := filepath.Join(dir, "ports.json")
+	settingsPath := filepath.Join(dir, "settings.json")
+
+	reg, _ := registry.NewFileRegistry(registryPath)
+
+	wsDir := filepath.Join(dir, "myproject")
+	os.MkdirAll(wsDir, 0755)
+
+	composeContent := `
+services:
+  web:
+    image: nginx:latest
+`
+	os.WriteFile(filepath.Join(wsDir, "docker-compose.yml"), []byte(composeContent), 0644)
+
+	manifest := &workspace.Manifest{
+		Name: "myproject",
+		Type: workspace.TypeMulti,
+		Services: map[string]workspace.Service{
+			"old-service": {Image: "nginx:old"},
+		},
+	}
+	manifestData, _ := yaml.Marshal(manifest)
+	os.WriteFile(filepath.Join(wsDir, "rook.yaml"), manifestData, 0644)
+
+	reg.Register("myproject", wsDir)
+
+	alloc, _ := ports.NewFileAllocator(portsPath, 10000, 60000)
+	orch := orchestrator.New(nil, nil, alloc)
+	discoverers := []discovery.Discoverer{discovery.NewComposeDiscoverer()}
+	a := api.NewWorkspaceAPIFull(reg, alloc, orch, discoverers, settingsPath, portsPath)
+
+	err := a.ApplyDiscovery("myproject", []string{}, []string{"old-service"})
+	if err != nil {
+		t.Fatalf("ApplyDiscovery failed: %v", err)
+	}
+
+	manifestPath := filepath.Join(wsDir, "rook.yaml")
+	updated, err := workspace.ParseManifest(manifestPath)
+	if err != nil {
+		t.Fatalf("parsing updated manifest: %v", err)
+	}
+
+	if _, exists := updated.Services["old-service"]; exists {
+		t.Error("expected old-service to be removed from manifest")
+	}
+}
+
+func TestApplyDiscovery_RejectsInvalidServiceNames(t *testing.T) {
+	dir := t.TempDir()
+	registryPath := filepath.Join(dir, "workspaces.json")
+	portsPath := filepath.Join(dir, "ports.json")
+	settingsPath := filepath.Join(dir, "settings.json")
+
+	reg, _ := registry.NewFileRegistry(registryPath)
+
+	wsDir := filepath.Join(dir, "myproject")
+	os.MkdirAll(wsDir, 0755)
+
+	composeContent := `
+services:
+  web:
+    image: nginx:latest
+`
+	os.WriteFile(filepath.Join(wsDir, "docker-compose.yml"), []byte(composeContent), 0644)
+
+	manifest := &workspace.Manifest{
+		Name:     "myproject",
+		Type:     workspace.TypeMulti,
+		Services: map[string]workspace.Service{},
+	}
+	manifestData, _ := yaml.Marshal(manifest)
+	os.WriteFile(filepath.Join(wsDir, "rook.yaml"), manifestData, 0644)
+
+	reg.Register("myproject", wsDir)
+
+	alloc, _ := ports.NewFileAllocator(portsPath, 10000, 60000)
+	orch := orchestrator.New(nil, nil, alloc)
+	discoverers := []discovery.Discoverer{discovery.NewComposeDiscoverer()}
+	a := api.NewWorkspaceAPIFull(reg, alloc, orch, discoverers, settingsPath, portsPath)
+
+	err := a.ApplyDiscovery("myproject", []string{"nonexistent"}, []string{})
+	if err == nil {
+		t.Error("expected error for nonexistent service name")
 	}
 }
 

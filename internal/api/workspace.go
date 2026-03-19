@@ -489,6 +489,114 @@ func (w *WorkspaceAPI) CheckBuilds(name string) (*BuildCheckResult, error) {
 	}, nil
 }
 
+// DiscoverWorkspace re-runs discovery and returns the diff against the current manifest.
+func (w *WorkspaceAPI) DiscoverWorkspace(name string) (*DiscoverDiff, error) {
+	entry, err := w.registry.Get(name)
+	if err != nil {
+		return nil, err
+	}
+
+	manifestPath := filepath.Join(entry.Path, "rook.yaml")
+	manifest, err := workspace.ParseManifest(manifestPath)
+	if err != nil {
+		return nil, fmt.Errorf("loading manifest: %w", err)
+	}
+
+	result, err := discovery.RunAll(entry.Path, w.discoverers)
+	if err != nil {
+		return nil, fmt.Errorf("discovery failed: %w", err)
+	}
+
+	diff := &DiscoverDiff{
+		Source:          result.Source,
+		NewServices:     []ServiceDiff{},
+		RemovedServices: []ServiceDiff{},
+	}
+
+	for svcName, svc := range result.Services {
+		if _, exists := manifest.Services[svcName]; !exists {
+			sd := ServiceDiff{Name: svcName}
+			if svc.Image != "" {
+				sd.Image = svc.Image
+			}
+			if svc.Build != "" {
+				sd.Build = svc.Build
+			}
+			diff.NewServices = append(diff.NewServices, sd)
+		}
+	}
+
+	for svcName := range manifest.Services {
+		if _, exists := result.Services[svcName]; !exists {
+			diff.RemovedServices = append(diff.RemovedServices, ServiceDiff{
+				Name:   svcName,
+				Reason: "No longer in discovery source",
+			})
+		}
+	}
+
+	sort.Slice(diff.NewServices, func(i, j int) bool { return diff.NewServices[i].Name < diff.NewServices[j].Name })
+	sort.Slice(diff.RemovedServices, func(i, j int) bool { return diff.RemovedServices[i].Name < diff.RemovedServices[j].Name })
+
+	diff.HasChanges = len(diff.NewServices) > 0 || len(diff.RemovedServices) > 0
+
+	return diff, nil
+}
+
+// ApplyDiscovery applies selected changes to the manifest.
+func (w *WorkspaceAPI) ApplyDiscovery(name string, newServices []string, removedServices []string) error {
+	entry, err := w.registry.Get(name)
+	if err != nil {
+		return err
+	}
+
+	manifestPath := filepath.Join(entry.Path, "rook.yaml")
+	manifest, err := workspace.ParseManifest(manifestPath)
+	if err != nil {
+		return fmt.Errorf("loading manifest: %w", err)
+	}
+
+	result, err := discovery.RunAll(entry.Path, w.discoverers)
+	if err != nil {
+		return fmt.Errorf("discovery failed: %w", err)
+	}
+
+	// Validate and add new services
+	for _, svcName := range newServices {
+		svc, exists := result.Services[svcName]
+		if !exists {
+			return fmt.Errorf("service %q not found in discovery result", svcName)
+		}
+		manifest.Services[svcName] = svc
+	}
+
+	// Validate and remove services
+	for _, svcName := range removedServices {
+		if _, exists := manifest.Services[svcName]; !exists {
+			return fmt.Errorf("service %q not found in manifest", svcName)
+		}
+		delete(manifest.Services, svcName)
+	}
+
+	// Allocate ports for new services
+	for _, svcName := range newServices {
+		svc := result.Services[svcName]
+		if len(svc.Ports) > 0 {
+			if _, err := w.portAlloc.Allocate(name, svcName, svc.Ports[0]); err != nil {
+				return fmt.Errorf("allocating port for %s: %w", svcName, err)
+			}
+		}
+	}
+
+	if err := workspace.WriteManifest(manifestPath, manifest); err != nil {
+		return fmt.Errorf("writing manifest: %w", err)
+	}
+
+	w.emitter.Emit("workspace:changed", WorkspaceChangedEvent{Workspace: name})
+
+	return nil
+}
+
 // loadWorkspace reads the manifest from the registry path and converts to a Workspace.
 func (w *WorkspaceAPI) loadWorkspace(name string) (*workspace.Workspace, error) {
 	entry, err := w.registry.Get(name)
