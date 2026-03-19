@@ -16,7 +16,7 @@ func TestLoad_ReturnsDefaultsWhenFileMissing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load failed: %v", err)
 	}
-	if !s.AutoRebuild {
+	if !s.GetAutoRebuild() {
 		t.Error("expected AutoRebuild to be true by default")
 	}
 }
@@ -25,7 +25,8 @@ func TestSave_AndLoad_RoundTrip(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "settings.json")
 
-	s := &settings.Settings{AutoRebuild: false}
+	s := &settings.Settings{}
+	s.SetAutoRebuild(false)
 	if err := s.Save(path); err != nil {
 		t.Fatalf("Save failed: %v", err)
 	}
@@ -34,7 +35,7 @@ func TestSave_AndLoad_RoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load failed: %v", err)
 	}
-	if loaded.AutoRebuild {
+	if loaded.GetAutoRebuild() {
 		t.Error("expected AutoRebuild to be false")
 	}
 }
@@ -43,7 +44,8 @@ func TestSave_CreatesParentDirectories(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "subdir", "another", "settings.json")
 
-	s := &settings.Settings{AutoRebuild: true}
+	s := &settings.Settings{}
+	s.SetAutoRebuild(true)
 	if err := s.Save(path); err != nil {
 		t.Fatalf("Save failed: %v", err)
 	}

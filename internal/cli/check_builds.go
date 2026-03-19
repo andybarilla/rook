@@ -2,6 +2,7 @@ package cli
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 
@@ -10,6 +11,11 @@ import (
 	"github.com/andybarilla/rook/internal/workspace"
 	"github.com/spf13/cobra"
 )
+
+// errStaleBuilds is returned when check-builds finds services needing rebuild.
+// main.go converts any RunE error to os.Exit(1), so this achieves the same
+// non-zero exit without calling os.Exit directly (which kills the test process).
+var errStaleBuilds = errors.New("one or more services need rebuilding")
 
 func NewCheckBuildsCmd() *cobra.Command {
 	var jsonOutput bool
@@ -93,7 +99,7 @@ func printCheckBuildsText(results map[string]buildcache.StaleResult, services ma
 	}
 
 	if hasStale {
-		os.Exit(1)
+		return errStaleBuilds
 	}
 	return nil
 }
@@ -138,7 +144,7 @@ func printCheckBuildsJSON(results map[string]buildcache.StaleResult, services ma
 	}
 
 	if hasStale {
-		os.Exit(1)
+		return errStaleBuilds
 	}
 	return nil
 }

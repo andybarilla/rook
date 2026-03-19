@@ -7,13 +7,12 @@ import (
 	"testing"
 
 	"github.com/andybarilla/rook/internal/envgen"
-	"github.com/andybarilla/rook/internal/workspace"
 )
 
 func TestResolveTemplates_PortAndHost(t *testing.T) {
 	env := map[string]string{"DATABASE_URL": "postgres://u:p@{{.Host.postgres}}:{{.Port.postgres}}/db"}
 	portMap := map[string]int{"postgres": 12345}
-	result, err := envgen.ResolveTemplates(env, portMap, false)
+	result, err := envgen.ResolveTemplates(env, portMap)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -22,11 +21,11 @@ func TestResolveTemplates_PortAndHost(t *testing.T) {
 	}
 }
 
-func TestResolveTemplates_DevcontainerContext(t *testing.T) {
+func TestResolveWithHostMap_ContainerNetworking(t *testing.T) {
 	env := map[string]string{"REDIS_URL": "redis://{{.Host.redis}}:{{.Port.redis}}"}
-	svc := workspace.Service{Image: "redis:7", Ports: []int{6379}}
-	portMap := map[string]int{"redis": 12346}
-	result, _ := envgen.ResolveTemplatesWithServices(env, portMap, true, map[string]workspace.Service{"redis": svc})
+	portMap := map[string]int{"redis": 6379}
+	hostMap := map[string]string{"redis": "redis"}
+	result, _ := envgen.ResolveWithHostMap(env, portMap, hostMap)
 	if !strings.Contains(result["REDIS_URL"], "redis") {
 		t.Errorf("should use service name as host: %s", result["REDIS_URL"])
 	}
@@ -50,7 +49,7 @@ func TestWriteEnvFile(t *testing.T) {
 }
 
 func TestResolveTemplates_NoTemplates(t *testing.T) {
-	result, _ := envgen.ResolveTemplates(map[string]string{"STATIC": "value"}, nil, false)
+	result, _ := envgen.ResolveTemplates(map[string]string{"STATIC": "value"}, nil)
 	if result["STATIC"] != "value" {
 		t.Errorf("got %s", result["STATIC"])
 	}

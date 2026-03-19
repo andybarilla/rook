@@ -65,7 +65,7 @@ func LoadProcessEnvFile(path string, inlineEnv map[string]string, portMap map[st
 	}
 
 	// Resolve templates (process services use localhost)
-	fileVars, err = ResolveTemplates(fileVars, portMap, false)
+	fileVars, err = ResolveTemplates(fileVars, portMap)
 	if err != nil {
 		return nil, fmt.Errorf("resolving env file templates: %w", err)
 	}

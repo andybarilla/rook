@@ -9,8 +9,6 @@ import (
 	"strconv"
 	"strings"
 	"text/template"
-
-	"github.com/andybarilla/rook/internal/workspace"
 )
 
 // shellVarPattern matches ${VAR:-default}, ${VAR-default}, ${VAR}, and $VAR patterns.
@@ -44,32 +42,15 @@ type templateData struct {
 	Host map[string]string
 }
 
-func ResolveTemplates(env map[string]string, portMap map[string]int, devcontainer bool) (map[string]string, error) {
-	return ResolveTemplatesWithServices(env, portMap, devcontainer, nil)
-}
-
-func ResolveTemplatesWithServices(env map[string]string, portMap map[string]int, devcontainer bool, services map[string]workspace.Service) (map[string]string, error) {
+func ResolveTemplates(env map[string]string, portMap map[string]int) (map[string]string, error) {
 	data := templateData{
 		Port: make(map[string]string),
 		Host: make(map[string]string),
 	}
 
 	for name, port := range portMap {
-		if devcontainer && services != nil {
-			if svc, ok := services[name]; ok && svc.IsContainer() && len(svc.Ports) > 0 {
-				data.Port[name] = strconv.Itoa(svc.Ports[0])
-			} else {
-				data.Port[name] = strconv.Itoa(port)
-			}
-		} else {
-			data.Port[name] = strconv.Itoa(port)
-		}
-
-		if devcontainer {
-			data.Host[name] = name
-		} else {
-			data.Host[name] = "localhost"
-		}
+		data.Port[name] = strconv.Itoa(port)
+		data.Host[name] = "localhost"
 	}
 
 	result := make(map[string]string, len(env))

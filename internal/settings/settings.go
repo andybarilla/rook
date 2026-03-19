@@ -8,14 +8,28 @@ import (
 
 // Settings holds user preferences for rook behavior.
 type Settings struct {
-	AutoRebuild bool `json:"autoRebuild"`
+	AutoRebuild *bool `json:"autoRebuild"`
 }
 
 // defaultSettings returns settings with default values applied.
 func defaultSettings() *Settings {
+	t := true
 	return &Settings{
-		AutoRebuild: true,
+		AutoRebuild: &t,
 	}
+}
+
+// GetAutoRebuild returns the AutoRebuild setting, defaulting to true if unset.
+func (s *Settings) GetAutoRebuild() bool {
+	if s.AutoRebuild == nil {
+		return true
+	}
+	return *s.AutoRebuild
+}
+
+// SetAutoRebuild sets the AutoRebuild value.
+func (s *Settings) SetAutoRebuild(v bool) {
+	s.AutoRebuild = &v
 }
 
 // Load reads settings from disk. Returns defaults if file doesn't exist.
@@ -33,15 +47,10 @@ func Load(path string) (*Settings, error) {
 		return nil, err
 	}
 
-	// Apply defaults for zero values
-	if s.AutoRebuild == false {
-		// Check if it was explicitly set to false by looking at raw JSON
-		var raw map[string]interface{}
-		if json.Unmarshal(data, &raw) == nil {
-			if _, ok := raw["autoRebuild"]; !ok {
-				s.AutoRebuild = true
-			}
-		}
+	// Apply defaults for nil values
+	if s.AutoRebuild == nil {
+		t := true
+		s.AutoRebuild = &t
 	}
 
 	return &s, nil

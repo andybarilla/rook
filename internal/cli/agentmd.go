@@ -66,6 +66,8 @@ func buildRookSection(m *workspace.Manifest) string {
 		svc := m.Services[name]
 		if svc.Image != "" {
 			fmt.Fprintf(&b, "- `%s` — %s\n", name, svc.Image)
+		} else if svc.Build != "" {
+			fmt.Fprintf(&b, "- `%s` — build (%s)\n", name, svc.Build)
 		} else {
 			fmt.Fprintf(&b, "- `%s` — process\n", name)
 		}

@@ -40,7 +40,7 @@ func newEnvCmd() *cobra.Command {
 				}
 			}
 			for name, svc := range m.Services {
-				resolved, err := envgen.ResolveTemplates(svc.Environment, portMap, false)
+				resolved, err := envgen.ResolveTemplates(svc.Environment, portMap)
 				if err != nil {
 					return err
 				}

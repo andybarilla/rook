@@ -190,7 +190,7 @@ func newUpCmd() *cobra.Command {
 						resolved, err = envgen.ResolveWithHostMap(svc.Environment, containerPortMap, containerHostMap)
 					} else {
 						// Process services use localhost + allocated ports
-						resolved, err = envgen.ResolveTemplates(svc.Environment, portMap, false)
+						resolved, err = envgen.ResolveTemplates(svc.Environment, portMap)
 					}
 					if err != nil {
 						return fmt.Errorf("resolving env for %s: %w", name, err)
@@ -343,7 +343,6 @@ func newUpCmd() *cobra.Command {
 
 			fmt.Print("\nStreaming logs (Ctrl+C to stop)...\n\n")
 			mux := newLogMux(os.Stdout)
-			docker = runner.NewDockerRunner(fmt.Sprintf("rook_%s", wsName))
 
 			var wg sync.WaitGroup
 			statuses, _ := orch.Status(*ws)

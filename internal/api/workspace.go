@@ -373,7 +373,7 @@ func (w *WorkspaceAPI) GetEnv(name string) (map[string][]EnvVar, error) {
 			continue
 		}
 
-		resolved, err := envgen.ResolveTemplates(svc.Environment, portMap, false)
+		resolved, err := envgen.ResolveTemplates(svc.Environment, portMap)
 		if err != nil {
 			return nil, fmt.Errorf("resolving env for %s: %w", svcName, err)
 		}
@@ -421,7 +421,7 @@ func (w *WorkspaceAPI) GetSettings() *Settings {
 	if err != nil {
 		return &Settings{AutoRebuild: true}
 	}
-	return &Settings{AutoRebuild: s.AutoRebuild}
+	return &Settings{AutoRebuild: s.GetAutoRebuild()}
 }
 
 // SaveSettings persists settings to the settings file.
@@ -429,7 +429,8 @@ func (w *WorkspaceAPI) SaveSettings(s *Settings) error {
 	if w.settingsPath == "" {
 		return fmt.Errorf("settings path not configured")
 	}
-	internal := &settings.Settings{AutoRebuild: s.AutoRebuild}
+	internal := &settings.Settings{}
+	internal.SetAutoRebuild(s.AutoRebuild)
 	return internal.Save(w.settingsPath)
 }
 
