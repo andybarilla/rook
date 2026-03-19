@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { WorkspaceDetail as WorkspaceDetailType, BuildCheckResult, Settings } from '../hooks/useWails'
+import type { WorkspaceDetail as WorkspaceDetailType, BuildCheckResult, DiscoverDiff } from '../hooks/useWails'
+import { useSettings } from '../hooks/useSettings'
+import { useToast } from '../hooks/useToast'
 import { ServiceList } from '../components/ServiceList'
 import { ProfileSwitcher } from '../components/ProfileSwitcher'
 import { LogViewer } from '../components/LogViewer'
@@ -7,59 +9,50 @@ import { EnvViewer } from '../components/EnvViewer'
 import { ManifestEditor } from '../components/ManifestEditor'
 import { BuildsTab } from './BuildsTab'
 import { RebuildDialog } from '../components/RebuildDialog'
+import { DiscoverDiffDialog } from '../components/DiscoverDiffDialog'
 
 interface WorkspaceDetailProps { name: string }
 
-type Tab = 'services' | 'logs' | 'environment' | 'builds' | 'settings'
+type Tab = 'services' | 'logs' | 'environment' | 'builds' | 'manifest'
 
 export function WorkspaceDetail({ name }: WorkspaceDetailProps) {
   const [detail, setDetail] = useState<WorkspaceDetailType | null>(null)
   const [tab, setTab] = useState<Tab>('services')
-  const [settings, setSettings] = useState<Settings>({ autoRebuild: true })
+  const { settings } = useSettings()
+  const { show: showToast } = useToast()
   const [buildResult, setBuildResult] = useState<BuildCheckResult | null>(null)
   const [showRebuildDialog, setShowRebuildDialog] = useState(false)
   const [pendingStart, setPendingStart] = useState<{ profile: string } | null>(null)
   const [starting, setStarting] = useState(false)
+  const [discoverDiff, setDiscoverDiff] = useState<DiscoverDiff | null>(null)
+  const [showDiscoverDialog, setShowDiscoverDialog] = useState(false)
+  const [rescanning, setRescanning] = useState(false)
 
   const refresh = useCallback(() => {
     window.go.api.WorkspaceAPI.GetWorkspace(name).then(setDetail).catch(console.error)
   }, [name])
 
-  const refreshSettings = useCallback(async () => {
-    try {
-      const s = await window.go.api.WorkspaceAPI.GetSettings()
-      setSettings(s || { autoRebuild: true })
-    } catch (e) {
-      console.error('Failed to get settings:', e)
-    }
-  }, [])
-
   useEffect(() => {
     refresh()
-    refreshSettings()
     const off = window.runtime.EventsOn('service:status', () => refresh())
     return off
-  }, [name, refresh, refreshSettings])
+  }, [name, refresh])
 
   const handleStart = async (profile: string) => {
     setStarting(true)
     try {
-      // Check for stale builds
       const result = await window.go.api.WorkspaceAPI.CheckBuilds(name)
       setBuildResult(result)
 
       if (result.hasStale) {
         if (settings.autoRebuild) {
-          // Auto-rebuild enabled, just start with forceBuild=true
           await window.go.api.WorkspaceAPI.StartWorkspace(name, profile, true)
           refresh()
         } else {
-          // Show rebuild dialog
           setPendingStart({ profile })
           setShowRebuildDialog(true)
         }
       } else {
-        // No stale builds, start normally
         await window.go.api.WorkspaceAPI.StartWorkspace(name, profile, false)
         refresh()
       }
@@ -82,6 +75,36 @@ export function WorkspaceDetail({ name }: WorkspaceDetailProps) {
     setPendingStart(null)
   }
 
+  const handleRescan = async () => {
+    setRescanning(true)
+    try {
+      const diff = await window.go.api.WorkspaceAPI.DiscoverWorkspace(name)
+      if (!diff.hasChanges) {
+        showToast('No changes detected', 'info')
+      } else {
+        setDiscoverDiff(diff)
+        setShowDiscoverDialog(true)
+      }
+    } catch (e) {
+      console.error('Rescan failed:', e)
+      showToast('Failed to scan: ' + e, 'error')
+    } finally {
+      setRescanning(false)
+    }
+  }
+
+  const handleApplyDiscovery = async (newServices: string[], removedServices: string[]) => {
+    setShowDiscoverDialog(false)
+    try {
+      await window.go.api.WorkspaceAPI.ApplyDiscovery(name, newServices, removedServices)
+      showToast('Changes applied', 'success')
+      refresh()
+    } catch (e) {
+      console.error('Apply discovery failed:', e)
+      showToast('Failed to apply changes: ' + e, 'error')
+    }
+  }
+
   if (!detail) return <div className="p-4 text-rook-muted">Loading...</div>
 
   const hasRunning = detail.services.some(s => s.status === 'running' || s.status === 'starting')
@@ -95,6 +118,13 @@ export function WorkspaceDetail({ name }: WorkspaceDetailProps) {
           <p className="text-[10px] text-rook-muted">{detail.path}</p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={handleRescan}
+            disabled={rescanning}
+            className="text-[11px] text-rook-muted hover:text-rook-text border border-rook-border px-2 py-1 rounded disabled:opacity-50"
+          >
+            {rescanning ? 'Scanning...' : 'Re-scan'}
+          </button>
           <ProfileSwitcher profiles={detail.profiles} active={detail.activeProfile}
             onChange={(p) => handleStart(p)} />
           {hasRunning ? (
@@ -112,7 +142,7 @@ export function WorkspaceDetail({ name }: WorkspaceDetailProps) {
         </div>
       </div>
       <div className="flex border-b border-rook-border">
-        {(['services', 'logs', 'environment', 'builds', 'settings'] as Tab[]).map(t => (
+        {(['services', 'logs', 'environment', 'builds', 'manifest'] as Tab[]).map(t => (
           <button key={t} onClick={() => setTab(t)}
             className={`px-4 py-2 text-[11px] border-b-2 capitalize ${tab === t ? 'text-rook-text border-rook-accent font-semibold' : 'text-rook-muted border-transparent'}`}>
             {t}
@@ -131,7 +161,7 @@ export function WorkspaceDetail({ name }: WorkspaceDetailProps) {
         {tab === 'logs' && <LogViewer workspaceName={name} services={detail.services.map(s => s.name)} />}
         {tab === 'environment' && <EnvViewer workspaceName={name} />}
         {tab === 'builds' && <BuildsTab workspaceName={name} />}
-        {tab === 'settings' && <ManifestEditor workspaceName={name} />}
+        {tab === 'manifest' && <ManifestEditor workspaceName={name} />}
       </div>
 
       <RebuildDialog
@@ -143,6 +173,13 @@ export function WorkspaceDetail({ name }: WorkspaceDetailProps) {
           setShowRebuildDialog(false)
           setPendingStart(null)
         }}
+      />
+
+      <DiscoverDiffDialog
+        open={showDiscoverDialog}
+        diff={discoverDiff}
+        onApply={handleApplyDiscovery}
+        onCancel={() => setShowDiscoverDialog(false)}
       />
     </div>
   )

@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { WorkspaceInfo, usePorts } from '../hooks/useWails'
+import { useSettings } from '../hooks/useSettings'
+import { useToast } from '../hooks/useToast'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 
 interface DashboardProps {
@@ -8,6 +10,8 @@ interface DashboardProps {
 
 export function Dashboard({ workspaces }: DashboardProps) {
   const ports = usePorts()
+  const { settings, save: saveSettings } = useSettings()
+  const { show: showToast } = useToast()
   const [showResetConfirm, setShowResetConfirm] = useState(false)
   const [resetting, setResetting] = useState(false)
   const runningCount = workspaces.reduce((sum, ws) => sum + ws.runningCount, 0)
@@ -63,6 +67,24 @@ export function Dashboard({ workspaces }: DashboardProps) {
       >
         Reset Ports
       </button>
+
+      <div className="mt-6 pt-4 border-t border-rook-border">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={settings.autoRebuild}
+            onChange={async (e) => {
+              try {
+                await saveSettings({ ...settings, autoRebuild: e.target.checked })
+              } catch (err) {
+                showToast('Failed to save settings', 'error')
+              }
+            }}
+            className="rounded border-rook-border"
+          />
+          <span className="text-xs text-rook-text-secondary">Auto-rebuild on stale</span>
+        </label>
+      </div>
 
       <ConfirmDialog
         open={showResetConfirm}
