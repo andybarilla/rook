@@ -55,6 +55,20 @@ func (r *DockerRunner) Adopt(serviceName string) RunHandle {
 	return RunHandle{ID: serviceName, Type: "docker"}
 }
 
+// resolveImageTag determines the container image tag for a service.
+// For build_from services, uses the referenced service's image tag.
+func (r *DockerRunner) resolveImageTag(name string, svc workspace.Service) string {
+	if svc.BuildFrom != "" {
+		wsName := strings.TrimPrefix(r.prefix, "rook_")
+		return fmt.Sprintf("rook-%s-%s:latest", wsName, svc.BuildFrom)
+	}
+	if svc.Build != "" {
+		wsName := strings.TrimPrefix(r.prefix, "rook_")
+		return fmt.Sprintf("rook-%s-%s:latest", wsName, name)
+	}
+	return svc.Image
+}
+
 func (r *DockerRunner) Start(ctx context.Context, name string, svc workspace.Service, ports PortMap, workDir string) (RunHandle, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -73,11 +87,15 @@ func (r *DockerRunner) Start(ctx context.Context, name string, svc workspace.Ser
 	}
 
 	// Determine the image to use
-	imageTag := svc.Image
-	if svc.Build != "" {
-		wsName := strings.TrimPrefix(r.prefix, "rook_")
-		imageTag = fmt.Sprintf("rook-%s-%s:latest", wsName, name)
+	imageTag := r.resolveImageTag(name, svc)
 
+	if svc.BuildFrom != "" {
+		// build_from: use referenced service's image, no build step
+		if err := exec.Command(ContainerRuntime, "image", "inspect", imageTag).Run(); err != nil {
+			return RunHandle{}, fmt.Errorf("image for %s not found (build_from: %s) — ensure %s starts first", name, svc.BuildFrom, svc.BuildFrom)
+		}
+		fmt.Fprintf(os.Stderr, "%s: using image from %s\n", name, svc.BuildFrom)
+	} else if svc.Build != "" {
 		needsBuild := svc.ForceBuild
 		if !needsBuild {
 			if err := exec.Command(ContainerRuntime, "image", "inspect", imageTag).Run(); err != nil {
