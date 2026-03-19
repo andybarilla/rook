@@ -24,7 +24,7 @@ type LookupResult struct {
 
 // PortAllocator defines the interface for port allocation.
 type PortAllocator interface {
-	Allocate(workspace, service string, preferred int) (int, error)
+	Allocate(workspace, service string) (int, error)
 	AllocatePinned(workspace, service string, port int) (int, error)
 	Release(workspace, service string) error
 	Get(workspace, service string) LookupResult
@@ -97,20 +97,15 @@ func portAvailable(port int) bool {
 	return true
 }
 
-// Allocate assigns a port for the given workspace and service.
-// If preferred is non-zero, available in the allocator, and free on the system, it will be used.
-// If the preferred port is taken on the system, a port from the allocator range is assigned instead.
-// If the workspace/service already has an allocation, the existing port is returned.
-func (a *FileAllocator) Allocate(workspace, service string, preferred int) (int, error) {
+// Allocate assigns a port for the given workspace and service from the
+// allocator range. If the workspace/service already has an allocation,
+// the existing port is returned.
+func (a *FileAllocator) Allocate(workspace, service string) (int, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
 	if idx := a.findIndex(workspace, service); idx >= 0 {
 		return a.entries[idx].Port, nil
-	}
-
-	if preferred > 0 && !a.used[preferred] && portAvailable(preferred) {
-		return a.assign(workspace, service, preferred, false)
 	}
 
 	for p := a.minPort; p <= a.maxPort; p++ {

@@ -13,7 +13,7 @@ func TestAllocate_AssignsFromRange(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	port, err := a.Allocate("ws1", "postgres", 0)
+	port, err := a.Allocate("ws1", "postgres")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -22,12 +22,12 @@ func TestAllocate_AssignsFromRange(t *testing.T) {
 	}
 }
 
-func TestAllocate_PreferredPort(t *testing.T) {
+func TestAllocate_AlwaysFromRange(t *testing.T) {
 	dir := t.TempDir()
 	a, _ := ports.NewFileAllocator(filepath.Join(dir, "ports.json"), 49100, 49110)
-	port, _ := a.Allocate("ws1", "app", 49105)
-	if port != 49105 {
-		t.Errorf("expected 49105, got %d", port)
+	port, _ := a.Allocate("ws1", "app")
+	if port < 49100 || port > 49110 {
+		t.Errorf("expected port in range 49100-49110, got %d", port)
 	}
 }
 
@@ -35,7 +35,7 @@ func TestAllocate_StablePorts(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "ports.json")
 	a1, _ := ports.NewFileAllocator(path, 49100, 49110)
-	port1, _ := a1.Allocate("ws1", "postgres", 0)
+	port1, _ := a1.Allocate("ws1", "postgres")
 	a2, _ := ports.NewFileAllocator(path, 49100, 49110)
 	port2 := a2.Get("ws1", "postgres")
 	if !port2.OK {
@@ -49,10 +49,10 @@ func TestAllocate_StablePorts(t *testing.T) {
 func TestAllocate_NoConflicts(t *testing.T) {
 	dir := t.TempDir()
 	a, _ := ports.NewFileAllocator(filepath.Join(dir, "ports.json"), 49200, 49202)
-	a.Allocate("ws1", "a", 0)
-	a.Allocate("ws1", "b", 0)
-	a.Allocate("ws1", "c", 0)
-	_, err := a.Allocate("ws1", "d", 0)
+	a.Allocate("ws1", "a")
+	a.Allocate("ws1", "b")
+	a.Allocate("ws1", "c")
+	_, err := a.Allocate("ws1", "d")
 	if err == nil {
 		t.Fatal("expected error when exhausted")
 	}
@@ -71,10 +71,10 @@ func TestAllocate_PinnedConflict(t *testing.T) {
 func TestRelease(t *testing.T) {
 	dir := t.TempDir()
 	a, _ := ports.NewFileAllocator(filepath.Join(dir, "ports.json"), 49300, 49301)
-	a.Allocate("ws1", "a", 0)
-	a.Allocate("ws1", "b", 0)
+	a.Allocate("ws1", "a")
+	a.Allocate("ws1", "b")
 	a.Release("ws1", "a")
-	_, err := a.Allocate("ws1", "c", 0)
+	_, err := a.Allocate("ws1", "c")
 	if err != nil {
 		t.Fatal("should allocate after release")
 	}
@@ -83,8 +83,8 @@ func TestRelease(t *testing.T) {
 func TestAll(t *testing.T) {
 	dir := t.TempDir()
 	a, _ := ports.NewFileAllocator(filepath.Join(dir, "ports.json"), 49100, 49110)
-	a.Allocate("ws1", "postgres", 0)
-	a.Allocate("ws2", "redis", 0)
+	a.Allocate("ws1", "postgres")
+	a.Allocate("ws2", "redis")
 	all := a.All()
 	if len(all) != 2 {
 		t.Errorf("expected 2, got %d", len(all))
