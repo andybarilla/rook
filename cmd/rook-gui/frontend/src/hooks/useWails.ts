@@ -73,6 +73,20 @@ export interface BuildCheckResult {
   hasStale: boolean
 }
 
+export interface ServiceDiff {
+  name: string
+  image?: string
+  build?: string
+  reason?: string
+}
+
+export interface DiscoverDiff {
+  source: string
+  newServices: ServiceDiff[]
+  removedServices: ServiceDiff[]
+  hasChanges: boolean
+}
+
 // Wails runtime globals
 declare global {
   interface Window {
@@ -97,6 +111,8 @@ declare global {
           SaveSettings(settings: Settings): Promise<void>
           CheckBuilds(workspace: string): Promise<BuildCheckResult>
           ResetPorts(): Promise<void>
+          DiscoverWorkspace(name: string): Promise<DiscoverDiff>
+          ApplyDiscovery(name: string, newServices: string[], removedServices: string[]): Promise<void>
         }
       }
     }
