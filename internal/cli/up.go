@@ -151,7 +151,7 @@ func newUpCmd() *cobra.Command {
 					}
 					portMap[name] = port
 				} else if len(svc.Ports) > 0 {
-					port, err := cctx.portAlloc.Allocate(ws.Name, name, svc.Ports[0])
+					port, err := cctx.portAlloc.Allocate(ws.Name, name)
 					if err != nil {
 						return fmt.Errorf("allocating port for %s: %w", name, err)
 					}

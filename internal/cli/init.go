@@ -156,6 +156,9 @@ func newInitCmd() *cobra.Command {
 				warns.add("cannot create .rook/.gitignore: %v", err)
 			}
 
+			// Add rook section to CLAUDE.md or AGENTS.md if present
+			ensureAgentMDRookSection(dir, m)
+
 			cfgDir := configDir()
 			os.MkdirAll(cfgDir, 0755)
 
@@ -179,14 +182,12 @@ func newInitCmd() *cobra.Command {
 						return fmt.Errorf("pinning port for %s: %w", name, err)
 					}
 					fmt.Printf("  %s.%s -> :%d (pinned)\n", m.Name, name, allocated)
-				} else {
-					for _, port := range svc.Ports {
-						allocated, err := alloc.Allocate(m.Name, name, port)
-						if err != nil {
-							return fmt.Errorf("allocating port for %s: %w", name, err)
-						}
-						fmt.Printf("  %s.%s -> :%d\n", m.Name, name, allocated)
+				} else if len(svc.Ports) > 0 {
+					allocated, err := alloc.Allocate(m.Name, name)
+					if err != nil {
+						return fmt.Errorf("allocating port for %s: %w", name, err)
 					}
+					fmt.Printf("  %s.%s -> :%d\n", m.Name, name, allocated)
 				}
 			}
 			fmt.Printf("Workspace %q registered from %s\n", m.Name, dir)
