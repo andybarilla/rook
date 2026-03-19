@@ -3,6 +3,9 @@ package runner_test
 import (
 	"context"
 	"io"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -55,4 +58,63 @@ func TestProcessRunner_WorkingDir(t *testing.T) {
 		t.Error("expected pwd output")
 	}
 	r.Stop(handle)
+}
+
+func TestProcessRunner_FileLogging(t *testing.T) {
+	logDir := t.TempDir()
+	r := runner.NewProcessRunner()
+	r.SetLogDir(logDir)
+
+	svc := workspace.Service{Command: "echo hello-from-log"}
+	handle, err := r.Start(context.Background(), "log-svc", svc, nil, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(200 * time.Millisecond)
+	r.Stop(handle)
+
+	logPath := filepath.Join(logDir, "log-svc.log")
+	data, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatalf("log file not created: %v", err)
+	}
+	content := string(data)
+	if !strings.Contains(content, "--- rook up") {
+		t.Error("expected session separator in log file")
+	}
+	if !strings.Contains(content, "hello-from-log") {
+		t.Errorf("expected process output in log file, got: %s", content)
+	}
+}
+
+func TestProcessRunner_FileLogging_AppendsSessions(t *testing.T) {
+	logDir := t.TempDir()
+
+	// First session
+	r1 := runner.NewProcessRunner()
+	r1.SetLogDir(logDir)
+	svc := workspace.Service{Command: "echo session-one"}
+	h1, _ := r1.Start(context.Background(), "app", svc, nil, t.TempDir())
+	time.Sleep(200 * time.Millisecond)
+	r1.Stop(h1)
+
+	// Second session
+	r2 := runner.NewProcessRunner()
+	r2.SetLogDir(logDir)
+	svc2 := workspace.Service{Command: "echo session-two"}
+	h2, _ := r2.Start(context.Background(), "app", svc2, nil, t.TempDir())
+	time.Sleep(200 * time.Millisecond)
+	r2.Stop(h2)
+
+	data, _ := os.ReadFile(filepath.Join(logDir, "app.log"))
+	content := string(data)
+	if !strings.Contains(content, "session-one") {
+		t.Error("expected first session output")
+	}
+	if !strings.Contains(content, "session-two") {
+		t.Error("expected second session output")
+	}
+	if strings.Count(content, "--- rook up") != 2 {
+		t.Errorf("expected 2 session separators, got %d", strings.Count(content, "--- rook up"))
+	}
 }

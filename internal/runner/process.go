@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -14,20 +15,29 @@ import (
 )
 
 type processEntry struct {
-	cmd    *exec.Cmd
-	cancel context.CancelFunc
-	output *syncBuffer
-	done   chan struct{}
-	err    error
+	cmd     *exec.Cmd
+	cancel  context.CancelFunc
+	output  *syncBuffer
+	logFile *os.File
+	done    chan struct{}
+	err     error
 }
 
 type ProcessRunner struct {
 	mu      sync.Mutex
 	entries map[string]*processEntry
+	logDir  string
 }
 
 func NewProcessRunner() *ProcessRunner {
 	return &ProcessRunner{entries: make(map[string]*processEntry)}
+}
+
+// SetLogDir sets the directory for persistent process log files.
+// Must be called before Start(). When set, process output is teed to
+// <logDir>/<service>.log in addition to the in-memory buffer.
+func (r *ProcessRunner) SetLogDir(dir string) {
+	r.logDir = dir
 }
 
 func (r *ProcessRunner) Start(ctx context.Context, name string, svc workspace.Service, ports PortMap, workDir string) (RunHandle, error) {
@@ -39,27 +49,53 @@ func (r *ProcessRunner) Start(ctx context.Context, name string, svc workspace.Se
 	cmd.Dir = workDir
 
 	var output syncBuffer
-	cmd.Stdout = &output
-	cmd.Stderr = &output
+	var logFile *os.File
+
+	if r.logDir != "" {
+		if err := os.MkdirAll(r.logDir, 0755); err != nil {
+			cancel()
+			return RunHandle{}, fmt.Errorf("creating log dir: %w", err)
+		}
+		logPath := filepath.Join(r.logDir, name+".log")
+		f, err := os.OpenFile(logPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+		if err != nil {
+			cancel()
+			return RunHandle{}, fmt.Errorf("opening log file for %s: %w", name, err)
+		}
+		fmt.Fprintf(f, "--- rook up %s ---\n", time.Now().Format(time.RFC3339))
+		logFile = f
+		cmd.Stdout = io.MultiWriter(&output, f)
+		cmd.Stderr = io.MultiWriter(&output, f)
+	} else {
+		cmd.Stdout = &output
+		cmd.Stderr = &output
+	}
 	cmd.Env = os.Environ()
 	for k, v := range svc.Environment {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", k, v))
 	}
 
 	entry := &processEntry{
-		cmd:    cmd,
-		cancel: cancel,
-		output: &output,
-		done:   make(chan struct{}),
+		cmd:     cmd,
+		cancel:  cancel,
+		output:  &output,
+		logFile: logFile,
+		done:    make(chan struct{}),
 	}
 
 	if err := cmd.Start(); err != nil {
 		cancel()
+		if logFile != nil {
+			logFile.Close()
+		}
 		return RunHandle{}, fmt.Errorf("starting %s: %w", name, err)
 	}
 
 	go func() {
 		entry.err = cmd.Wait()
+		if entry.logFile != nil {
+			entry.logFile.Close()
+		}
 		close(entry.done)
 	}()
 
