@@ -90,11 +90,15 @@ rook list                     # List registered workspaces
 - Devcontainer script copy: start scripts are copied to `.rook/` during init with a warning to review for devcontainer-specific code
 - Dockerfile field: supports `dockerfile` in compose build object form (e.g., `.devcontainer/Dockerfile`)
 - Multiple port mapping: all declared ports are mapped, not just the first
+- Process log files: `ProcessRunner` tees stdout/stderr to `.rook/.cache/logs/<service>.log` via `io.MultiWriter`; `rook logs` tails these alongside container logs; session separators with `O_APPEND` preserve crash logs across restarts
 - Auto-rebuild detection: `rook up` checks for stale builds (Dockerfile changes, context file changes, missing images) and prompts to rebuild; cache stored in `.rook/build-cache.json`
 - Shared builds (`build_from`): when multiple services share the same build context and Dockerfile, discovery auto-sets `build_from` on duplicates; the runner reuses the source service's image tag without rebuilding
 
 ## What's Not Yet Implemented
 
+- `rook status` for process services (currently shows "unknown" without a daemon)
+- `rook init` agentmd section update (currently append-only; re-init doesn't refresh services)
+- CLI command tests for `down`, `restart`, `logs`, `env`, `list`, `status`, `ports`
 - GUI visual manifest editor (Settings tab is a placeholder)
 - GUI system tray (waiting for Wails v3)
 - File watching / live reload
