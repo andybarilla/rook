@@ -112,7 +112,7 @@ func newLogsCmd() *cobra.Command {
 				colorIdx++
 				name := pl.name
 
-				reader, err := tailFile(pl.path, ctx)
+				reader, err := tailFile(ctx, pl.path)
 				if err != nil {
 					continue
 				}
@@ -129,6 +129,7 @@ func newLogsCmd() *cobra.Command {
 			<-sigCh
 
 			cancel()
+			wg.Wait()
 			fmt.Println("\nStopped tailing logs.")
 			return nil
 		},
@@ -157,7 +158,7 @@ func streamSingleProcessLog(logPath string, ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	reader, err := tailFile(logPath, ctx)
+	reader, err := tailFile(ctx, logPath)
 	if err != nil {
 		return fmt.Errorf("tailing log file: %w", err)
 	}

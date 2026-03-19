@@ -18,7 +18,7 @@ func TestTailFile_ReadsExistingContent(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	reader, err := tailFile(path, ctx)
+	reader, err := tailFile(ctx, path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,7 +49,7 @@ func TestTailFile_FollowsNewWrites(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	reader, err := tailFile(path, ctx)
+	reader, err := tailFile(ctx, path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,7 +88,7 @@ func TestTailFile_ContextCancellation(t *testing.T) {
 	os.WriteFile(path, []byte("data\n"), 0644)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	reader, err := tailFile(path, ctx)
+	reader, err := tailFile(ctx, path)
 	if err != nil {
 		t.Fatal(err)
 	}

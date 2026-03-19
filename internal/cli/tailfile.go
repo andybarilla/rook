@@ -10,7 +10,7 @@ import (
 // tailFile opens a file and returns a reader that streams its content,
 // including existing data and any new data appended after opening.
 // The reader closes when the context is cancelled.
-func tailFile(path string, ctx context.Context) (io.ReadCloser, error) {
+func tailFile(ctx context.Context, path string) (io.ReadCloser, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -20,6 +20,8 @@ func tailFile(path string, ctx context.Context) (io.ReadCloser, error) {
 	go func() {
 		defer pw.Close()
 		defer f.Close()
+		ticker := time.NewTicker(200 * time.Millisecond)
+		defer ticker.Stop()
 		buf := make([]byte, 4096)
 		for {
 			n, err := f.Read(buf)
@@ -35,7 +37,7 @@ func tailFile(path string, ctx context.Context) (io.ReadCloser, error) {
 			select {
 			case <-ctx.Done():
 				return
-			case <-time.After(200 * time.Millisecond):
+			case <-ticker.C:
 			}
 		}
 	}()
