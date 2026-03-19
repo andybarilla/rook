@@ -46,6 +46,9 @@ func newUpCmd() *cobra.Command {
 				return err
 			}
 
+			// Set log directory for process services
+			cctx.process.SetLogDir(logDirPath(ws.Root))
+
 			profile := "all"
 			if len(args) > 1 {
 				profile = args[1]
@@ -441,4 +444,9 @@ func buildCachePath(wsRoot string) string {
 // resolvedDirPath returns the path to the resolved files directory.
 func resolvedDirPath(wsRoot string) string {
 	return filepath.Join(wsRoot, ".rook", ".cache", "resolved")
+}
+
+// logDirPath returns the path to the process log files directory.
+func logDirPath(wsRoot string) string {
+	return filepath.Join(wsRoot, ".rook", ".cache", "logs")
 }
