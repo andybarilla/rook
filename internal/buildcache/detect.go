@@ -46,12 +46,17 @@ func DetectStale(cache *Cache, service string, svc workspace.Service, workDir, c
 		result.Reasons = append(result.Reasons, "image rebuilt externally")
 	}
 
-	// Determine Dockerfile path
+	// Determine Dockerfile path: explicit path is relative to workDir, default "Dockerfile" is in build context
 	dockerfile := "Dockerfile"
 	if svc.Dockerfile != "" {
 		dockerfile = svc.Dockerfile
 	}
-	dockerfilePath := filepath.Join(workDir, dockerfile)
+	var dockerfilePath string
+	if svc.Dockerfile != "" {
+		dockerfilePath = filepath.Join(workDir, dockerfile)
+	} else {
+		dockerfilePath = filepath.Join(buildCtx, "Dockerfile")
+	}
 
 	// Compute Dockerfile path relative to build context for skip comparison
 	dockerfileRelToCtx, err := filepath.Rel(buildCtx, dockerfilePath)
@@ -83,6 +88,17 @@ func DetectStale(cache *Cache, service string, svc workspace.Service, workDir, c
 		}
 		if info.IsDir() {
 			return nil
+		}
+
+		// Skip symlinks to directories (Walk uses Lstat, so IsDir is false for dir symlinks)
+		if info.Mode()&os.ModeSymlink != 0 {
+			target, err := os.Stat(path)
+			if err != nil {
+				return nil // skip unresolvable symlinks
+			}
+			if target.IsDir() {
+				return nil
+			}
 		}
 
 		relPath, err := filepath.Rel(buildCtx, path)

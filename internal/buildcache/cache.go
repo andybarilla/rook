@@ -63,8 +63,18 @@ func (c *Cache) Save(path string) error {
 // dockerfile is the relative path to the Dockerfile from workDir (or "Dockerfile" if default).
 // imageID is the Docker image ID of the built image.
 func (c *Cache) UpdateAfterBuild(service, workDir, buildCtx, dockerfile, imageID string) error {
-	// Hash Dockerfile (path is relative to workDir)
-	dockerfilePath := filepath.Join(workDir, dockerfile)
+	// Hash Dockerfile: explicit path is relative to workDir, default "Dockerfile" is in build context
+	var dockerfilePath string
+	if dockerfile == "Dockerfile" {
+		// Resolve build context first for default Dockerfile lookup
+		absBuildCtx := buildCtx
+		if !filepath.IsAbs(absBuildCtx) {
+			absBuildCtx = filepath.Join(workDir, absBuildCtx)
+		}
+		dockerfilePath = filepath.Join(absBuildCtx, "Dockerfile")
+	} else {
+		dockerfilePath = filepath.Join(workDir, dockerfile)
+	}
 	dockerfileHash, err := HashFile(dockerfilePath)
 	if err != nil {
 		return fmt.Errorf("hashing Dockerfile: %w", err)
@@ -95,6 +105,17 @@ func (c *Cache) UpdateAfterBuild(service, workDir, buildCtx, dockerfile, imageID
 		}
 		if info.IsDir() {
 			return nil
+		}
+
+		// Skip symlinks to directories (Walk uses Lstat, so IsDir is false for dir symlinks)
+		if info.Mode()&os.ModeSymlink != 0 {
+			target, err := os.Stat(path)
+			if err != nil {
+				return nil // skip unresolvable symlinks
+			}
+			if target.IsDir() {
+				return nil
+			}
 		}
 
 		relPath, err := filepath.Rel(buildCtx, path)

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -352,6 +353,27 @@ func newUpCmd() *cobra.Command {
 			colorIdx := 0
 			for _, name := range services {
 				if statuses[name] != runner.StatusRunning {
+					if statuses[name] == runner.StatusCrashed {
+						// Fetch last logs for the crashed service
+						svc := ws.Services[name]
+						var lastLogs string
+						if svc.IsContainer() {
+							handle := runner.RunHandle{ID: name, Type: "docker"}
+							if logReader, err := docker.Logs(handle); err == nil {
+								if data, err := io.ReadAll(logReader); err == nil {
+									lines := strings.Split(strings.TrimSpace(string(data)), "\n")
+									if len(lines) > 20 {
+										lines = lines[len(lines)-20:]
+									}
+									lastLogs = "\n  " + strings.Join(lines, "\n  ")
+								}
+								logReader.Close()
+							}
+						}
+						warns.add("service %s crashed after starting%s", name, lastLogs)
+					} else if statuses[name] == runner.StatusStopped {
+						warns.add("service %s stopped unexpectedly", name)
+					}
 					continue
 				}
 				svc := ws.Services[name]
