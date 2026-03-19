@@ -164,8 +164,9 @@ services:
 		}
 
 		worker := result.Services["worker"]
-		if worker.Build != "." {
-			t.Errorf("expected build '.', got '%s'", worker.Build)
+		// worker has same build as api, so it gets build_from=api and build is cleared
+		if worker.BuildFrom != "api" {
+			t.Errorf("expected build_from 'api', got '%s'", worker.BuildFrom)
 		}
 		if worker.Command != "./server -worker" {
 			t.Errorf("expected command './server -worker', got '%s'", worker.Command)
@@ -382,4 +383,98 @@ services:
 			t.Errorf("expected depends_on [postgres, redis], got %v", app.DependsOn)
 		}
 	})
+}
+
+func TestComposeDiscoverer_BuildFromDedup(t *testing.T) {
+	dir := t.TempDir()
+	compose := `services:
+  server:
+    build: .
+    command: ./server
+    ports:
+      - "8080:8080"
+  worker:
+    build: .
+    command: ./worker
+`
+	os.WriteFile(filepath.Join(dir, "docker-compose.yml"), []byte(compose), 0644)
+
+	d := NewComposeDiscoverer()
+	result, err := d.Discover(dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	server := result.Services["server"]
+	if server.Build != "." {
+		t.Errorf("server should keep build, got %q", server.Build)
+	}
+	if server.BuildFrom != "" {
+		t.Errorf("server should not have build_from, got %q", server.BuildFrom)
+	}
+
+	worker := result.Services["worker"]
+	if worker.Build != "" {
+		t.Errorf("worker should have build cleared, got %q", worker.Build)
+	}
+	if worker.BuildFrom != "server" {
+		t.Errorf("worker should have build_from=server, got %q", worker.BuildFrom)
+	}
+}
+
+func TestComposeDiscoverer_BuildFromDedup_DifferentDockerfile(t *testing.T) {
+	dir := t.TempDir()
+	compose := `services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+`
+	os.WriteFile(filepath.Join(dir, "docker-compose.yml"), []byte(compose), 0644)
+
+	d := NewComposeDiscoverer()
+	result, err := d.Discover(dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	api := result.Services["api"]
+	worker := result.Services["worker"]
+	if api.BuildFrom != "" || worker.BuildFrom != "" {
+		t.Error("different dockerfiles should not trigger build_from dedup")
+	}
+}
+
+func TestComposeDiscoverer_BuildFromDedup_SameDockerfile(t *testing.T) {
+	dir := t.TempDir()
+	compose := `services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.go
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.go
+`
+	os.WriteFile(filepath.Join(dir, "docker-compose.yml"), []byte(compose), 0644)
+
+	d := NewComposeDiscoverer()
+	result, err := d.Discover(dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	api := result.Services["api"]
+	worker := result.Services["worker"]
+	if api.Build == "" {
+		t.Error("api (first alpha) should keep build")
+	}
+	if worker.BuildFrom != "api" {
+		t.Errorf("worker should have build_from=api, got %q", worker.BuildFrom)
+	}
 }

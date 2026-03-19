@@ -197,6 +197,33 @@ func (d *ComposeDiscoverer) Discover(dir string) (*DiscoveryResult, error) {
 		result.Services[name] = svc
 	}
 
+	// Deduplicate identical builds: services with the same (build, dockerfile)
+	// tuple get build_from pointing to the first service alphabetically.
+	type buildKey struct{ build, dockerfile string }
+	buildOwners := make(map[buildKey]string)
+
+	sortedNames := make([]string, 0, len(result.Services))
+	for name := range result.Services {
+		sortedNames = append(sortedNames, name)
+	}
+	sort.Strings(sortedNames)
+
+	for _, name := range sortedNames {
+		svc := result.Services[name]
+		if svc.Build == "" {
+			continue
+		}
+		key := buildKey{build: svc.Build, dockerfile: svc.Dockerfile}
+		if owner, exists := buildOwners[key]; exists {
+			svc.BuildFrom = owner
+			svc.Build = ""
+			svc.Dockerfile = ""
+			result.Services[name] = svc
+		} else {
+			buildOwners[key] = name
+		}
+	}
+
 	// When using devcontainer compose, merge depends_on from root compose
 	// (devcontainer compose typically omits dependency declarations)
 	if strings.Contains(path, ".devcontainer") {
