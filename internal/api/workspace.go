@@ -208,7 +208,7 @@ func (w *WorkspaceAPI) AddWorkspace(path string) (*DiscoverResult, error) {
 	// Allocate ports for each service
 	for svcName, svc := range manifest.Services {
 		if len(svc.Ports) > 0 {
-			if _, err := w.portAlloc.Allocate(name, svcName, svc.Ports[0]); err != nil {
+			if _, err := w.portAlloc.Allocate(name, svcName); err != nil {
 				return nil, fmt.Errorf("allocating port for %s: %w", svcName, err)
 			}
 		}
@@ -582,7 +582,7 @@ func (w *WorkspaceAPI) ApplyDiscovery(name string, newServices []string, removed
 	for _, svcName := range newServices {
 		svc := result.Services[svcName]
 		if len(svc.Ports) > 0 {
-			if _, err := w.portAlloc.Allocate(name, svcName, svc.Ports[0]); err != nil {
+			if _, err := w.portAlloc.Allocate(name, svcName); err != nil {
 				return fmt.Errorf("allocating port for %s: %w", svcName, err)
 			}
 		}

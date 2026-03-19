@@ -25,8 +25,8 @@ func (r *stubRegistry) List() []registry.Entry                  { return nil }
 // stubPortAlloc implements ports.PortAllocator for testing.
 type stubPortAlloc struct{}
 
-func (s *stubPortAlloc) Allocate(workspace, service string, preferred int) (int, error) {
-	return preferred, nil
+func (s *stubPortAlloc) Allocate(workspace, service string) (int, error) {
+	return 10000, nil
 }
 func (s *stubPortAlloc) AllocatePinned(workspace, service string, port int) (int, error) {
 	return port, nil
