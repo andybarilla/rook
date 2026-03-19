@@ -1,6 +1,9 @@
 package workspace
 
-import "sort"
+import (
+	"fmt"
+	"sort"
+)
 
 type WorkspaceType string
 
@@ -30,12 +33,13 @@ type Service struct {
 	EnvFile     string            `yaml:"env_file,omitempty"`
 	Build       string            `yaml:"build,omitempty"`
 	Dockerfile  string            `yaml:"dockerfile,omitempty"`
+	BuildFrom   string            `yaml:"build_from,omitempty"`
 	ForceBuild     bool   `yaml:"-"`
 	ResolvedEnvFile string `yaml:"-"`
 }
 
-func (s Service) IsContainer() bool { return s.Image != "" || s.Build != "" }
-func (s Service) IsProcess() bool   { return s.Command != "" && s.Image == "" && s.Build == "" }
+func (s Service) IsContainer() bool { return s.Image != "" || s.Build != "" || s.BuildFrom != "" }
+func (s Service) IsProcess() bool   { return s.Command != "" && s.Image == "" && s.Build == "" && s.BuildFrom == "" }
 
 type Manifest struct {
 	Name     string              `yaml:"name"`
@@ -44,6 +48,31 @@ type Manifest struct {
 	Services map[string]Service  `yaml:"services"`
 	Groups   map[string][]string `yaml:"groups,omitempty"`
 	Profiles map[string][]string `yaml:"profiles,omitempty"`
+}
+
+func (m *Manifest) Validate() error {
+	for name, svc := range m.Services {
+		if svc.BuildFrom == "" {
+			continue
+		}
+		if svc.Build != "" {
+			return fmt.Errorf("service %q: build_from is mutually exclusive with build", name)
+		}
+		if svc.Image != "" {
+			return fmt.Errorf("service %q: build_from is mutually exclusive with image", name)
+		}
+		target, ok := m.Services[svc.BuildFrom]
+		if !ok {
+			return fmt.Errorf("service %q: build_from references unknown service %q", name, svc.BuildFrom)
+		}
+		if target.Build == "" {
+			return fmt.Errorf("service %q: build_from target %q has no build context", name, svc.BuildFrom)
+		}
+		if target.BuildFrom != "" {
+			return fmt.Errorf("service %q: build_from target %q is itself a build_from (chaining not allowed)", name, svc.BuildFrom)
+		}
+	}
+	return nil
 }
 
 type Workspace struct {
