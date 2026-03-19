@@ -88,6 +88,7 @@ rook list                     # List registered workspaces
 - Dockerfile field: supports `dockerfile` in compose build object form (e.g., `.devcontainer/Dockerfile`)
 - Multiple port mapping: all declared ports are mapped, not just the first
 - Auto-rebuild detection: `rook up` checks for stale builds (Dockerfile changes, context file changes, missing images) and prompts to rebuild; cache stored in `.rook/build-cache.json`
+- Shared builds (`build_from`): when multiple services share the same build context and Dockerfile, discovery auto-sets `build_from` on duplicates; the runner reuses the source service's image tag without rebuilding
 
 ## What's Not Yet Implemented
 
@@ -95,4 +96,3 @@ rook list                     # List registered workspaces
 - GUI system tray (waiting for Wails v3)
 - File watching / live reload
 - `rookd` daemon for headless/remote management
-- Shared build / image alias (so multiple services can reference one built image without rebuilding)
