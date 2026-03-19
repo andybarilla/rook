@@ -36,6 +36,11 @@ func TopoSort(services map[string]workspace.Service, targets []string) ([]string
 				return err
 			}
 		}
+		if svc.BuildFrom != "" {
+			if err := visit(svc.BuildFrom); err != nil {
+				return err
+			}
+		}
 		state[name] = visited
 		order = append(order, name)
 		return nil

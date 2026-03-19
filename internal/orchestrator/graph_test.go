@@ -75,3 +75,67 @@ func TestTopoSort_NoDeps(t *testing.T) {
 		t.Errorf("expected 3, got %d", len(order))
 	}
 }
+
+func TestTopoSort_BuildFromOrdering(t *testing.T) {
+	services := map[string]workspace.Service{
+		"server": {Build: ".", Ports: []int{8080}},
+		"worker": {BuildFrom: "server", Command: "work"},
+	}
+	order, err := orchestrator.TopoSort(services, []string{"server", "worker"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	serverIdx := indexOf(order, "server")
+	workerIdx := indexOf(order, "worker")
+	if serverIdx > workerIdx {
+		t.Errorf("server (idx %d) should come before worker (idx %d), got %v", serverIdx, workerIdx, order)
+	}
+}
+
+func TestTopoSort_BuildFromPullsInSource(t *testing.T) {
+	services := map[string]workspace.Service{
+		"server": {Build: ".", Ports: []int{8080}},
+		"worker": {BuildFrom: "server", Command: "work"},
+	}
+	order, err := orchestrator.TopoSort(services, []string{"worker"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !containsStr(order, "server") {
+		t.Errorf("build_from source should be pulled into order, got %v", order)
+	}
+}
+
+func TestTopoSort_BuildFromWithDependsOn(t *testing.T) {
+	services := map[string]workspace.Service{
+		"postgres": {Image: "postgres:16", Ports: []int{5432}},
+		"server":   {Build: ".", DependsOn: []string{"postgres"}},
+		"worker":   {BuildFrom: "server", DependsOn: []string{"postgres"}},
+	}
+	order, err := orchestrator.TopoSort(services, []string{"server", "worker", "postgres"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	pgIdx := indexOf(order, "postgres")
+	serverIdx := indexOf(order, "server")
+	workerIdx := indexOf(order, "worker")
+	if pgIdx > serverIdx {
+		t.Errorf("postgres should come before server")
+	}
+	if serverIdx > workerIdx {
+		t.Errorf("server should come before worker (build_from dependency)")
+	}
+}
+
+func indexOf(order []string, name string) int {
+	for i, n := range order {
+		if n == name {
+			return i
+		}
+	}
+	return -1
+}
+
+func containsStr(order []string, name string) bool {
+	return indexOf(order, name) >= 0
+}
