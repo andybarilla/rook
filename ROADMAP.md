@@ -90,6 +90,9 @@ Watch for changes to:
 
 Potential integration with tools like `air`, `watchexec`, or built-in fsnotify.
 
+#### Respect `.gitignore` in Build Cache
+The build cache context-file hashing should respect `.gitignore` (and `.dockerignore`) so that git-ignored files (e.g., `node_modules/`, build artifacts, local config) don't trigger false-positive stale build detection. Currently any change in the build context directory counts, even files that Docker itself would ignore.
+
 #### Shared Build / Image Alias
 Allow multiple services to reference a single built image without rebuilding. Useful when several services share the same Dockerfile but have different configs.
 
