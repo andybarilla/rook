@@ -60,7 +60,7 @@ func (o *Orchestrator) Up(ctx context.Context, ws workspace.Workspace, profileNa
 					}
 					portMap[name] = port
 				} else {
-					port, err := o.portAllocator.Allocate(ws.Name, name, svc.Ports[0])
+					port, err := o.portAllocator.Allocate(ws.Name, name)
 					if err != nil {
 						return fmt.Errorf("allocating port for %s: %w", name, err)
 					}
@@ -228,7 +228,7 @@ func (o *Orchestrator) StartService(ctx context.Context, ws workspace.Workspace,
 				}
 				portMap[serviceName] = port
 			} else {
-				port, err := o.portAllocator.Allocate(ws.Name, serviceName, svc.Ports[0])
+				port, err := o.portAllocator.Allocate(ws.Name, serviceName)
 				if err != nil {
 					return fmt.Errorf("allocating port for %s: %w", serviceName, err)
 				}
