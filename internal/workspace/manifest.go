@@ -17,6 +17,9 @@ func ParseManifest(path string) (*Manifest, error) {
 	if err := yaml.Unmarshal(data, &m); err != nil {
 		return nil, fmt.Errorf("parsing manifest: %w", err)
 	}
+	if err := m.Validate(); err != nil {
+		return nil, fmt.Errorf("validating manifest: %w", err)
+	}
 	return &m, nil
 }
 

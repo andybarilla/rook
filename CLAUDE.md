@@ -62,6 +62,7 @@ rook list                     # List registered workspaces
 - **No external test frameworks**: Use stdlib `testing` package only
 - **Commit style**: `feat:`, `fix:`, `test:`, `chore:` prefixes
 - **Test files**: `_test.go` in same package (black-box: `package x_test`)
+- **Worktrees**: All implementation work must be done in a git worktree, regardless of size
 
 ## Key Patterns
 

@@ -84,6 +84,24 @@ func TestParseManifest_MissingFile(t *testing.T) {
 	}
 }
 
+func TestParseManifest_ValidatesBuildFrom(t *testing.T) {
+	dir := t.TempDir()
+	content := `name: test
+type: single
+services:
+  worker:
+    build_from: nonexistent
+    command: run.sh
+`
+	path := filepath.Join(dir, "rook.yaml")
+	os.WriteFile(path, []byte(content), 0644)
+
+	_, err := workspace.ParseManifest(path)
+	if err == nil {
+		t.Error("ParseManifest should return validation error for invalid build_from")
+	}
+}
+
 func TestManifestToWorkspace(t *testing.T) {
 	m := workspace.Manifest{
 		Name: "test",
