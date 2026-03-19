@@ -132,7 +132,7 @@ func newInitCmd() *cobra.Command {
 					fmt.Printf("  Copied %s to .rook/scripts/%s\n", rel, scriptName)
 					warns.add("Review .rook/scripts/%s and adjust for rook (e.g., remove devcontainer-specific wait loops)", scriptName)
 				}
-					wsName := filepath.Base(dir)
+				wsName := filepath.Base(dir)
 				m := &workspace.Manifest{
 					Name:     wsName,
 					Type:     workspace.TypeSingle,

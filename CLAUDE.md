@@ -23,6 +23,8 @@ Interface-driven design. Core library in `internal/`, consumed by CLI (`cmd/rook
 - `internal/runner/` — `Runner` interface, `ProcessRunner`, `DockerRunner` with build support, `Reconnectable` interface for container adoption
 - `internal/orchestrator/` — `TopoSort()` + `Orchestrator` (incremental start/stop, health check waiting, single-service start/stop/restart, container reconnection)
 - `internal/discovery/` — `Discoverer` interface for compose (extracts build, command, env_file), mise, devcontainer
+- `internal/buildcache/` — stale build detection, Dockerfile hashing, `.dockerignore` parsing
+- `internal/settings/` — `Settings` struct with JSON persistence (e.g., `AutoRebuild`)
 - `internal/api/` — `WorkspaceAPI` service layer for GUI (Wails bindings, event emitter, log buffer)
 - `internal/cli/` — Cobra commands with shared `cliContext` for dependency initialization
 
@@ -43,7 +45,7 @@ rook init <path>              # Register workspace (auto-discovers from docker-c
 rook up [workspace] [profile] # Start services (foreground with log streaming)
 rook up -d                    # Start detached
 rook up --build               # Force rebuild of services with Dockerfiles
-rook down [workspace]         # Stop all containers
+rook down [workspace]         # Stop all containers (-v to remove volumes)
 rook restart [ws] [service]   # Restart service(s)
 rook status [workspace]       # Show workspace/service status
 rook logs [workspace] [svc]   # Tail container logs
@@ -51,6 +53,7 @@ rook ports                    # Show global port allocation table
 rook ports --reset            # Clear allocations and stop containers
 rook env <workspace>          # Show resolved environment variables
 rook check-builds [workspace] # Check which services need rebuilding
+rook discover <path>          # Run auto-discovery on a path without registering
 rook list                     # List registered workspaces
 ```
 
@@ -72,7 +75,7 @@ rook list                     # List registered workspaces
 - Pinned ports (`pin_port`) error on conflict instead of reassigning
 - Profile resolution: entries can be service names, group names, or `*` wildcard
 - Template vars in environment: `{{.Host.x}}` resolves to container name (container-to-container) or `localhost` (processes), `{{.Port.x}}` resolves to internal port (containers) or allocated port (processes)
-- Template vars in mounted config files (e.g., Caddyfile): resolved to `.rook/resolved/` temp copies before mounting
+- Template vars in mounted config files (e.g., Caddyfile): resolved to `.rook/.cache/resolved/` temp copies before mounting
 - Container networking: all workspace containers run on a shared `rook_<workspace>` network
 - Container naming: `rook_<workspace>_<service>` — used for discovery, reconnection, status checks
 - Container reconnection: `DockerRunner.Adopt` + `Orchestrator.Reconnect` re-discover running containers on CLI restart
