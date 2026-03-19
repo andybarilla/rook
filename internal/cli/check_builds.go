@@ -45,7 +45,7 @@ func NewCheckBuildsCmd() *cobra.Command {
 			docker := runner.NewDockerRunner(fmt.Sprintf("rook_%s", wsName))
 
 			for name, svc := range ws.Services {
-				if svc.Build == "" {
+				if svc.Build == "" || svc.BuildFrom != "" {
 					results[name] = buildcache.StaleResult{}
 					continue
 				}
@@ -77,7 +77,9 @@ func NewCheckBuildsCmd() *cobra.Command {
 func printCheckBuildsText(results map[string]buildcache.StaleResult, services map[string]workspace.Service, hasStale bool) error {
 	for name, svc := range services {
 		result := results[name]
-		if svc.Build == "" {
+		if svc.BuildFrom != "" {
+			fmt.Printf("%s: uses image from %s\n", name, svc.BuildFrom)
+		} else if svc.Build == "" {
 			fmt.Printf("%s: no build context (uses image)\n", name)
 		} else if result.NeedsRebuild {
 			if len(result.Reasons) > 0 {
@@ -112,7 +114,10 @@ func printCheckBuildsJSON(results map[string]buildcache.StaleResult, services ma
 		result := results[name]
 		status := checkBuildsServiceStatus{}
 
-		if svc.Build == "" {
+		if svc.BuildFrom != "" {
+			status.Status = "build_from"
+			status.Reason = svc.BuildFrom
+		} else if svc.Build == "" {
 			status.Status = "no_build_context"
 		} else if result.NeedsRebuild {
 			status.Status = "needs_rebuild"
