@@ -20,11 +20,14 @@ Remove the preferred port parameter from `Allocate()` entirely. All non-pinned p
 2. **`FileAllocator.Allocate()`** (`internal/ports/allocator.go`) — Remove the "try preferred port first" branch. Logic becomes: check existing allocation, then scan range.
 
 3. **Call sites** — Drop the `svc.Ports[0]` argument from all `Allocate()` calls:
-   - `internal/cli/up.go` — port allocation loop
-   - `internal/cli/init.go` — init-time allocation
-   - `internal/orchestrator/orchestrator.go` — `Up()` and `StartService()`
+   - `internal/cli/up.go` — port allocation loop (guard `len(svc.Ports) > 0` stays — services without ports still skip allocation)
+   - `internal/cli/init.go` — init-time allocation. Currently loops over `svc.Ports` calling `Allocate()` per port; replace with a single `Allocate()` call per service.
+   - `internal/orchestrator/orchestrator.go` — two call sites: `Up()` and `StartService()`
+   - `internal/api/workspace.go` — two call sites: `DiscoverAndInit()` and `ApplyDiscoveryDiff()`
 
-4. **Tests** — Update allocator tests to match new signature. Tests verifying "preferred port is used" become "always allocates from range" tests.
+4. **Tests** — Update to match new signature:
+   - `internal/ports/allocator_test.go` — all `Allocate()` calls drop `preferred` arg; tests verifying "preferred port is used" become "always allocates from range" tests
+   - `internal/api/workspace_test.go` — `stubPortAlloc.Allocate()` signature must drop `preferred` parameter
 
 ### Unchanged
 
@@ -32,7 +35,6 @@ Remove the preferred port parameter from `Allocate()` entirely. All non-pinned p
 - `pin_port` / `AllocatePinned()` — explicit user decision, always respected
 - Discovery — still extracts ports from compose (used for container port mappings)
 - Environment templates — `{{.Port.x}}` still resolves to allocated port
-- GUI / API layer — no changes needed
 
 ## Port Precedence
 
