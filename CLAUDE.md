@@ -67,7 +67,7 @@ rook list                     # List registered workspaces
 
 - File-backed persistence: `ports.json` and `workspaces.json` in `$XDG_CONFIG_HOME/rook/`
 - Services can be containers (`image`), buildable containers (`build`), or processes (`command`)
-- Port allocation: preferred ports tried first, system availability checked, then sequential from range 10000-60000
+- Port allocation: always from range 10000-60000 (compose preferred ports are ignored); system availability checked
 - Pinned ports (`pin_port`) error on conflict instead of reassigning
 - Profile resolution: entries can be service names, group names, or `*` wildcard
 - Template vars in environment: `{{.Host.x}}` resolves to container name (container-to-container) or `localhost` (processes), `{{.Port.x}}` resolves to internal port (containers) or allocated port (processes)
@@ -90,12 +90,6 @@ rook list                     # List registered workspaces
 
 ## What's Not Yet Implemented
 
-<<<<<<< Updated upstream
-=======
-- Auto-rebuild detection (prompt when Dockerfile changes)
->>>>>>> Stashed changes
-- Auto-scaffold project config on `rook init` (add `.rook/` to .gitignore, generate CLAUDE.md blurb)
-- Force rook ports flag (ignore preferred ports from compose, always use rook range)
 - GUI visual manifest editor (Settings tab is a placeholder)
 - GUI system tray (waiting for Wails v3)
 - File watching / live reload
