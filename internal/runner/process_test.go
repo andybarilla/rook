@@ -267,3 +267,44 @@ func TestProcessRunner_Status_ReconnectedDies(t *testing.T) {
 		t.Error("expected non-running status after process death")
 	}
 }
+
+func TestProcessRunner_Stop_ReconnectedEntry(t *testing.T) {
+	pidDir := t.TempDir()
+	r := runner.NewProcessRunner()
+	r.SetPIDDir(pidDir)
+
+	cmd := exec.Command("sleep", "60")
+	if err := cmd.Start(); err != nil {
+		t.Fatal(err)
+	}
+	pid := cmd.Process.Pid
+
+	runner.WritePIDFile(pidDir, "worker", runner.PIDInfo{
+		PID:       pid,
+		Command:   "sleep 60",
+		StartedAt: time.Now(),
+	})
+
+	handle, err := r.Reconnect("worker")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := r.Stop(handle); err != nil {
+		t.Fatal(err)
+	}
+
+	time.Sleep(100 * time.Millisecond)
+	if runner.IsProcessAlive(pid) {
+		t.Error("process should be dead after Stop")
+	}
+
+	if _, readErr := runner.ReadPIDFile(pidDir, "worker"); readErr == nil {
+		t.Error("PID file should have been removed after Stop")
+	}
+
+	status, _ := r.Status(handle)
+	if status != runner.StatusStopped {
+		t.Errorf("expected stopped, got %s", status)
+	}
+}

@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/andybarilla/rook/internal/workspace"
@@ -157,6 +158,39 @@ func (r *ProcessRunner) Stop(handle RunHandle) error {
 	if !ok {
 		return nil
 	}
+
+	if entry.reconnected {
+		proc, err := os.FindProcess(entry.pid)
+		if err == nil {
+			_ = proc.Signal(syscall.SIGTERM)
+			// Wait for the process to exit. We poll IsProcessAlive for
+			// non-child processes, and also attempt proc.Wait to reap
+			// zombies when the process is our child (e.g., in tests).
+			go func() { proc.Wait() }()
+			deadline := time.After(5 * time.Second)
+			for {
+				select {
+				case <-deadline:
+					proc.Kill()
+					go func() { proc.Wait() }()
+					goto cleanup
+				case <-time.After(100 * time.Millisecond):
+					if !IsProcessAlive(entry.pid) {
+						goto cleanup
+					}
+				}
+			}
+		}
+	cleanup:
+		r.mu.Lock()
+		delete(r.entries, handle.ID)
+		r.mu.Unlock()
+		if r.pidDir != "" {
+			RemovePIDFile(r.pidDir, handle.ID)
+		}
+		return nil
+	}
+
 	entry.cancel()
 	<-entry.done
 	if r.pidDir != "" {
