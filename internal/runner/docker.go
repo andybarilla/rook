@@ -279,6 +279,24 @@ func ContainerStatus(containerName string) ServiceStatus {
 	}
 }
 
+// ContainerVolumes returns the names of named volumes mounted on a container.
+// Bind mounts are excluded — only Docker/Podman-managed volumes are returned.
+// Note: relies on .Mounts[].Type == "volume" which requires Podman 4.x+ or any Docker version.
+func ContainerVolumes(containerName string) ([]string, error) {
+	// Use Go template to extract volume names; named volumes have Type "volume", bind mounts have Type "bind"
+	output, err := exec.Command(ContainerRuntime, "inspect",
+		"-f", `{{range .Mounts}}{{if eq .Type "volume"}}{{.Name}}{{"\n"}}{{end}}{{end}}`,
+		containerName).Output()
+	if err != nil {
+		return nil, fmt.Errorf("inspecting volumes for %s: %w", containerName, err)
+	}
+	raw := strings.TrimSpace(string(output))
+	if raw == "" {
+		return nil, nil
+	}
+	return strings.Split(raw, "\n"), nil
+}
+
 // StopContainer stops and removes a container by name.
 func StopContainer(name string) {
 	StopContainerWithVolumes(name, false)
@@ -331,4 +349,16 @@ func (r *DockerRunner) GetImageID(serviceName string) (string, error) {
 		return "", fmt.Errorf("inspecting image %s: %w", imageTag, err)
 	}
 	return strings.TrimSpace(string(output)), nil
+}
+
+// RemoveNetwork removes a container network by name.
+func RemoveNetwork(name string) {
+	exec.Command(ContainerRuntime, "network", "rm", name).Run()
+}
+
+// RemoveVolumes removes named volumes by name. It is a no-op for nil or empty slices.
+func RemoveVolumes(names []string) {
+	for _, name := range names {
+		exec.Command(ContainerRuntime, "volume", "rm", name).Run()
+	}
 }

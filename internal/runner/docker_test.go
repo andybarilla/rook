@@ -106,6 +106,76 @@ func TestStopContainerWithVolumes_NoVolumes(t *testing.T) {
 	}
 }
 
+func TestContainerVolumes(t *testing.T) {
+	if !dockerAvailable() {
+		t.Skip("docker not available")
+	}
+
+	runtime := runner.ContainerRuntime
+	containerName := "rook-test-cvol"
+
+	// Clean up
+	exec.Command(runtime, "rm", "-f", containerName).Run()
+	exec.Command(runtime, "volume", "rm", "-f", "rook-test-namedvol").Run()
+
+	// Create container with a named volume and a bind mount
+	cmd := exec.Command(runtime, "run", "-d", "--name", containerName,
+		"-v", "rook-test-namedvol:/data",
+		"-v", "/tmp:/hostmount",
+		"alpine:latest", "sleep", "300")
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("failed to create container: %v", err)
+	}
+	defer func() {
+		exec.Command(runtime, "rm", "-f", containerName).Run()
+		exec.Command(runtime, "volume", "rm", "-f", "rook-test-namedvol").Run()
+	}()
+
+	vols, err := runner.ContainerVolumes(containerName)
+	if err != nil {
+		t.Fatalf("ContainerVolumes failed: %v", err)
+	}
+
+	// Should contain the named volume, NOT the bind mount
+	found := false
+	for _, v := range vols {
+		if v == "rook-test-namedvol" {
+			found = true
+		}
+		if v == "/tmp" {
+			t.Error("bind mount should not be returned as a named volume")
+		}
+	}
+	if !found {
+		t.Errorf("expected 'rook-test-namedvol' in volumes, got %v", vols)
+	}
+}
+
+func TestRemoveNetwork(t *testing.T) {
+	if !dockerAvailable() {
+		t.Skip("docker not available")
+	}
+
+	runtime := runner.ContainerRuntime
+	netName := "rook-test-net"
+
+	// Create a network
+	exec.Command(runtime, "network", "create", netName).Run()
+
+	// Verify it exists
+	if err := exec.Command(runtime, "network", "inspect", netName).Run(); err != nil {
+		t.Fatalf("network should exist: %v", err)
+	}
+
+	runner.RemoveNetwork(netName)
+
+	// Network should be gone
+	if err := exec.Command(runtime, "network", "inspect", netName).Run(); err == nil {
+		t.Error("network should have been removed")
+		exec.Command(runtime, "network", "rm", netName).Run()
+	}
+}
+
 func TestBuildRemoveArgs(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -139,4 +209,34 @@ func TestBuildRemoveArgs(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRemoveVolumes(t *testing.T) {
+	if !dockerAvailable() {
+		t.Skip("docker not available")
+	}
+
+	runtime := runner.ContainerRuntime
+
+	// Create a volume
+	exec.Command(runtime, "volume", "create", "rook-test-rmvol").Run()
+
+	// Verify it exists
+	if err := exec.Command(runtime, "volume", "inspect", "rook-test-rmvol").Run(); err != nil {
+		t.Fatalf("volume should exist: %v", err)
+	}
+
+	runner.RemoveVolumes([]string{"rook-test-rmvol"})
+
+	// Volume should be gone
+	if err := exec.Command(runtime, "volume", "inspect", "rook-test-rmvol").Run(); err == nil {
+		t.Error("volume should have been removed")
+		exec.Command(runtime, "volume", "rm", "-f", "rook-test-rmvol").Run()
+	}
+}
+
+func TestRemoveVolumes_Empty(t *testing.T) {
+	// Should not panic or error on empty input
+	runner.RemoveVolumes(nil)
+	runner.RemoveVolumes([]string{})
 }
