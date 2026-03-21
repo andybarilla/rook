@@ -91,10 +91,10 @@ func (c *Cache) UpdateAfterBuild(service, workDir, buildCtx, dockerfile, imageID
 		return fmt.Errorf("computing Dockerfile relative path: %w", err)
 	}
 
-	// Parse .dockerignore
-	ignorePatterns, err := ParseDockerignore(buildCtx)
+	// Collect ignore patterns from .dockerignore and .gitignore
+	ignorePatterns, err := CollectIgnorePatterns(buildCtx, workDir)
 	if err != nil {
-		return fmt.Errorf("parsing .dockerignore: %w", err)
+		return fmt.Errorf("collecting ignore patterns: %w", err)
 	}
 
 	// Walk build context
@@ -135,6 +135,11 @@ func (c *Cache) UpdateAfterBuild(service, workDir, buildCtx, dockerfile, imageID
 
 		// Skip .dockerignore - it's metadata, not build content
 		if relPath == ".dockerignore" {
+			return nil
+		}
+
+		// Skip .gitignore - it's metadata, not build content
+		if relPath == ".gitignore" {
 			return nil
 		}
 

@@ -142,6 +142,31 @@ func TestCache_UpdateAfterBuild_RelativeBuildContext(t *testing.T) {
 	}
 }
 
+func TestCache_UpdateAfterBuild_RespectsGitignore(t *testing.T) {
+	dir := t.TempDir()
+	createTestFile(t, dir, "Dockerfile", "FROM alpine")
+	createTestFile(t, dir, "main.go", "package main")
+	createTestFile(t, dir, "node_modules/pkg/index.js", "module.exports = {}")
+	createTestFile(t, dir, ".gitignore", "node_modules/\n")
+
+	cache := &buildcache.Cache{Version: 1, Services: map[string]buildcache.ServiceCache{}}
+
+	err := cache.UpdateAfterBuild("api", dir, dir, "Dockerfile", "sha256:newimage")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, exists := cache.Services["api"].ContextFiles["node_modules/pkg/index.js"]; exists {
+		t.Error("node_modules files should be excluded by .gitignore")
+	}
+	if _, exists := cache.Services["api"].ContextFiles["main.go"]; !exists {
+		t.Error("main.go should still be tracked")
+	}
+	if _, exists := cache.Services["api"].ContextFiles[".gitignore"]; exists {
+		t.Error(".gitignore should not be tracked as content")
+	}
+}
+
 func createTestFile(t *testing.T, dir, name, content string) string {
 	t.Helper()
 	path := filepath.Join(dir, name)
