@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -162,5 +163,107 @@ func TestProcessRunner_FileLogging_AppendsSessions(t *testing.T) {
 	}
 	if strings.Count(content, "--- rook up") != 2 {
 		t.Errorf("expected 2 session separators, got %d", strings.Count(content, "--- rook up"))
+	}
+}
+
+func TestProcessRunner_Reconnect_AliveProcess(t *testing.T) {
+	pidDir := t.TempDir()
+	r := runner.NewProcessRunner()
+	r.SetPIDDir(pidDir)
+
+	cmd := exec.Command("sleep", "60")
+	if err := cmd.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer cmd.Process.Kill()
+
+	runner.WritePIDFile(pidDir, "worker", runner.PIDInfo{
+		PID:       cmd.Process.Pid,
+		Command:   "sleep 60",
+		StartedAt: time.Now(),
+	})
+
+	handle, err := r.Reconnect("worker")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if handle.Type != "process" {
+		t.Errorf("expected type process, got %s", handle.Type)
+	}
+
+	status, _ := r.Status(handle)
+	if status != runner.StatusRunning {
+		t.Errorf("expected running, got %s", status)
+	}
+}
+
+func TestProcessRunner_Reconnect_DeadProcess(t *testing.T) {
+	pidDir := t.TempDir()
+	r := runner.NewProcessRunner()
+	r.SetPIDDir(pidDir)
+
+	cmd := exec.Command("sleep", "60")
+	if err := cmd.Start(); err != nil {
+		t.Fatal(err)
+	}
+	pid := cmd.Process.Pid
+	cmd.Process.Kill()
+	cmd.Wait()
+
+	runner.WritePIDFile(pidDir, "worker", runner.PIDInfo{
+		PID:       pid,
+		Command:   "sleep 60",
+		StartedAt: time.Now(),
+	})
+
+	_, err := r.Reconnect("worker")
+	if err == nil {
+		t.Error("expected error for dead process")
+	}
+
+	if _, readErr := runner.ReadPIDFile(pidDir, "worker"); readErr == nil {
+		t.Error("stale PID file should have been removed")
+	}
+}
+
+func TestProcessRunner_Reconnect_NoPIDFile(t *testing.T) {
+	pidDir := t.TempDir()
+	r := runner.NewProcessRunner()
+	r.SetPIDDir(pidDir)
+
+	_, err := r.Reconnect("nonexistent")
+	if err == nil {
+		t.Error("expected error when no PID file exists")
+	}
+}
+
+func TestProcessRunner_Status_ReconnectedDies(t *testing.T) {
+	pidDir := t.TempDir()
+	r := runner.NewProcessRunner()
+	r.SetPIDDir(pidDir)
+
+	cmd := exec.Command("sleep", "60")
+	if err := cmd.Start(); err != nil {
+		t.Fatal(err)
+	}
+
+	runner.WritePIDFile(pidDir, "worker", runner.PIDInfo{
+		PID:       cmd.Process.Pid,
+		Command:   "sleep 60",
+		StartedAt: time.Now(),
+	})
+
+	handle, err := r.Reconnect("worker")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cmd.Process.Kill()
+	cmd.Wait()
+	time.Sleep(100 * time.Millisecond)
+
+	status, _ := r.Status(handle)
+	if status == runner.StatusRunning {
+		t.Error("expected non-running status after process death")
 	}
 }

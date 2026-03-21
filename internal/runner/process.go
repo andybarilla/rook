@@ -15,12 +15,14 @@ import (
 )
 
 type processEntry struct {
-	cmd     *exec.Cmd
-	cancel  context.CancelFunc
-	output  *syncBuffer
-	logFile *os.File
-	done    chan struct{}
-	err     error
+	cmd         *exec.Cmd
+	cancel      context.CancelFunc
+	output      *syncBuffer
+	logFile     *os.File
+	done        chan struct{}
+	err         error
+	reconnected bool
+	pid         int
 }
 
 type ProcessRunner struct {
@@ -119,6 +121,35 @@ func (r *ProcessRunner) Start(ctx context.Context, name string, svc workspace.Se
 	return RunHandle{ID: name, Type: "process"}, nil
 }
 
+// Reconnect adopts an existing process via its PID file. Returns an error
+// if the PID file is missing or the process is no longer alive.
+func (r *ProcessRunner) Reconnect(serviceName string) (RunHandle, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if r.pidDir == "" {
+		return RunHandle{}, fmt.Errorf("pidDir not set")
+	}
+
+	info, err := ReadPIDFile(r.pidDir, serviceName)
+	if err != nil {
+		return RunHandle{}, fmt.Errorf("reading PID file for %s: %w", serviceName, err)
+	}
+
+	if !IsProcessAlive(info.PID) {
+		RemovePIDFile(r.pidDir, serviceName)
+		return RunHandle{}, fmt.Errorf("process %s (pid %d) is no longer running", serviceName, info.PID)
+	}
+
+	entry := &processEntry{
+		reconnected: true,
+		pid:         info.PID,
+		done:        make(chan struct{}),
+	}
+	r.entries[serviceName] = entry
+	return RunHandle{ID: serviceName, Type: "process"}, nil
+}
+
 func (r *ProcessRunner) Stop(handle RunHandle) error {
 	r.mu.Lock()
 	entry, ok := r.entries[handle.ID]
@@ -137,10 +168,27 @@ func (r *ProcessRunner) Stop(handle RunHandle) error {
 func (r *ProcessRunner) Status(handle RunHandle) (ServiceStatus, error) {
 	r.mu.Lock()
 	entry, ok := r.entries[handle.ID]
-	r.mu.Unlock()
 	if !ok {
+		r.mu.Unlock()
 		return StatusStopped, nil
 	}
+	reconnected := entry.reconnected
+	pid := entry.pid
+	r.mu.Unlock()
+
+	if reconnected {
+		if IsProcessAlive(pid) {
+			return StatusRunning, nil
+		}
+		if r.pidDir != "" {
+			RemovePIDFile(r.pidDir, handle.ID)
+		}
+		r.mu.Lock()
+		delete(r.entries, handle.ID)
+		r.mu.Unlock()
+		return StatusStopped, nil
+	}
+
 	select {
 	case <-entry.done:
 		if entry.err != nil {
