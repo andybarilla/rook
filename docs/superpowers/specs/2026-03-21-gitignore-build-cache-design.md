@@ -28,12 +28,12 @@ Merge `.gitignore` patterns into the exclusion list alongside `.dockerignore` pa
 ### Changes to existing code
 
 - `DetectStale`: replace `ParseDockerignore(buildCtx)` call with `CollectIgnorePatterns(buildCtx, workDir)`
-- `UpdateAfterBuild`: replace `ParseDockerignore(buildCtx)` call with `CollectIgnorePatterns(buildCtx, workDir)`. Requires adding `workDir` parameter (already available at call sites).
+- `UpdateAfterBuild`: replace `ParseDockerignore(buildCtx)` call with `CollectIgnorePatterns(buildCtx, workDir)`. The `workDir` parameter already exists in the signature and is already passed by call sites — no signature change needed.
 
 ### No changes needed
 
 - `MatchesPatterns` — `.gitignore` uses the same glob syntax as `.dockerignore`, so the existing `patternmatcher` handles both
-- `ParseDockerignore` — kept as-is, called internally by `CollectIgnorePatterns`
+- `ParseDockerignore` — kept as-is and remains exported, called internally by `CollectIgnorePatterns`
 - `HashFile`, `Cache`, `ServiceCache` — unchanged
 
 ## File changes
@@ -43,8 +43,7 @@ Merge `.gitignore` patterns into the exclusion list alongside `.dockerignore` pa
 | `internal/buildcache/dockerignore.go` | Rename to `ignore.go`. Add `ParseGitignore`, `CollectIgnorePatterns` |
 | `internal/buildcache/dockerignore_test.go` | Rename to `ignore_test.go`. Add tests for new functions |
 | `internal/buildcache/detect.go` | Replace `ParseDockerignore` with `CollectIgnorePatterns` |
-| `internal/buildcache/cache.go` | `UpdateAfterBuild` signature adds `workDir`, replaces `ParseDockerignore` with `CollectIgnorePatterns` |
-| Call sites of `UpdateAfterBuild` | Pass `workDir` argument |
+| `internal/buildcache/cache.go` | Replace `ParseDockerignore` with `CollectIgnorePatterns` in `UpdateAfterBuild` (no signature change — `workDir` already exists) |
 
 ## Edge cases
 
@@ -52,6 +51,7 @@ Merge `.gitignore` patterns into the exclusion list alongside `.dockerignore` pa
 - **Negation patterns** (`!important.log`): already supported by `patternmatcher`
 - **Build context == workspace root**: `.gitignore` read once, not duplicated
 - **Nested `.gitignore` files**: not supported (only root-level). This handles the 99% case; nested gitignores in build contexts are rare.
+- **`.gitignore` file itself**: skipped from the context walk (like `.dockerignore` is), since it's metadata not build content. Changes to `.gitignore` patterns do not trigger rebuild detection.
 
 ## Testing
 
