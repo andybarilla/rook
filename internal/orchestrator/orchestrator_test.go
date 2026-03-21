@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/andybarilla/rook/internal/orchestrator"
 	"github.com/andybarilla/rook/internal/ports"
@@ -266,5 +267,79 @@ func TestOrchestrator_Reconnect_NoContainers(t *testing.T) {
 	statuses, _ := orch.Status(ws)
 	if statuses["postgres"] != runner.StatusStopped {
 		t.Errorf("expected stopped, got %s", statuses["postgres"])
+	}
+}
+
+func TestOrchestrator_Reconnect_ProcessServices(t *testing.T) {
+	cmd := exec.Command("sleep", "60")
+	if err := cmd.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer cmd.Process.Kill()
+
+	wsRoot := t.TempDir()
+	pidDir := runner.PIDDirPath(wsRoot)
+	runner.WritePIDFile(pidDir, "worker", runner.PIDInfo{
+		PID:       cmd.Process.Pid,
+		Command:   "sleep 60",
+		StartedAt: time.Now(),
+	})
+
+	containerMock := &mockRunner{}
+	processRunner := runner.NewProcessRunner()
+	orch := orchestrator.New(containerMock, processRunner, nil)
+
+	ws := workspace.Workspace{
+		Name: "test", Root: wsRoot,
+		Services: map[string]workspace.Service{
+			"worker": {Command: "sleep 60"},
+		},
+	}
+
+	if err := orch.Reconnect(ws); err != nil {
+		t.Fatal(err)
+	}
+
+	statuses, _ := orch.Status(ws)
+	if statuses["worker"] != runner.StatusRunning {
+		t.Errorf("expected running, got %s", statuses["worker"])
+	}
+}
+
+func TestOrchestrator_Reconnect_SkipsDeadProcesses(t *testing.T) {
+	cmd := exec.Command("sleep", "60")
+	if err := cmd.Start(); err != nil {
+		t.Fatal(err)
+	}
+	pid := cmd.Process.Pid
+	cmd.Process.Kill()
+	cmd.Wait()
+
+	wsRoot := t.TempDir()
+	pidDir := runner.PIDDirPath(wsRoot)
+	runner.WritePIDFile(pidDir, "worker", runner.PIDInfo{
+		PID:       pid,
+		Command:   "sleep 60",
+		StartedAt: time.Now(),
+	})
+
+	containerMock := &mockRunner{}
+	processRunner := runner.NewProcessRunner()
+	orch := orchestrator.New(containerMock, processRunner, nil)
+
+	ws := workspace.Workspace{
+		Name: "test", Root: wsRoot,
+		Services: map[string]workspace.Service{
+			"worker": {Command: "sleep 60"},
+		},
+	}
+
+	if err := orch.Reconnect(ws); err != nil {
+		t.Fatal(err)
+	}
+
+	statuses, _ := orch.Status(ws)
+	if statuses["worker"] != runner.StatusStopped {
+		t.Errorf("expected stopped, got %s", statuses["worker"])
 	}
 }
