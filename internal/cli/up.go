@@ -46,6 +46,7 @@ func newUpCmd() *cobra.Command {
 
 			// Set log directory for process services
 			cctx.process.SetLogDir(logDirPath(ws.Root))
+			cctx.process.SetPIDDir(runner.PIDDirPath(ws.Root))
 
 			profileName := "all"
 			if len(args) > 1 {
