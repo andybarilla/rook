@@ -353,12 +353,16 @@ func (r *DockerRunner) GetImageID(serviceName string) (string, error) {
 
 // RemoveNetwork removes a container network by name.
 func RemoveNetwork(name string) {
-	exec.Command(ContainerRuntime, "network", "rm", name).Run()
+	if err := exec.Command(ContainerRuntime, "network", "rm", name).Run(); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: could not remove network %s: %v\n", name, err)
+	}
 }
 
 // RemoveVolumes removes named volumes by name. It is a no-op for nil or empty slices.
 func RemoveVolumes(names []string) {
 	for _, name := range names {
-		exec.Command(ContainerRuntime, "volume", "rm", name).Run()
+		if err := exec.Command(ContainerRuntime, "volume", "rm", name).Run(); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: could not remove volume %s: %v\n", name, err)
+		}
 	}
 }
