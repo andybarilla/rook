@@ -103,3 +103,87 @@ func TestMatchesPatterns_Negation(t *testing.T) {
 		t.Error("important.log should not match (negated)")
 	}
 }
+
+func TestCollectIgnorePatterns_DefaultsOnly(t *testing.T) {
+	dir := t.TempDir()
+	// No .dockerignore, no .gitignore
+	patterns, err := buildcache.CollectIgnorePatterns(dir, dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Should have default exclusions (.rook/, .git/)
+	if len(patterns) < 2 {
+		t.Errorf("expected at least default patterns, got %d", len(patterns))
+	}
+}
+
+func TestCollectIgnorePatterns_MergesDockerignoreAndGitignore(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, ".dockerignore"), []byte("*.log\n"), 0644)
+	os.WriteFile(filepath.Join(dir, ".gitignore"), []byte("node_modules/\n"), 0644)
+
+	patterns, err := buildcache.CollectIgnorePatterns(dir, dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	hasLog := false
+	hasNodeModules := false
+	for _, p := range patterns {
+		if p == "*.log" {
+			hasLog = true
+		}
+		if p == "node_modules/" {
+			hasNodeModules = true
+		}
+	}
+	if !hasLog {
+		t.Error("expected *.log from .dockerignore")
+	}
+	if !hasNodeModules {
+		t.Error("expected node_modules/ from .gitignore")
+	}
+}
+
+func TestCollectIgnorePatterns_WorkDirGitignore(t *testing.T) {
+	// Build context is a subdirectory; .gitignore is in workspace root
+	workDir := t.TempDir()
+	buildCtx := filepath.Join(workDir, "server")
+	os.MkdirAll(buildCtx, 0755)
+	os.WriteFile(filepath.Join(workDir, ".gitignore"), []byte("node_modules/\ndist/\n"), 0644)
+
+	patterns, err := buildcache.CollectIgnorePatterns(buildCtx, workDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	hasNodeModules := false
+	for _, p := range patterns {
+		if p == "node_modules/" {
+			hasNodeModules = true
+		}
+	}
+	if !hasNodeModules {
+		t.Error("expected node_modules/ from workspace root .gitignore")
+	}
+}
+
+func TestCollectIgnorePatterns_NoDuplicateWhenSameDir(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, ".gitignore"), []byte("node_modules/\n"), 0644)
+
+	patterns, err := buildcache.CollectIgnorePatterns(dir, dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	count := 0
+	for _, p := range patterns {
+		if p == "node_modules/" {
+			count++
+		}
+	}
+	if count != 1 {
+		t.Errorf("expected node_modules/ once, got %d times", count)
+	}
+}

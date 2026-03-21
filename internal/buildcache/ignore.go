@@ -72,6 +72,43 @@ func ParseGitignore(dir string) ([]string, error) {
 	return patterns, nil
 }
 
+// CollectIgnorePatterns merges ignore patterns from all sources:
+// default exclusions, .dockerignore (from build context), and
+// .gitignore (from build context and workspace root).
+func CollectIgnorePatterns(buildCtx, workDir string) ([]string, error) {
+	// Start with .dockerignore (includes default exclusions)
+	patterns, err := ParseDockerignore(buildCtx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Add .gitignore from build context
+	gitPatterns, err := ParseGitignore(buildCtx)
+	if err != nil {
+		return nil, err
+	}
+	patterns = append(patterns, gitPatterns...)
+
+	// Add .gitignore from workspace root if different from build context
+	absBuildCtx, err := filepath.Abs(buildCtx)
+	if err != nil {
+		return nil, fmt.Errorf("resolving build context path: %w", err)
+	}
+	absWorkDir, err := filepath.Abs(workDir)
+	if err != nil {
+		return nil, fmt.Errorf("resolving workspace root path: %w", err)
+	}
+	if absBuildCtx != absWorkDir {
+		rootGitPatterns, err := ParseGitignore(workDir)
+		if err != nil {
+			return nil, err
+		}
+		patterns = append(patterns, rootGitPatterns...)
+	}
+
+	return patterns, nil
+}
+
 // MatchesPatterns checks if a file path matches any of the patterns.
 // Supports negation patterns (those starting with !).
 // Patterns are normalized to match Docker's .dockerignore behavior:
