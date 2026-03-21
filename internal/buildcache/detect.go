@@ -74,10 +74,10 @@ func DetectStale(cache *Cache, service string, svc workspace.Service, workDir, c
 		result.Reasons = append(result.Reasons, "Dockerfile modified")
 	}
 
-	// Parse .dockerignore
-	ignorePatterns, err := ParseDockerignore(buildCtx)
+	// Collect ignore patterns from .dockerignore and .gitignore
+	ignorePatterns, err := CollectIgnorePatterns(buildCtx, workDir)
 	if err != nil {
-		return nil, fmt.Errorf("parsing .dockerignore: %w", err)
+		return nil, fmt.Errorf("collecting ignore patterns: %w", err)
 	}
 
 	// Walk build context
@@ -118,6 +118,11 @@ func DetectStale(cache *Cache, service string, svc workspace.Service, workDir, c
 
 		// Skip .dockerignore - it's metadata, not build content
 		if relPath == ".dockerignore" {
+			return nil
+		}
+
+		// Skip .gitignore - it's metadata, not build content
+		if relPath == ".gitignore" {
 			return nil
 		}
 
