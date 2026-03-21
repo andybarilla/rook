@@ -42,6 +42,36 @@ func ParseDockerignore(dir string) ([]string, error) {
 	return patterns, nil
 }
 
+// ParseGitignore reads .gitignore from the given directory.
+// Returns empty slice if file doesn't exist (unlike ParseDockerignore,
+// does not include default exclusions — those are added by CollectIgnorePatterns).
+func ParseGitignore(dir string) ([]string, error) {
+	path := filepath.Join(dir, ".gitignore")
+
+	f, err := os.Open(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("reading .gitignore: %w", err)
+	}
+	defer f.Close()
+
+	var patterns []string
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		patterns = append(patterns, line)
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("reading .gitignore: %w", err)
+	}
+	return patterns, nil
+}
+
 // MatchesPatterns checks if a file path matches any of the patterns.
 // Supports negation patterns (those starting with !).
 // Patterns are normalized to match Docker's .dockerignore behavior:
