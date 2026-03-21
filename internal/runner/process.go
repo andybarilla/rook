@@ -27,6 +27,7 @@ type ProcessRunner struct {
 	mu      sync.Mutex
 	entries map[string]*processEntry
 	logDir  string
+	pidDir  string
 }
 
 func NewProcessRunner() *ProcessRunner {
@@ -38,6 +39,12 @@ func NewProcessRunner() *ProcessRunner {
 // <logDir>/<service>.log in addition to the in-memory buffer.
 func (r *ProcessRunner) SetLogDir(dir string) {
 	r.logDir = dir
+}
+
+// SetPIDDir sets the directory for PID files. When set, Start writes a PID
+// file and Stop removes it.
+func (r *ProcessRunner) SetPIDDir(dir string) {
+	r.pidDir = dir
 }
 
 func (r *ProcessRunner) Start(ctx context.Context, name string, svc workspace.Service, ports PortMap, workDir string) (RunHandle, error) {
@@ -100,6 +107,15 @@ func (r *ProcessRunner) Start(ctx context.Context, name string, svc workspace.Se
 	}()
 
 	r.entries[name] = entry
+
+	if r.pidDir != "" {
+		WritePIDFile(r.pidDir, name, PIDInfo{
+			PID:       cmd.Process.Pid,
+			Command:   svc.Command,
+			StartedAt: time.Now(),
+		})
+	}
+
 	return RunHandle{ID: name, Type: "process"}, nil
 }
 
@@ -112,6 +128,9 @@ func (r *ProcessRunner) Stop(handle RunHandle) error {
 	}
 	entry.cancel()
 	<-entry.done
+	if r.pidDir != "" {
+		RemovePIDFile(r.pidDir, handle.ID)
+	}
 	return nil
 }
 

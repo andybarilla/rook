@@ -87,6 +87,52 @@ func TestProcessRunner_FileLogging(t *testing.T) {
 	}
 }
 
+func TestProcessRunner_Start_CreatesPIDFile(t *testing.T) {
+	pidDir := t.TempDir()
+	r := runner.NewProcessRunner()
+	r.SetPIDDir(pidDir)
+
+	svc := workspace.Service{Command: "sleep 60"}
+	handle, err := r.Start(context.Background(), "api", svc, nil, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer r.Stop(handle)
+
+	info, err := runner.ReadPIDFile(pidDir, "api")
+	if err != nil {
+		t.Fatalf("PID file not created: %v", err)
+	}
+	if info.PID <= 0 {
+		t.Errorf("expected positive PID, got %d", info.PID)
+	}
+	if info.Command != "sleep 60" {
+		t.Errorf("expected command 'sleep 60', got %q", info.Command)
+	}
+}
+
+func TestProcessRunner_Stop_RemovesPIDFile(t *testing.T) {
+	pidDir := t.TempDir()
+	r := runner.NewProcessRunner()
+	r.SetPIDDir(pidDir)
+
+	svc := workspace.Service{Command: "sleep 60"}
+	handle, err := r.Start(context.Background(), "api", svc, nil, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := runner.ReadPIDFile(pidDir, "api"); err != nil {
+		t.Fatalf("PID file not created: %v", err)
+	}
+
+	r.Stop(handle)
+
+	if _, err := runner.ReadPIDFile(pidDir, "api"); err == nil {
+		t.Error("PID file should have been removed after Stop")
+	}
+}
+
 func TestProcessRunner_FileLogging_AppendsSessions(t *testing.T) {
 	logDir := t.TempDir()
 
