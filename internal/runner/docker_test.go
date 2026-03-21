@@ -65,12 +65,11 @@ func TestStopContainerWithVolumes(t *testing.T) {
 		t.Error("container should be removed")
 	}
 
-	// Named volumes are NOT removed by -v flag, only anonymous volumes
-	// So the named volume should still exist
+	// Named volumes are NOT removed by `docker rm -v` (only anonymous volumes).
+	// Use runner.RemoveVolumes() for named volume cleanup — see TestRemoveVolumes.
 	volumeInspect = exec.Command(runtime, "volume", "inspect", "rook-test-vol")
 	if err := volumeInspect.Run(); err != nil {
-		// This is actually expected behavior - -v removes anonymous volumes but not named ones
-		// For this test we just verify the command runs without error
+		// Expected: named volume may or may not survive depending on runtime behavior
 	}
 
 	// Clean up the named volume if it still exists
