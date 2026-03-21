@@ -14,7 +14,9 @@ PID file tracking with cross-platform liveness checks. When a process service st
 
 ## PID File Format & Location
 
-**Location**: `.rook/.cache/pids/<service>.pid` (per workspace)
+**Location**: `<ws.Root>/.rook/.cache/pids/<service>.pid` (per workspace, consistent with the existing `.rook/.cache/logs/` convention)
+
+**Path helper**: `PIDDirPath(wsRoot string) string` returns `<wsRoot>/.rook/.cache/pids/`
 
 **Format** (JSON):
 ```json
@@ -34,7 +36,7 @@ PID file tracking with cross-platform liveness checks. When a process service st
 
 Use `os.FindProcess(pid)` followed by `process.Signal(syscall.Signal(0))`:
 - Linux/macOS: returns nil if alive, error if dead
-- Windows: `Signal` is unsupported — fall back to "PID file exists + started recently = assume running"
+- Windows: `Signal` is unsupported — defer Windows-specific implementation to a future `pidfile_windows.go` build-tagged file. For now, `IsProcessAlive` returns false on unsupported platforms (process shows "stopped"), which is a safe default. Windows support is out of scope for this iteration.
 
 **Staleness guard**: If PID is dead (signal fails with "no such process"), delete the PID file and report `stopped`.
 
@@ -49,6 +51,7 @@ type PIDInfo struct {
     StartedAt time.Time `json:"started_at"`
 }
 
+func PIDDirPath(wsRoot string) string  // returns <wsRoot>/.rook/.cache/pids/
 func WritePIDFile(dir, serviceName string, info PIDInfo) error
 func ReadPIDFile(dir, serviceName string) (*PIDInfo, error)
 func RemovePIDFile(dir, serviceName string) error
@@ -56,13 +59,13 @@ func IsProcessAlive(pid int) bool
 func ListPIDFiles(dir string) ([]string, error)  // returns service names
 ```
 
-`IsProcessAlive` uses signal 0 on Linux/macOS. A `pidfile_windows.go` build-tagged file can provide a Windows-specific implementation if `syscall.Signal(0)` proves insufficient, but we start without it.
+`IsProcessAlive` uses signal 0 on Linux/macOS. Windows returns false (safe default, deferred to future work).
 
 ## ProcessRunner Changes
 
 ### New field
 
-- `pidDir string` — path to `.rook/.cache/pids/` for the workspace
+- `pidDir string` — path to `.rook/.cache/pids/` for the workspace, set via `SetPIDDir(dir string)` (mirrors existing `SetLogDir` pattern)
 
 ### Start()
 
@@ -70,9 +73,13 @@ After launching the process, write the PID file with PID, command, and current t
 
 ### Stop()
 
-Delete the PID file after killing the process.
+Two paths depending on whether the entry is reconnected:
 
-### New: processEntry.reconnected field
+**Normal entries** (started by us): Call `entry.cancel()`, wait on `<-entry.done`, then remove PID file.
+
+**Reconnected entries** (`cmd == nil`): Send `SIGTERM` via `os.FindProcess(pid).Signal(syscall.SIGTERM)`, poll `IsProcessAlive()` with a timeout (5s), escalate to `Kill()` if still alive, then remove PID file and clean up the entry.
+
+### New: processEntry changes
 
 ```go
 type processEntry struct {
@@ -83,6 +90,7 @@ type processEntry struct {
     done        chan struct{}
     err         error
     reconnected bool  // true if adopted from PID file, not started by us
+    pid         int   // stored for reconnected entries (cmd is nil)
 }
 ```
 
@@ -92,9 +100,9 @@ For reconnected entries (where we don't own `cmd`), check PID liveness directly 
 
 ### New: Reconnect(serviceName string) (RunHandle, error)
 
-- Read PID file for the service
+- Read PID file for the service (requires `pidDir` to be set via `SetPIDDir`)
 - Check if PID is alive via `IsProcessAlive()`
-- If alive: create a `processEntry` with `reconnected: true`, `cmd: nil`, store in entries map, return `RunHandle`
+- If alive: create a `processEntry` with `reconnected: true`, `pid` set, `cmd: nil`, store in entries map, return `RunHandle`
 - If dead: remove stale PID file, return error
 
 ## Orchestrator Changes
@@ -102,24 +110,37 @@ For reconnected entries (where we don't own `cmd`), check PID liveness directly 
 ### Reconnect()
 
 Currently only reconnects containers. Extend to:
-- Accept the workspace's PID directory path
+- Derive PID directory from workspace root: `PIDDirPath(ws.Root)`
+- Call `SetPIDDir` on the process runner before reconnecting
 - Scan PID files via `ListPIDFiles()`
 - Call `ProcessRunner.Reconnect(serviceName)` for each
 - Store resulting handles in the `handles` map
 
+The `Reconnect(ws workspace.Workspace)` signature does not change — `ws.Root` provides the path needed to derive the PID directory.
+
 ## CLI Status Command Changes
+
+The CLI status command reads PID files directly (via `ReadPIDFile` and `IsProcessAlive` from the `pidfile` package) without going through the orchestrator. This mirrors how container status already works — `showWorkspaceDetail` calls `runner.ContainerStatus()` directly, not through the runner interface.
 
 ### `showWorkspaceDetail()` (`internal/cli/status.go`)
 
 For process services, use PID file liveness check instead of hardcoding "unknown":
-- Read PID file for the service
+- Derive PID dir from workspace root: `PIDDirPath(ws.Root)`
+- Read PID file for the service via `ReadPIDFile(pidDir, serviceName)`
 - If PID file exists and process alive: "running"
 - If PID file exists and process dead: "stopped" (clean up PID file)
 - If no PID file: "stopped"
 
 ### `showAllWorkspaces()`
 
-Include process service status in the workspace-level summary (running/stopped/partial).
+Update aggregate counting to include process service status:
+- Iterate all services in the manifest
+- For container services: check via `runner.ContainerStatus()` (existing behavior)
+- For process services: check via `ReadPIDFile` + `IsProcessAlive`
+- Compute `running` count from both service types
+- Derive workspace status from `running` vs `total`: all running = "running", none = "stopped", mixed = "partial"
+
+This requires loading the workspace manifest (already done for service counting) and having access to `ws.Root` for PID file paths.
 
 ## Testing
 
@@ -129,6 +150,7 @@ Include process service status in the workspace-level summary (running/stopped/p
 - `IsProcessAlive` returns true for a running subprocess
 - `IsProcessAlive` returns false after killing the subprocess
 - Read nonexistent PID file returns error
+- `PIDDirPath` returns correct path
 
 ### `process_test.go` (new tests)
 - PID file created on `Start()`, contains correct PID and command
@@ -136,6 +158,7 @@ Include process service status in the workspace-level summary (running/stopped/p
 - `Reconnect()` succeeds for alive process, returns valid handle
 - `Reconnect()` fails and cleans up for dead process
 - `Status()` on reconnected entry checks PID liveness
+- `Stop()` on reconnected entry sends signal and removes PID file
 
 ### `orchestrator_test.go` (new tests)
 - `Reconnect()` picks up process services from PID files
