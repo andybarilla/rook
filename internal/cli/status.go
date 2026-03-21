@@ -48,6 +48,11 @@ func showAllWorkspaces(cctx *cliContext) error {
 			fmt.Printf("%-20s %-12s %-12s\n", e.Name, "error", "-")
 			continue
 		}
+		ws, err := m.ToWorkspace(e.Path)
+		if err != nil {
+			fmt.Printf("%-20s %-12s %-12s\n", e.Name, "error", "-")
+			continue
+		}
 		total := len(m.Services)
 		prefix := fmt.Sprintf("rook_%s_", e.Name)
 		containers, _ := runner.FindContainers(prefix)
@@ -57,11 +62,13 @@ func showAllWorkspaces(cctx *cliContext) error {
 				running++
 			}
 		}
-		hasProcessOnly := true
-		for _, svc := range m.Services {
-			if svc.IsContainer() {
-				hasProcessOnly = false
-				break
+		// Count running process services
+		for name, svc := range ws.Services {
+			if !svc.IsProcess() {
+				continue
+			}
+			if processStatus(ws.Root, name) == runner.StatusRunning {
+				running++
 			}
 		}
 		status := "stopped"
@@ -69,8 +76,6 @@ func showAllWorkspaces(cctx *cliContext) error {
 			status = "running"
 		} else if running > 0 {
 			status = "partial"
-		} else if hasProcessOnly && len(containers) == 0 {
-			status = "unknown"
 		}
 		fmt.Printf("%-20s %-12s %d/%d\n", e.Name, status, running, total)
 	}
@@ -82,11 +87,13 @@ func showWorkspaceDetail(cctx *cliContext, ws *workspace.Workspace) error {
 	fmt.Printf("%-20s %-12s %-12s %-8s\n", "SERVICE", "TYPE", "STATUS", "PORT")
 	for name, svc := range ws.Services {
 		svcType := "process"
-		status := "unknown"
+		var status string
 		if svc.IsContainer() {
 			svcType = "container"
 			containerName := fmt.Sprintf("%s%s", prefix, name)
 			status = string(runner.ContainerStatus(containerName))
+		} else {
+			status = string(processStatus(ws.Root, name))
 		}
 		port := "-"
 		if result := cctx.portAlloc.Get(ws.Name, name); result.OK {
@@ -95,4 +102,19 @@ func showWorkspaceDetail(cctx *cliContext, ws *workspace.Workspace) error {
 		fmt.Printf("%-20s %-12s %-12s %-8s\n", name, svcType, status, port)
 	}
 	return nil
+}
+
+// processStatus checks a process service's status via its PID file.
+func processStatus(wsRoot, serviceName string) runner.ServiceStatus {
+	pidDir := runner.PIDDirPath(wsRoot)
+	info, err := runner.ReadPIDFile(pidDir, serviceName)
+	if err != nil {
+		return runner.StatusStopped
+	}
+	if runner.IsProcessAlive(info.PID) {
+		return runner.StatusRunning
+	}
+	// Stale PID file — clean up
+	runner.RemovePIDFile(pidDir, serviceName)
+	return runner.StatusStopped
 }
