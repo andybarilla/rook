@@ -1,9 +1,11 @@
 package cli
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/andybarilla/rook/internal/orchestrator"
 	"github.com/andybarilla/rook/internal/ports"
@@ -66,6 +68,53 @@ func (c *cliContext) loadWorkspace(name string) (*workspace.Workspace, error) {
 		return nil, err
 	}
 	return m.ToWorkspace(entry.Path)
+}
+
+func (c *cliContext) resolveAndLoadWorkspace(args []string, stdin *os.File) (*workspace.Workspace, error) {
+	fromCwd := len(args) == 0
+	name, err := c.resolveWorkspaceName(args)
+	if err != nil {
+		return nil, err
+	}
+
+	ws, err := c.loadWorkspace(name)
+	if err == nil {
+		return ws, nil
+	}
+
+	// Only offer auto-init when name was inferred from cwd rook.yaml
+	if !fromCwd {
+		return nil, err
+	}
+
+	// Check if the error is "not found" (vs some other failure)
+	if !strings.Contains(err.Error(), "not found") {
+		return nil, err
+	}
+
+	cwd, cwdErr := os.Getwd()
+	if cwdErr != nil {
+		return nil, err
+	}
+
+	// Prompt for confirmation — read from stdin; EOF means non-interactive
+	fmt.Printf("Workspace %q is not registered. Initialize it now? [Y/n]: ", name)
+	reader := bufio.NewReader(stdin)
+	input, readErr := reader.ReadString('\n')
+	if readErr != nil {
+		// Non-TTY or EOF — fall back to error
+		return nil, fmt.Errorf("workspace %q not found. Run \"rook init .\" to register this workspace", name)
+	}
+	input = strings.TrimSpace(strings.ToLower(input))
+	if input == "n" || input == "no" {
+		return nil, fmt.Errorf("run \"rook init .\" to register this workspace")
+	}
+
+	if err := c.initFromManifest(cwd); err != nil {
+		return nil, fmt.Errorf("auto-init failed: %w", err)
+	}
+
+	return c.loadWorkspace(name)
 }
 
 func (c *cliContext) initFromManifest(dir string) error {
