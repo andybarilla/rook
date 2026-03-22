@@ -129,25 +129,23 @@ func (o *Orchestrator) Up(ctx context.Context, ws workspace.Workspace, profileNa
 		o.mu.Unlock()
 
 		// Brief pause to catch immediate crashes (e.g., missing env vars)
-		if svc.IsContainer() {
-			time.Sleep(1 * time.Second)
-			status, _ := r.Status(handle)
-			if status == runner.StatusCrashed || status == runner.StatusStopped {
-				// Fetch last logs for the error message
-				var lastLogs string
-				if logReader, err := r.Logs(handle); err == nil {
-					if data, err := io.ReadAll(logReader); err == nil {
-						lines := strings.Split(strings.TrimSpace(string(data)), "\n")
-						// Show last 20 lines
-						if len(lines) > 20 {
-							lines = lines[len(lines)-20:]
-						}
-						lastLogs = "\n  " + strings.Join(lines, "\n  ")
+		time.Sleep(1 * time.Second)
+		status, _ := r.Status(handle)
+		if status == runner.StatusCrashed || status == runner.StatusStopped {
+			// Fetch last logs for the error message
+			var lastLogs string
+			if logReader, err := r.Logs(handle); err == nil {
+				if data, err := io.ReadAll(logReader); err == nil {
+					lines := strings.Split(strings.TrimSpace(string(data)), "\n")
+					// Show last 20 lines
+					if len(lines) > 20 {
+						lines = lines[len(lines)-20:]
 					}
-					logReader.Close()
+					lastLogs = "\n  " + strings.Join(lines, "\n  ")
 				}
-				return fmt.Errorf("service %s crashed immediately after starting%s", name, lastLogs)
+				logReader.Close()
 			}
+			return fmt.Errorf("service %s crashed immediately after starting%s", name, lastLogs)
 		}
 
 		// Wait for health check if defined

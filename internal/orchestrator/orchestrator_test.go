@@ -306,6 +306,89 @@ func TestOrchestrator_Reconnect_ProcessServices(t *testing.T) {
 	}
 }
 
+type crashingMockRunner struct {
+	mockRunner
+	crashNames map[string]bool
+	logOutput  string
+}
+
+func (m *crashingMockRunner) Status(handle runner.RunHandle) (runner.ServiceStatus, error) {
+	if m.crashNames[handle.ID] {
+		return runner.StatusCrashed, nil
+	}
+	return runner.StatusRunning, nil
+}
+
+func (m *crashingMockRunner) Logs(handle runner.RunHandle) (io.ReadCloser, error) {
+	return io.NopCloser(strings.NewReader(m.logOutput)), nil
+}
+
+func TestOrchestrator_Up_DetectsProcessCrash(t *testing.T) {
+	crash := &crashingMockRunner{
+		crashNames: map[string]bool{"worker": true},
+		logOutput:  "Error: missing DATABASE_URL",
+	}
+	ws := workspace.Workspace{
+		Name: "test", Root: t.TempDir(),
+		Services: map[string]workspace.Service{
+			"worker": {Command: "node worker.js"},
+		},
+		Profiles: map[string][]string{"default": {"worker"}},
+	}
+	orch := orchestrator.New(crash, crash, nil)
+	err := orch.Up(context.Background(), ws, "default")
+	if err == nil {
+		t.Fatal("expected error for crashed process")
+	}
+	if !strings.Contains(err.Error(), "crashed immediately") {
+		t.Errorf("expected crash message, got: %s", err.Error())
+	}
+	if !strings.Contains(err.Error(), "missing DATABASE_URL") {
+		t.Errorf("expected log output in error, got: %s", err.Error())
+	}
+}
+
+func TestOrchestrator_Up_DetectsContainerCrash(t *testing.T) {
+	crash := &crashingMockRunner{
+		crashNames: map[string]bool{"db": true},
+		logOutput:  "FATAL: password authentication failed",
+	}
+	ws := workspace.Workspace{
+		Name: "test", Root: t.TempDir(),
+		Services: map[string]workspace.Service{
+			"db": {Image: "postgres:16"},
+		},
+		Profiles: map[string][]string{"default": {"db"}},
+	}
+	orch := orchestrator.New(crash, crash, nil)
+	err := orch.Up(context.Background(), ws, "default")
+	if err == nil {
+		t.Fatal("expected error for crashed container")
+	}
+	if !strings.Contains(err.Error(), "crashed immediately") {
+		t.Errorf("expected crash message, got: %s", err.Error())
+	}
+	if !strings.Contains(err.Error(), "password authentication failed") {
+		t.Errorf("expected log output in error, got: %s", err.Error())
+	}
+}
+
+func TestOrchestrator_Up_HealthyProcessPasses(t *testing.T) {
+	mock := &mockRunner{}
+	ws := workspace.Workspace{
+		Name: "test", Root: t.TempDir(),
+		Services: map[string]workspace.Service{
+			"worker": {Command: "node worker.js"},
+		},
+		Profiles: map[string][]string{"default": {"worker"}},
+	}
+	orch := orchestrator.New(mock, mock, nil)
+	err := orch.Up(context.Background(), ws, "default")
+	if err != nil {
+		t.Fatalf("healthy process should not error: %v", err)
+	}
+}
+
 func TestOrchestrator_Reconnect_SkipsDeadProcesses(t *testing.T) {
 	cmd := exec.Command("sleep", "60")
 	if err := cmd.Start(); err != nil {
