@@ -9,7 +9,7 @@ When a user runs `rook up` in a directory that has a `rook.yaml` but hasn't been
 
 ## Behavior
 
-When any workspace-resolving command (`up`, `down`, `restart`, `status`, `logs`, `env`, `check-builds`) finds a `rook.yaml` in the current directory but the workspace isn't in the registry, it prompts:
+When any workspace-resolving command that loads a workspace (`up`, `restart`, `status`, `logs`, `env`, `check-builds`) infers the workspace name from a `rook.yaml` in the current directory but the workspace isn't in the registry, it prompts:
 
 ```
 Workspace "myapp" is not registered. Initialize it now? [Y/n]
@@ -19,22 +19,38 @@ Workspace "myapp" is not registered. Initialize it now? [Y/n]
 - **No**: Exit with `Run "rook init ." to register this workspace.`
 - **Non-TTY stdin**: Fall back to the existing error (no prompt).
 
+**Excluded commands:** `down` (works via container scanning, never calls `loadWorkspace`).
+
+**Explicit name case:** When the user passes a workspace name as an argument (`rook up myapp`) and it's not registered, the existing error is returned with no prompt — the prompt only fires when the name was inferred from a local `rook.yaml`.
+
 ## Implementation
 
-### Where the change lives
+### New method: `resolveAndLoadWorkspace`
 
-`internal/cli/context.go` in `loadWorkspace()`. After `resolveWorkspaceName()` succeeds (found `rook.yaml` in cwd), if `registry.Get(name)` returns "not found":
+Introduce `resolveAndLoadWorkspace(args []string) (*workspace.Workspace, error)` on `cliContext`. This method combines `resolveWorkspaceName` + `loadWorkspace` and preserves whether the name came from cwd inference or an explicit argument:
 
-1. Prompt the user for confirmation via stdin.
-2. If yes, call `initFromManifest()` — a new helper that performs the subset of init applicable when `rook.yaml` already exists.
-3. Reload and continue with the original command.
+1. Call `resolveWorkspaceName(args)` to get the name and track whether it came from cwd.
+2. Call `loadWorkspace(name)`.
+3. If `loadWorkspace` fails with "not found" **and** the name was inferred from cwd:
+   - Check if stdin is a TTY. If not, return the existing error.
+   - Prompt the user for confirmation.
+   - If yes, call `initFromManifest(cwd, registry, allocator)`.
+   - Reload and return the workspace.
+4. If the name was from an explicit argument, return the error as-is.
 
-### `initFromManifest()` helper
+Commands that currently call `resolveWorkspaceName` + `loadWorkspace` separately switch to `resolveAndLoadWorkspace`.
+
+### `initFromManifest` helper
+
+```go
+func initFromManifest(dir string, reg *registry.FileRegistry, alloc *ports.FileAllocator) error
+```
 
 Extracted from `init.go`, this helper does:
 
-- Register workspace in registry
-- Allocate ports for all services
+- Parse `rook.yaml` from `dir`
+- Register workspace in registry via `reg.Register(name, dir)`
+- Allocate ports for all services (respecting `pin_port`)
 - Create `.rook/` directory and `.gitignore`
 - Append to CLAUDE.md/AGENTS.md if present
 
@@ -45,12 +61,15 @@ Extracted from `init.go`, this helper does:
 
 ## Scope boundaries
 
-- Only triggers when `rook.yaml` exists in cwd — no auto-discovery from compose files
+- Only triggers when `rook.yaml` exists in cwd and name was inferred from it — no auto-discovery
 - Only handles "not registered" — does not handle stale/moved registry paths
+- `reg.Register` already errors on duplicate names, which guards against double-registration
 - Prompt requires a TTY; non-TTY falls back to the existing error
 
 ## Testing
 
-- Unit test for `initFromManifest` helper: verifies port allocation and registry entry
-- Unit test confirming prompt is skipped when workspace is already registered
-- Unit test confirming non-TTY stdin falls back to error message
+- Unit test for `initFromManifest`: verifies port allocation, registry entry, and `.rook/` scaffold creation
+- Unit test for `resolveAndLoadWorkspace` happy path: cwd has `rook.yaml`, not registered, prompt answered yes, workspace loads successfully
+- Unit test confirming prompt is skipped when workspace is already registered (normal path)
+- Unit test confirming explicit name argument returns error without prompting when not found
+- Unit test confirming non-TTY stdin falls back to error message (no prompt)
