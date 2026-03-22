@@ -59,3 +59,29 @@ func formatRebuildPrompt(w io.Writer, staleServices map[string][]string, service
 		}
 	}
 }
+
+// buildFromConsumers returns sorted names of build_from consumers whose
+// source has ForceBuild=true, filtered to only services in resolvedServices.
+func buildFromConsumers(services map[string]workspace.Service, resolvedServices []string) []string {
+	resolvedSet := make(map[string]bool)
+	for _, name := range resolvedServices {
+		resolvedSet[name] = true
+	}
+
+	var result []string
+	for name, svc := range services {
+		if svc.BuildFrom == "" {
+			continue
+		}
+		if !resolvedSet[name] {
+			continue
+		}
+		source, ok := services[svc.BuildFrom]
+		if !ok || !source.ForceBuild {
+			continue
+		}
+		result = append(result, name)
+	}
+	sort.Strings(result)
+	return result
+}
