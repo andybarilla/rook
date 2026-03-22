@@ -527,9 +527,8 @@ with:
 			if err != nil {
 				return err
 			}
+			wsName := ws.Name
 ```
-
-Note: `check_builds.go` does not use `wsName` after this point — no need for the alias.
 
 - [ ] **Step 5: Update `status.go`**
 
