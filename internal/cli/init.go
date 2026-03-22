@@ -7,8 +7,6 @@ import (
 	"strings"
 
 	"github.com/andybarilla/rook/internal/discovery"
-	"github.com/andybarilla/rook/internal/ports"
-	"github.com/andybarilla/rook/internal/registry"
 	"github.com/andybarilla/rook/internal/workspace"
 	"github.com/spf13/cobra"
 )
@@ -145,52 +143,14 @@ func newInitCmd() *cobra.Command {
 				fmt.Printf("Generated %s\n", manifestPath)
 			}
 
-			m, err := workspace.ParseManifest(manifestPath)
+			cctx, err := newCLIContext()
 			if err != nil {
 				return err
 			}
 
-			// Ensure .rook/.gitignore exists with .cache/ entry (runs for all init paths)
-			rookDir := filepath.Join(dir, ".rook")
-			if err := ensureRookGitignore(rookDir); err != nil {
-				warns.add("cannot create .rook/.gitignore: %v", err)
-			}
-
-			// Add rook section to CLAUDE.md or AGENTS.md if present
-			ensureAgentMDRookSection(dir, m)
-
-			cfgDir := configDir()
-			os.MkdirAll(cfgDir, 0755)
-
-			reg, err := registry.NewFileRegistry(filepath.Join(cfgDir, "workspaces.json"))
-			if err != nil {
+			if err := cctx.initFromManifest(dir); err != nil {
 				return err
 			}
-			if err := reg.Register(m.Name, dir); err != nil {
-				return err
-			}
-
-			alloc, err := ports.NewFileAllocator(filepath.Join(cfgDir, "ports.json"), 10000, 60000)
-			if err != nil {
-				return err
-			}
-
-			for name, svc := range m.Services {
-				if svc.PinPort > 0 {
-					allocated, err := alloc.AllocatePinned(m.Name, name, svc.PinPort)
-					if err != nil {
-						return fmt.Errorf("pinning port for %s: %w", name, err)
-					}
-					fmt.Printf("  %s.%s -> :%d (pinned)\n", m.Name, name, allocated)
-				} else if len(svc.Ports) > 0 {
-					allocated, err := alloc.Allocate(m.Name, name)
-					if err != nil {
-						return fmt.Errorf("allocating port for %s: %w", name, err)
-					}
-					fmt.Printf("  %s.%s -> :%d\n", m.Name, name, allocated)
-				}
-			}
-			fmt.Printf("Workspace %q registered from %s\n", m.Name, dir)
 			warns.print(os.Stderr)
 			return nil
 		},

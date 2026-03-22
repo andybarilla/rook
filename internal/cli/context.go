@@ -67,3 +67,40 @@ func (c *cliContext) loadWorkspace(name string) (*workspace.Workspace, error) {
 	}
 	return m.ToWorkspace(entry.Path)
 }
+
+func (c *cliContext) initFromManifest(dir string) error {
+	manifestPath := filepath.Join(dir, "rook.yaml")
+	m, err := workspace.ParseManifest(manifestPath)
+	if err != nil {
+		return err
+	}
+
+	rookDir := filepath.Join(dir, ".rook")
+	if err := ensureRookGitignore(rookDir); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: cannot create .rook/.gitignore: %v\n", err)
+	}
+
+	ensureAgentMDRookSection(dir, m)
+
+	if err := c.registry.Register(m.Name, dir); err != nil {
+		return err
+	}
+
+	for name, svc := range m.Services {
+		if svc.PinPort > 0 {
+			allocated, err := c.portAlloc.AllocatePinned(m.Name, name, svc.PinPort)
+			if err != nil {
+				return fmt.Errorf("pinning port for %s: %w", name, err)
+			}
+			fmt.Printf("  %s.%s -> :%d (pinned)\n", m.Name, name, allocated)
+		} else if len(svc.Ports) > 0 {
+			allocated, err := c.portAlloc.Allocate(m.Name, name)
+			if err != nil {
+				return fmt.Errorf("allocating port for %s: %w", name, err)
+			}
+			fmt.Printf("  %s.%s -> :%d\n", m.Name, name, allocated)
+		}
+	}
+	fmt.Printf("Workspace %q registered from %s\n", m.Name, dir)
+	return nil
+}
