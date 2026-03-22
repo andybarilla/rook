@@ -15,6 +15,7 @@ import (
 	"github.com/andybarilla/rook/internal/buildcache"
 	"github.com/andybarilla/rook/internal/envgen"
 	"github.com/andybarilla/rook/internal/orchestrator"
+	profilepkg "github.com/andybarilla/rook/internal/profile"
 	"github.com/andybarilla/rook/internal/runner"
 	"github.com/spf13/cobra"
 )
@@ -50,11 +51,16 @@ func newUpCmd() *cobra.Command {
 			// Set log directory for process services
 			cctx.process.SetLogDir(logDirPath(ws.Root))
 
-			profile := "all"
+			profileName := "all"
 			if len(args) > 1 {
-				profile = args[1]
+				profileName = args[1]
 			} else if _, ok := ws.Profiles["default"]; ok {
-				profile = "default"
+				profileName = "default"
+			}
+
+			resolvedServices, err := profilepkg.Resolve(*ws, profileName)
+			if err != nil {
+				return fmt.Errorf("resolving profile %q: %w", profileName, err)
 			}
 
 			// Create docker runner for build cache checking (reused later for log streaming)
@@ -87,14 +93,8 @@ func newUpCmd() *cobra.Command {
 			// Prompt to rebuild if any stale services
 			if len(staleServices) > 0 && !build {
 				fmt.Println("Checking for stale builds...")
-				fmt.Printf("\n%d service(s) need rebuild:\n", len(staleServices))
-				for name, reasons := range staleServices {
-					if len(reasons) > 0 {
-						fmt.Printf("  - %s (%s)\n", name, reasons[0])
-					} else {
-						fmt.Printf("  - %s\n", name)
-					}
-				}
+				fmt.Println()
+				formatRebuildPrompt(os.Stdout, staleServices, ws.Services, resolvedServices)
 
 				// Check which services have missing images (must rebuild)
 				var missingImages, staleFiles []string
@@ -297,12 +297,19 @@ func newUpCmd() *cobra.Command {
 				}
 			}
 
+			// Remove stale build_from consumer containers so they aren't
+			// reconnected with an outdated image.
+			staleConsumers := buildFromConsumers(ws.Services, resolvedServices)
+			for _, name := range staleConsumers {
+				runner.StopContainer(containerPrefix + name)
+			}
+
 			orch := cctx.newOrchestrator(wsName)
 			if err := orch.Reconnect(*ws); err != nil {
 				warns.add("reconnect failed: %v", err)
 			}
-			fmt.Printf("Starting %s (profile: %s)...\n", wsName, profile)
-			if err := orch.Up(ctx, *ws, profile); err != nil {
+			fmt.Printf("Starting %s (profile: %s)...\n", wsName, profileName)
+			if err := orch.Up(ctx, *ws, profileName); err != nil {
 				return err
 			}
 
