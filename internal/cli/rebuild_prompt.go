@@ -76,6 +76,9 @@ func buildFromConsumers(services map[string]workspace.Service, resolvedServices 
 		if !resolvedSet[name] {
 			continue
 		}
+		if !resolvedSet[svc.BuildFrom] {
+			continue
+		}
 		source, ok := services[svc.BuildFrom]
 		if !ok || !source.ForceBuild {
 			continue

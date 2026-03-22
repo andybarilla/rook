@@ -157,3 +157,18 @@ func TestBuildFromConsumers_IgnoresNonRebuiltSources(t *testing.T) {
 		t.Errorf("expected 0 consumers (source not rebuilt), got %v", got)
 	}
 }
+
+func TestBuildFromConsumers_IgnoresOutOfProfileSource(t *testing.T) {
+	services := map[string]workspace.Service{
+		"api":    {Build: ".", ForceBuild: true},
+		"worker": {BuildFrom: "api"},
+	}
+	// worker is in profile but its source (api) is not
+	resolved := []string{"worker"}
+
+	got := buildFromConsumers(services, resolved)
+
+	if len(got) != 0 {
+		t.Errorf("expected 0 consumers (source not in profile), got %v", got)
+	}
+}
