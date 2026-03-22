@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/andybarilla/rook/internal/runner"
 	"github.com/spf13/cobra"
@@ -17,14 +18,11 @@ func newRestartCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			wsName, err := cctx.resolveWorkspaceName(args)
+			ws, err := cctx.resolveAndLoadWorkspace(args, os.Stdin)
 			if err != nil {
 				return err
 			}
-			ws, err := cctx.loadWorkspace(wsName)
-			if err != nil {
-				return err
-			}
+			wsName := ws.Name
 			orch := cctx.newOrchestrator(wsName)
 			orch.Reconnect(*ws)
 

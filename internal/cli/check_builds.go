@@ -29,15 +29,11 @@ func NewCheckBuildsCmd() *cobra.Command {
 				return err
 			}
 
-			wsName, err := cctx.resolveWorkspaceName(args)
+			ws, err := cctx.resolveAndLoadWorkspace(args, os.Stdin)
 			if err != nil {
 				return err
 			}
-
-			ws, err := cctx.loadWorkspace(wsName)
-			if err != nil {
-				return err
-			}
+			wsName := ws.Name
 
 			cachePath := buildCachePath(ws.Root)
 			cache, err := buildcache.Load(cachePath)

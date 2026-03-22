@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/andybarilla/rook/internal/runner"
@@ -18,10 +19,18 @@ func newStatusCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if len(args) == 0 {
+			// Check if we can resolve a workspace name at all.
+			// If not (no arg, no rook.yaml in cwd), show all workspaces.
+			_, nameErr := cctx.resolveWorkspaceName(args)
+			if nameErr != nil && len(args) == 0 {
 				return showAllWorkspaces(cctx)
 			}
-			return showWorkspaceDetail(cctx, args[0])
+			// Name resolved — use full resolve+load flow (with auto-init prompt)
+			ws, err := cctx.resolveAndLoadWorkspace(args, os.Stdin)
+			if err != nil {
+				return err
+			}
+			return showWorkspaceDetail(cctx, ws)
 		},
 	}
 }
@@ -68,12 +77,8 @@ func showAllWorkspaces(cctx *cliContext) error {
 	return nil
 }
 
-func showWorkspaceDetail(cctx *cliContext, wsName string) error {
-	ws, err := cctx.loadWorkspace(wsName)
-	if err != nil {
-		return err
-	}
-	prefix := fmt.Sprintf("rook_%s_", wsName)
+func showWorkspaceDetail(cctx *cliContext, ws *workspace.Workspace) error {
+	prefix := fmt.Sprintf("rook_%s_", ws.Name)
 	fmt.Printf("%-20s %-12s %-12s %-8s\n", "SERVICE", "TYPE", "STATUS", "PORT")
 	for name, svc := range ws.Services {
 		svcType := "process"

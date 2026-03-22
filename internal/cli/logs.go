@@ -27,15 +27,11 @@ func newLogsCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			wsName, err := cctx.resolveWorkspaceName(args)
+			ws, err := cctx.resolveAndLoadWorkspace(args, os.Stdin)
 			if err != nil {
 				return err
 			}
-
-			ws, err := cctx.loadWorkspace(wsName)
-			if err != nil {
-				return err
-			}
+			wsName := ws.Name
 
 			// Single-service mode
 			if len(args) > 1 {
