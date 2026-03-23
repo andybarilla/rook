@@ -129,7 +129,9 @@ func (c *cliContext) initFromManifest(dir string) error {
 		fmt.Fprintf(os.Stderr, "Warning: cannot create .rook/.gitignore: %v\n", err)
 	}
 
-	ensureAgentMDRookSection(dir, m)
+	if _, err := ensureAgentMDRookSection(dir, m); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: cannot update agent md: %v\n", err)
+	}
 
 	if err := c.registry.Register(m.Name, dir); err != nil {
 		return err
