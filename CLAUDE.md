@@ -54,6 +54,7 @@ rook ports --reset            # Clear allocations and stop containers
 rook env <workspace>          # Show resolved environment variables
 rook check-builds [workspace] # Check which services need rebuilding
 rook discover <path>          # Run auto-discovery on a path without registering
+rook agentmd [path]           # Update rook section in CLAUDE.md/AGENTS.md
 rook list                     # List registered workspaces
 ```
 
@@ -97,7 +98,6 @@ rook list                     # List registered workspaces
 ## What's Not Yet Implemented
 
 - `rook status` for process services (currently shows "unknown" without a daemon)
-- `rook init` agentmd section update (currently append-only; re-init doesn't refresh services)
 - CLI command tests for `down`, `restart`, `logs`, `env`, `list`, `status`, `ports`
 - GUI visual manifest editor (Settings tab is a placeholder)
 - GUI system tray (waiting for Wails v3)
