@@ -364,6 +364,42 @@ func TestEnsureAgentMD_ErrorsOnMissingClosingTag(t *testing.T) {
 	}
 }
 
+func TestAgentMDCmd_UpdatesExistingSection(t *testing.T) {
+	cfgDir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", cfgDir)
+
+	wsDir := t.TempDir()
+	manifestContent := `name: testws
+type: single
+services:
+  api:
+    image: node:20
+    ports:
+      - 3000
+`
+	os.WriteFile(filepath.Join(wsDir, "rook.yaml"), []byte(manifestContent), 0644)
+	os.WriteFile(filepath.Join(wsDir, "CLAUDE.md"), []byte("# Project\n\n<!-- rook -->\nold\n<!-- /rook -->\n"), 0644)
+
+	cmd := newAgentMDCmd()
+	cmd.SetArgs([]string{wsDir})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("agentmd command failed: %v", err)
+	}
+
+	content, _ := os.ReadFile(filepath.Join(wsDir, "CLAUDE.md"))
+	s := string(content)
+
+	if strings.Contains(s, "old") {
+		t.Error("old section content should be replaced")
+	}
+	if !strings.Contains(s, "api") {
+		t.Error("expected 'api' service in updated section")
+	}
+	if !strings.Contains(s, "testws") {
+		t.Error("expected workspace name in updated section")
+	}
+}
+
 func TestEnsureAgentMD_NoFileDoesNothing(t *testing.T) {
 	dir := t.TempDir()
 

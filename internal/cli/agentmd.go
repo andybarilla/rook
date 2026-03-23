@@ -64,6 +64,17 @@ func ensureAgentMDRookSection(dir string, m *workspace.Manifest) (string, error)
 	return "added", nil
 }
 
+// agentMDTarget returns the filename (CLAUDE.md or AGENTS.md) found in dir, or "".
+func agentMDTarget(dir string) string {
+	for _, name := range []string{"CLAUDE.md", "AGENTS.md"} {
+		p := filepath.Join(dir, name)
+		if _, err := os.Stat(p); err == nil {
+			return name
+		}
+	}
+	return ""
+}
+
 func buildRookSection(m *workspace.Manifest) string {
 	var b strings.Builder
 	b.WriteString("<!-- rook -->\n")
