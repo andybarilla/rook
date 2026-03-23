@@ -14,8 +14,14 @@
 
 ### `internal/cli/agentmd.go`
 
+- Change signature to `ensureAgentMDRookSection(dir string, m *workspace.Manifest) (action string, err error)`.
 - Replace the early-return on existing tags with a replacement: find the start of `<!-- rook -->` and end of `<!-- /rook -->\n`, splice in the new section.
+- If `<!-- rook -->` exists without a matching `<!-- /rook -->`, return an error (malformed file the user should fix).
 - No change to `buildRookSection` — it already generates the full tagged block.
+
+### `internal/cli/context.go`
+
+- Update the call in `initFromManifest` to handle the new return signature. Print a warning on error, matching the pattern used by `ensureRookGitignore`.
 
 ### `internal/cli/agentmd_cmd.go` (new)
 
@@ -32,7 +38,8 @@
 
 - **Update** `TestEnsureAgentMD_SkipsIfTagExists` → rename to `TestEnsureAgentMD_ReplacesExistingSection`, verify that old content between tags is replaced with new content reflecting current services.
 - **Add** `TestEnsureAgentMD_ReplacesWithDifferentServices` — tags exist with service A, manifest has service B, verify replacement shows only service B.
-- **Add** `TestEnsureAgentMD_PreservesContentOutsideTags` — content before and after the rook section is preserved exactly.
+- **Add** `TestEnsureAgentMD_PreservesContentOutsideTags` — content before and after the rook section is preserved exactly, including when tags are at the very start of the file.
+- **Add** `TestEnsureAgentMD_ErrorsOnMissingClosingTag` — `<!-- rook -->` without `<!-- /rook -->` returns an error.
 - **Add** `TestAgentMDCmd` — integration test for the CLI command.
 
 ## Behavior Matrix
@@ -42,6 +49,7 @@
 | No CLAUDE.md/AGENTS.md | No-op | No-op |
 | File exists, no tags | Append section | Append section |
 | File exists, tags present | Skip | Replace between tags |
+| File exists, opening tag without closing | Skip | Error |
 
 ## Scope Exclusions
 
