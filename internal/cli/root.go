@@ -29,6 +29,7 @@ func NewRootCmd() *cobra.Command {
 		newLogsCmd(),
 		newEnvCmd(),
 		NewCheckBuildsCmd(),
+		newAgentMDCmd(),
 	)
 	return cmd
 }

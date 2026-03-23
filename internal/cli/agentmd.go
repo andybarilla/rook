@@ -10,10 +10,10 @@ import (
 	"github.com/andybarilla/rook/internal/workspace"
 )
 
-// ensureAgentMDRookSection appends a rook section to an existing CLAUDE.md or
-// AGENTS.md file. It prefers CLAUDE.md if both exist. If neither exists or the
-// file already contains a <!-- rook --> tag, it does nothing.
-func ensureAgentMDRookSection(dir string, m *workspace.Manifest) {
+// ensureAgentMDRookSection upserts a rook section in an existing CLAUDE.md or
+// AGENTS.md file. It prefers CLAUDE.md if both exist. If neither exists, it
+// does nothing. Returns the action taken ("added", "updated", or "") and any error.
+func ensureAgentMDRookSection(dir string, m *workspace.Manifest) (string, error) {
 	// Try CLAUDE.md first, then AGENTS.md
 	var target string
 	for _, name := range []string{"CLAUDE.md", "AGENTS.md"} {
@@ -24,28 +24,55 @@ func ensureAgentMDRookSection(dir string, m *workspace.Manifest) {
 		}
 	}
 	if target == "" {
-		return
+		return "", nil
 	}
 
 	content, err := os.ReadFile(target)
 	if err != nil {
-		return
+		return "", fmt.Errorf("reading %s: %w", filepath.Base(target), err)
 	}
 
-	if strings.Contains(string(content), "<!-- rook -->") {
-		return
-	}
-
+	s := string(content)
 	section := buildRookSection(m)
 
-	// Ensure we start on a new line
-	s := string(content)
+	openTag := "<!-- rook -->"
+	closeTag := "<!-- /rook -->\n"
+
+	startIdx := strings.Index(s, openTag)
+	if startIdx >= 0 {
+		// Replace existing section
+		endIdx := strings.Index(s, closeTag)
+		if endIdx < 0 {
+			return "", fmt.Errorf("found %s without matching <!-- /rook --> in %s", openTag, filepath.Base(target))
+		}
+		result := s[:startIdx] + section + s[endIdx+len(closeTag):]
+		if err := os.WriteFile(target, []byte(result), 0644); err != nil {
+			return "", fmt.Errorf("writing %s: %w", filepath.Base(target), err)
+		}
+		return "updated", nil
+	}
+
+	// Append new section
 	if len(s) > 0 && !strings.HasSuffix(s, "\n") {
 		s += "\n"
 	}
 	s += "\n" + section
 
-	os.WriteFile(target, []byte(s), 0644)
+	if err := os.WriteFile(target, []byte(s), 0644); err != nil {
+		return "", fmt.Errorf("writing %s: %w", filepath.Base(target), err)
+	}
+	return "added", nil
+}
+
+// agentMDTarget returns the filename (CLAUDE.md or AGENTS.md) found in dir, or "".
+func agentMDTarget(dir string) string {
+	for _, name := range []string{"CLAUDE.md", "AGENTS.md"} {
+		p := filepath.Join(dir, name)
+		if _, err := os.Stat(p); err == nil {
+			return name
+		}
+	}
+	return ""
 }
 
 func buildRookSection(m *workspace.Manifest) string {
