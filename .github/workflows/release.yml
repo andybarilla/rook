@@ -61,11 +61,14 @@ jobs:
         if: matrix.os == 'linux'
         run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
 
-      - name: Install Wails CLI
-        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.11.0
+      - name: Install frontend deps
+        run: cd cmd/rook-gui/frontend && npm install
 
-      - name: Build GUI
-        run: wails build -production -tags webkit2_41 -ldflags "-s -w"
+      - name: Build frontend
+        run: cd cmd/rook-gui/frontend && npx vite build
+
+      - name: Build GUI binary
+        run: go build -tags "production,webkit2_41" -ldflags "-s -w" -o build/bin/rook-gui${{ matrix.os == 'windows' && '.exe' || '' }} ./cmd/rook-gui
 
       - name: Archive (unix)
         if: matrix.os != 'windows'
