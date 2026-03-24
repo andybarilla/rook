@@ -60,7 +60,7 @@ Single job — goreleaser handles everything including uploading `install.sh` vi
 
 Adapted from the jackdaw install script pattern.
 
-**Error handling:** `set -euo pipefail` at top. Failures (bad HTTP response, unsupported platform, missing tools) exit with a descriptive error message.
+**Error handling:** `set -eu` at top (POSIX sh — `pipefail` is not portable). Failures (bad HTTP response, unsupported platform, missing tools) exit with a descriptive error message.
 
 **Behavior:**
 1. Detect OS (`uname -s` -> `linux`, `darwin`) and arch (`uname -m` -> `amd64`, `arm64`). Exit on unsupported OS or arch.
