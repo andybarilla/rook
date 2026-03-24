@@ -1,0 +1,36 @@
+version: 2
+
+builds:
+  - main: ./cmd/rook
+    binary: rook
+    ldflags:
+      - -s -w
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+
+archives:
+  - formats: ["tar.gz"]
+    name_template: "rook_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - none*
+    format_overrides:
+      - goos: windows
+        formats: ["zip"]
+
+checksum:
+  name_template: checksums.txt
+
+release:
+  extra_files:
+    - glob: install.sh
+
+changelog:
+  disable: true
