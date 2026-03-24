@@ -21,7 +21,50 @@ func SanitizeScript(content []byte) ([]byte, []ScriptChange) {
 	// Rule 1: Remove wait loops (while/sleep/done blocks with preceding comments/echos)
 	lines, changes = removeWaitLoops(lines, changes)
 
+	// Rule 2: Remove keep-alive commands
+	lines, changes, _ = removeKeepAlive(lines, changes)
+
 	return []byte(strings.Join(lines, "\n")), changes
+}
+
+var keepAlivePatterns = []string{
+	"exec sleep infinity",
+	"sleep infinity",
+	"exec tail -f /dev/null",
+	"tail -f /dev/null",
+}
+
+func removeKeepAlive(lines []string, changes []ScriptChange) ([]string, []ScriptChange, bool) {
+	var result []string
+	removed := false
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		isKeepAlive := false
+		for _, pat := range keepAlivePatterns {
+			if trimmed == pat {
+				isKeepAlive = true
+				break
+			}
+		}
+		if isKeepAlive {
+			// Remove preceding contiguous comment and blank lines
+			for len(result) > 0 {
+				t := strings.TrimSpace(result[len(result)-1])
+				if strings.HasPrefix(t, "#") || t == "" {
+					result = result[:len(result)-1]
+				} else {
+					break
+				}
+			}
+			changes = append(changes, ScriptChange{
+				Description: "Removed keep-alive command (" + trimmed + ")",
+			})
+			removed = true
+			continue
+		}
+		result = append(result, line)
+	}
+	return result, changes, removed
 }
 
 // removeWaitLoops removes while loops whose body is only sleep commands,
