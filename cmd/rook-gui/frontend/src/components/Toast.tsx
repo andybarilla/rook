@@ -12,7 +12,7 @@ export function Toast({ message, type = 'info', onClose }: ToastProps) {
     return () => clearTimeout(timer)
   }, [onClose])
 
-  const bgColor = type === 'error' ? 'bg-red-600' : type === 'success' ? 'bg-green-600' : 'bg-rook-accent'
+  const bgColor = type === 'error' ? 'bg-rook-error' : type === 'success' ? 'bg-rook-success' : 'bg-rook-active'
 
   return (
     <div className={`fixed bottom-4 right-4 ${bgColor} text-white px-4 py-2 rounded-md shadow-lg text-xs z-50`}>

@@ -100,7 +100,7 @@ export function DiscoverDiffDialog({ open, diff, onApply, onCancel }: DiscoverDi
           <button
             onClick={() => onApply(Array.from(selectedNew), Array.from(selectedRemoved))}
             disabled={!canApply}
-            className="px-3 py-1.5 text-xs rounded bg-rook-accent hover:bg-rook-accent/80 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-3 py-1.5 text-xs rounded bg-rook-active hover:bg-rook-active-hover text-white disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Apply Changes
           </button>

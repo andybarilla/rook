@@ -46,7 +46,7 @@ export function RebuildDialog({ open, services, onRebuild, onSkip, onCancel }: R
           </button>
           <button
             onClick={onRebuild}
-            className="px-3 py-1.5 text-xs rounded bg-rook-accent hover:bg-rook-accent/80 text-white"
+            className="px-3 py-1.5 text-xs rounded bg-rook-active hover:bg-rook-active-hover text-white"
           >
             Rebuild
           </button>

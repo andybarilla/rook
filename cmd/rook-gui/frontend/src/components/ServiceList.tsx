@@ -14,7 +14,7 @@ export function ServiceList({ services, onStart, onStop, onRestart }: ServiceLis
   return (
     <div className="space-y-1.5">
       {services.map((svc) => (
-        <div key={svc.name} className="bg-rook-card rounded-md px-3 py-2.5 flex justify-between items-center">
+        <div key={svc.name} className={`bg-rook-card rounded-md px-3 py-2.5 flex justify-between items-center ${svc.status === 'running' || svc.status === 'starting' ? 'shadow-rook-glow-active' : ''}`}>
           <div className="flex items-center gap-2">
             <StatusDot status={svc.status} size="md" />
             {svc.hasBuild && svc.buildStatus && (
@@ -30,10 +30,10 @@ export function ServiceList({ services, onStart, onStop, onRestart }: ServiceLis
             {svc.status === 'running' || svc.status === 'starting' ? (
               <>
                 <ActionLink label="restart" onClick={() => onRestart(svc.name)} />
-                <ActionLink label="stop" onClick={() => onStop(svc.name)} color="text-rook-crashed" />
+                <ActionLink label="stop" onClick={() => onStop(svc.name)} color="text-rook-error" />
               </>
             ) : (
-              <ActionLink label="start" onClick={() => onStart(svc.name)} color="text-rook-running" />
+              <ActionLink label="start" onClick={() => onStart(svc.name)} color="text-rook-active" />
             )}
           </div>
         </div>

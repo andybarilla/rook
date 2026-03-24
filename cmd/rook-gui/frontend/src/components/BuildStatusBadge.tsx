@@ -10,7 +10,7 @@ export function BuildStatusBadge({ status, reason }: BuildStatusBadgeProps) {
 
   return (
     <span
-      className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-orange-500/20 text-orange-400 border border-orange-500/30"
+      className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-rook-attention/20 text-rook-attention border border-rook-attention/30"
       title={reason || 'Needs rebuild'}
     >
       build

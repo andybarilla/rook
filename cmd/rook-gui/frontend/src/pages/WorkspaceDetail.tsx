@@ -129,12 +129,12 @@ export function WorkspaceDetail({ name }: WorkspaceDetailProps) {
             onChange={(p) => handleStart(p)} />
           {hasRunning ? (
             <button onClick={() => window.go.api.WorkspaceAPI.StopWorkspace(name).then(refresh)}
-              className="bg-rook-crashed text-white px-3 py-1 rounded text-[11px]">Stop All</button>
+              className="bg-rook-error text-white px-3 py-1 rounded text-[11px]">Stop All</button>
           ) : (
             <button
               onClick={() => handleStart(activeProfile)}
               disabled={starting}
-              className="bg-rook-running text-rook-bg px-3 py-1 rounded text-[11px] font-semibold disabled:opacity-50"
+              className="bg-rook-active text-black px-3 py-1 rounded text-[11px] font-semibold disabled:opacity-50"
             >
               {starting ? 'Starting...' : 'Start'}
             </button>
@@ -144,7 +144,7 @@ export function WorkspaceDetail({ name }: WorkspaceDetailProps) {
       <div className="flex border-b border-rook-border">
         {(['services', 'logs', 'environment', 'builds', 'manifest'] as Tab[]).map(t => (
           <button key={t} onClick={() => setTab(t)}
-            className={`px-4 py-2 text-[11px] border-b-2 capitalize ${tab === t ? 'text-rook-text border-rook-accent font-semibold' : 'text-rook-muted border-transparent'}`}>
+            className={`px-4 py-2 text-[11px] border-b-2 capitalize ${tab === t ? 'text-rook-text border-rook-active font-semibold' : 'text-rook-muted border-transparent'}`}>
             {t}
           </button>
         ))}

@@ -4,11 +4,11 @@ interface StatusDotProps {
 }
 
 const colorMap: Record<string, string> = {
-  running: 'bg-rook-running',
-  starting: 'bg-rook-partial',
-  partial: 'bg-rook-partial',
-  crashed: 'bg-rook-crashed',
-  stopped: 'bg-rook-stopped',
+  running: 'bg-rook-active',
+  starting: 'bg-rook-attention',
+  partial: 'bg-rook-attention',
+  crashed: 'bg-rook-error',
+  stopped: 'bg-rook-idle',
 }
 
 export function StatusDot({ status, size = 'sm' }: StatusDotProps) {

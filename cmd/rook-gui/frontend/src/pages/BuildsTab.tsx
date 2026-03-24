@@ -32,7 +32,7 @@ export function BuildsTab({ workspaceName }: BuildsTabProps) {
   }
 
   if (error) {
-    return <div className="p-4 text-rook-crashed text-xs">Error: {error}</div>
+    return <div className="p-4 text-rook-error text-xs">Error: {error}</div>
   }
 
   if (!result || result.services.length === 0) {
@@ -73,9 +73,9 @@ export function BuildsTab({ workspaceName }: BuildsTabProps) {
 function StatusIcon({ status }: { status: BuildStatus['status'] }) {
   switch (status) {
     case 'up_to_date':
-      return <span className="text-rook-running">✅</span>
+      return <span className="text-rook-success">✅</span>
     case 'needs_rebuild':
-      return <span className="text-orange-400">⚠️</span>
+      return <span className="text-rook-attention">⚠️</span>
     default:
       return <span className="text-rook-muted">○</span>
   }
@@ -93,7 +93,7 @@ function StatusText({
       return <div className="text-rook-muted text-[10px]">Up to date</div>
     case 'needs_rebuild':
       return (
-        <div className="text-orange-400 text-[10px]">
+        <div className="text-rook-attention text-[10px]">
           Needs rebuild{reasons && reasons.length > 0 && ` (${reasons[0]})`}
         </div>
       )

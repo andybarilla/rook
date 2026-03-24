@@ -40,7 +40,7 @@ export function DiscoveryWizard({ onClose, onComplete }: DiscoveryWizardProps) {
                 className="w-full bg-rook-input text-rook-text border border-rook-border rounded px-3 py-2 text-sm mb-3"
                 onKeyDown={e => e.key === 'Enter' && handleDiscover()} />
               <button onClick={handleDiscover}
-                className="bg-rook-accent text-white px-4 py-2 rounded text-sm w-full">
+                className="bg-rook-active text-white px-4 py-2 rounded text-sm w-full">
                 Discover & Add
               </button>
             </>
@@ -50,7 +50,7 @@ export function DiscoveryWizard({ onClose, onComplete }: DiscoveryWizardProps) {
           )}
           {status === 'done' && result && (
             <>
-              <p className="text-rook-running text-sm mb-3">Workspace added!</p>
+              <p className="text-rook-success text-sm mb-3">Workspace added!</p>
               {result.source && <p className="text-rook-muted text-xs mb-2">Discovered from: {result.source}</p>}
               {result.services && Object.keys(result.services).length > 0 && (
                 <div className="space-y-1 mb-4">
@@ -63,12 +63,12 @@ export function DiscoveryWizard({ onClose, onComplete }: DiscoveryWizardProps) {
                 </div>
               )}
               <button onClick={() => { onComplete(); onClose() }}
-                className="bg-rook-accent text-white px-4 py-2 rounded text-sm w-full">Done</button>
+                className="bg-rook-active text-white px-4 py-2 rounded text-sm w-full">Done</button>
             </>
           )}
           {status === 'error' && (
             <>
-              <p className="text-rook-crashed text-sm mb-3">{error}</p>
+              <p className="text-rook-error text-sm mb-3">{error}</p>
               <button onClick={() => { setStatus('input'); setError(null) }}
                 className="text-rook-muted text-xs hover:underline">Try again</button>
             </>

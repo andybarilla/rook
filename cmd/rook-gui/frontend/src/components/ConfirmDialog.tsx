@@ -23,8 +23,8 @@ export function ConfirmDialog({
 
   const confirmBtnClass =
     variant === 'danger'
-      ? 'bg-red-600 hover:bg-red-700 text-white'
-      : 'bg-rook-accent hover:bg-rook-accent/80 text-white'
+      ? 'bg-rook-error hover:bg-rook-error/80 text-white'
+      : 'bg-rook-active hover:bg-rook-active-hover text-white'
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
