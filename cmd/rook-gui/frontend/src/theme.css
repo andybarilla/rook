@@ -57,8 +57,8 @@
   --color-rook-accent: #ff2d78;
 
   /* Glow effects */
-  --shadow-rook-glow-active: 0 0 12px #ff2d7810;
-  --shadow-rook-glow-attention: 0 0 12px #d4a01710;
+  --shadow-rook-glow-active: 0 0 12px #ff2d7840;
+  --shadow-rook-glow-attention: 0 0 12px #d4a01740;
 }
 
 *:not(.rounded-full) {
