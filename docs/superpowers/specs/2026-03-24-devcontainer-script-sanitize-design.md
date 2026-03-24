@@ -26,11 +26,11 @@ Takes raw script content, returns sanitized content and a list of changes made. 
 
 ### Sanitization rules (applied in order)
 
-1. **Remove wait loops**: Match `while` loops whose body is only `sleep` (with optional surrounding comment lines that describe the loop). Pattern: a block starting with `while [...]; do` (or `while ... ; do` on multiple lines) containing only `sleep` and ending with `done`. Include immediately preceding comment lines and any `echo` that describes the wait.
+1. **Remove wait loops**: Match single-line `while` loops whose body is only `sleep`, ending with `done`. Only the `while [...]; do` / `while ...; do` single-line form is matched. Contiguous comment lines (`#`) and `echo` lines immediately above the `while` keyword are removed with it.
 
-2. **Remove keep-alive commands**: Lines matching `exec sleep infinity`, `sleep infinity`, `exec tail -f /dev/null`, `tail -f /dev/null`. Include immediately preceding comment lines.
+2. **Remove keep-alive commands**: Lines matching `exec sleep infinity`, `sleep infinity`, `exec tail -f /dev/null`, `tail -f /dev/null`. Contiguous comment lines immediately above are removed with it.
 
-3. **Strip trailing `&`**: After keep-alive removal, any remaining command lines ending with ` &` have the ` &` stripped. Associated comments that say "in the background" get "in the background" removed.
+3. **Strip trailing `&`**: Only applied when Rule 2 removed at least one keep-alive. All remaining command lines ending with ` &` have the ` &` stripped. Comment lines containing "in the background" have that phrase removed.
 
 4. **Collapse blank lines**: Runs of 2+ blank lines become a single blank line. Trailing blank lines at end of file removed.
 
@@ -38,7 +38,7 @@ Each rule that fires appends a `ScriptChange` describing what happened.
 
 ### Integration in `init.go`
 
-Between reading the script (line 117) and writing it (line 121), call `SanitizeScript`. If changes were made:
+Between reading the script content and writing it to `.rook/scripts/`, call `SanitizeScript`. If changes were made:
 
 - Print each change: `  Sanitized .rook/scripts/<name>: <description>`
 - Replace the generic "Review" warning with: `"Verify .rook/scripts/%s — devcontainer patterns were automatically removed"`
