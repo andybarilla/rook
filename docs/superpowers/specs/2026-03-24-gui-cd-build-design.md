@@ -18,7 +18,7 @@ Runs after the `release` job (needs the GitHub Release to exist). Matrix across 
 
 | Runner | OS label | Arch | Platform deps |
 |--------|----------|------|---------------|
-| `ubuntu-latest` | `linux` | `amd64` | `libgtk-3-dev`, `libwebkit2gtk-4.1-dev` |
+| `ubuntu-24.04` | `linux` | `amd64` | `libgtk-3-dev`, `libwebkit2gtk-4.1-dev` |
 | `macos-13` | `darwin` | `amd64` | none (WebKit built-in) |
 | `macos-latest` | `darwin` | `arm64` | none (WebKit built-in) |
 | `windows-latest` | `windows` | `amd64` | none (WebView2 bundled by Wails) |
