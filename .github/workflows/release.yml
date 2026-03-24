@@ -30,6 +30,7 @@ jobs:
   gui:
     needs: release
     strategy:
+      fail-fast: false
       matrix:
         include:
           - runner: ubuntu-24.04
@@ -89,10 +90,8 @@ jobs:
     needs: gui
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-
       - name: Download GUI archives
-        run: gh release download "${{ github.ref_name }}" --pattern "rook-gui_*" --dir artifacts
+        run: gh release download "${{ github.ref_name }}" --repo "${{ github.repository }}" --pattern "rook-gui_*.tar.gz" --pattern "rook-gui_*.zip" --dir artifacts
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -100,6 +99,6 @@ jobs:
         run: cd artifacts && sha256sum rook-gui_* > checksums-gui.txt
 
       - name: Upload checksums
-        run: gh release upload --clobber "${{ github.ref_name }}" artifacts/checksums-gui.txt
+        run: gh release upload --clobber "${{ github.ref_name }}" --repo "${{ github.repository }}" artifacts/checksums-gui.txt
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
