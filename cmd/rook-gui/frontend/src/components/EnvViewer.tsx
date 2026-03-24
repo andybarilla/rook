@@ -24,7 +24,7 @@ export function EnvViewer({ workspaceName }: EnvViewerProps) {
       {serviceNames.map(svc => (
         <div key={svc}>
           <h3 className="text-xs uppercase tracking-wider text-rook-text-secondary mb-2">{svc}</h3>
-          <div className="bg-rook-card rounded-md overflow-hidden text-xs">
+          <div className="bg-rook-card overflow-hidden text-xs">
             <div className="grid grid-cols-[1fr_2fr_2fr] px-3 py-1.5 text-rook-muted border-b border-rook-border">
               <span>Key</span><span>Template</span><span>Resolved</span>
             </div>

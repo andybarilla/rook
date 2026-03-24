@@ -40,12 +40,12 @@ export function Dashboard({ workspaces }: DashboardProps) {
         {workspaces.length} workspaces · {runningCount} services running
       </p>
       <div className="grid grid-cols-3 gap-2 mb-4">
-        <StatCard label="Running" value={runningCount} color="text-rook-running" />
+        <StatCard label="Running" value={runningCount} color="text-rook-active" />
         <StatCard label="Stopped" value={stoppedCount} color="text-rook-muted" />
-        <StatCard label="Ports Used" value={ports.length} color="text-rook-partial" />
+        <StatCard label="Ports Used" value={ports.length} color="text-rook-attention" />
       </div>
       <p className="text-[10px] uppercase tracking-wider text-rook-text-secondary mb-2">Port Allocations</p>
-      <div className="bg-rook-card rounded-md text-xs overflow-hidden mb-4">
+      <div className="bg-rook-card text-xs overflow-hidden mb-4">
         <div className="grid grid-cols-[1fr_1fr_80px] px-2.5 py-2 text-rook-muted border-b border-rook-border">
           <span>Workspace</span><span>Service</span><span>Port</span>
         </div>
@@ -63,7 +63,7 @@ export function Dashboard({ workspaces }: DashboardProps) {
       </div>
       <button
         onClick={() => setShowResetConfirm(true)}
-        className="text-[10px] text-rook-crashed hover:underline"
+        className="text-[10px] text-rook-error hover:underline"
       >
         Reset Ports
       </button>
@@ -80,7 +80,8 @@ export function Dashboard({ workspaces }: DashboardProps) {
                 showToast('Failed to save settings', 'error')
               }
             }}
-            className="rounded border-rook-border"
+            className="border-rook-border"
+            style={{ accentColor: 'var(--color-rook-active)' }}
           />
           <span className="text-xs text-rook-text-secondary">Auto-rebuild on stale</span>
         </label>
@@ -101,7 +102,7 @@ export function Dashboard({ workspaces }: DashboardProps) {
 
 function StatCard({ label, value, color }: { label: string; value: number; color: string }) {
   return (
-    <div className="bg-rook-card rounded-md p-3 text-center">
+    <div className="bg-rook-card p-3 text-center">
       <div className={`text-xl font-bold ${color}`}>{value}</div>
       <div className="text-[10px] text-rook-muted">{label}</div>
     </div>

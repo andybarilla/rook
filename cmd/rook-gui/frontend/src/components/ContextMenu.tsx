@@ -29,7 +29,7 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
   return (
     <div
       ref={ref}
-      className="fixed bg-rook-card border border-rook-border rounded-md shadow-lg py-1 z-50"
+      className="fixed bg-rook-card border border-rook-border shadow-lg py-1 z-50"
       style={{ left: x, top: y }}
     >
       {items.map((item, i) => (
@@ -40,7 +40,7 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
             onClose()
           }}
           className={`block w-full text-left px-3 py-1.5 text-xs ${
-            item.danger ? 'text-rook-crashed hover:bg-red-500/10' : 'text-rook-text hover:bg-rook-border/50'
+            item.danger ? 'text-rook-error hover:bg-rook-error/10' : 'text-rook-text hover:bg-rook-border/50'
           }`}
         >
           {item.label}

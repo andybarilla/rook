@@ -9,7 +9,7 @@ export function ProfileSwitcher({ profiles, active, onChange }: ProfileSwitcherP
     <select
       value={active || ''}
       onChange={(e) => onChange(e.target.value)}
-      className="bg-rook-input text-rook-text-secondary border border-rook-border rounded px-2 py-1 text-[11px]"
+      className="bg-rook-input text-rook-text-secondary border border-rook-border px-2 py-1 text-[11px]"
     >
       {!active && <option value="">stopped</option>}
       {profiles.map((p) => (

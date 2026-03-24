@@ -1,24 +1,73 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('./assets/fonts/JetBrainsMono-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('./assets/fonts/JetBrainsMono-SemiBold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('./assets/fonts/JetBrainsMono-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme {
-  --color-rook-bg: #1a1a2e;
-  --color-rook-sidebar: #16162a;
-  --color-rook-card: #16162a;
-  --color-rook-input: #1e1e3a;
-  --color-rook-border: #2a2a4a;
-  --color-rook-text: #e0e0f0;
-  --color-rook-text-secondary: #a0a0c0;
-  --color-rook-muted: #6b7280;
-  --color-rook-running: #4ade80;
-  --color-rook-partial: #f59e0b;
-  --color-rook-crashed: #ef4444;
-  --color-rook-stopped: #6b7280;
-  --color-rook-accent: #6366f1;
+  /* Backgrounds */
+  --color-rook-bg: #000000;
+  --color-rook-sidebar: #111111;
+  --color-rook-card: #111111;
+  --color-rook-input: #0a0a0a;
+
+  /* Borders */
+  --color-rook-border: #222222;
+  --color-rook-border-active: #ff2d7830;
+  --color-rook-border-attention: #d4a01730;
+
+  /* Text */
+  --color-rook-text: #d4d4d4;
+  --color-rook-text-secondary: #999999;
+  --color-rook-muted: #666666;
+
+  /* Status / Accent */
+  --color-rook-active: #ff2d78;
+  --color-rook-active-hover: #ff4d8e;
+  --color-rook-attention: #d4a017;
+  --color-rook-success: #3fb950;
+  --color-rook-error: #f85149;
+  --color-rook-idle: #444444;
+
+  /* Legacy aliases for transition */
+  --color-rook-running: #ff2d78;
+  --color-rook-partial: #d4a017;
+  --color-rook-crashed: #f85149;
+  --color-rook-stopped: #444444;
+  --color-rook-accent: #ff2d78;
+
+  /* Glow effects */
+  --shadow-rook-glow-active: 0 0 12px #ff2d7840;
+  --shadow-rook-glow-attention: 0 0 12px #d4a01740;
+}
+
+*:not(.rounded-full) {
+  border-radius: 0 !important;
 }
 
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: 'JetBrains Mono', monospace;
   background-color: var(--color-rook-bg);
   color: var(--color-rook-text);
 }
