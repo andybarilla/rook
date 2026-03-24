@@ -17,11 +17,13 @@ builds:
         goarch: arm64
 
 archives:
-  - format: tar.gz
+  - formats: ["tar.gz"]
     name_template: "rook_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - none*
     format_overrides:
       - goos: windows
-        format: zip
+        formats: ["zip"]
 
 checksum:
   name_template: checksums.txt
