@@ -126,4 +126,103 @@ echo "ready"
 			t.Errorf("expected change description to mention wait loop, got %q", changes[0].Description)
 		}
 	})
+
+	t.Run("collapses_blank_lines", func(t *testing.T) {
+		input := `#!/bin/bash
+cd /workspaces/app
+
+# Wait for ready
+while [ -f /tmp/wait ]; do
+  sleep 1
+done
+
+
+
+echo "done"
+`
+		out, _ := SanitizeScript([]byte(input))
+		result := string(out)
+
+		if strings.Contains(result, "\n\n\n") {
+			t.Error("expected consecutive blank lines to be collapsed")
+		}
+		if !strings.Contains(result, "echo \"done\"") {
+			t.Error("expected content to be preserved")
+		}
+	})
+
+	t.Run("no_changes_for_clean_script", func(t *testing.T) {
+		input := `#!/bin/bash
+cd /workspaces/app
+make build
+make run
+`
+		out, changes := SanitizeScript([]byte(input))
+
+		if string(out) != input {
+			t.Errorf("expected clean script to be returned unchanged\ngot: %q\nwant: %q", string(out), input)
+		}
+		if len(changes) != 0 {
+			t.Errorf("expected no changes, got %d", len(changes))
+		}
+	})
+
+	t.Run("full_emrai_script", func(t *testing.T) {
+		input := `#!/bin/bash
+cd /workspaces/emrai
+
+# Wait for post-create.sh to finish (it creates this marker file)
+echo "Waiting for post-create to finish..."
+while [ ! -f /tmp/.devcontainer-ready ]; do
+  sleep 1
+done
+
+# Start dev servers in the background
+make dev-servers &
+
+# Keep the container alive
+exec sleep infinity
+`
+		out, changes := SanitizeScript([]byte(input))
+		result := string(out)
+
+		expected := "#!/bin/bash\ncd /workspaces/emrai\n\n# Start dev servers\nmake dev-servers\n"
+		if result != expected {
+			t.Errorf("expected:\n%s\ngot:\n%s", expected, result)
+		}
+		if len(changes) != 3 {
+			t.Fatalf("expected 3 changes, got %d: %v", len(changes), changes)
+		}
+	})
+
+	t.Run("multiple_wait_loops", func(t *testing.T) {
+		input := `#!/bin/bash
+while [ ! -f /tmp/a ]; do
+  sleep 1
+done
+echo "middle"
+while [ ! -f /tmp/b ]; do
+  sleep 2
+done
+echo "end"
+`
+		out, changes := SanitizeScript([]byte(input))
+		result := string(out)
+
+		if strings.Contains(result, "while") {
+			t.Error("expected both while loops to be removed")
+		}
+		if !strings.Contains(result, "echo \"middle\"") || !strings.Contains(result, "echo \"end\"") {
+			t.Error("expected non-loop content to be preserved")
+		}
+		waitChanges := 0
+		for _, c := range changes {
+			if strings.Contains(c.Description, "wait loop") {
+				waitChanges++
+			}
+		}
+		if waitChanges != 2 {
+			t.Errorf("expected 2 wait loop changes, got %d", waitChanges)
+		}
+	})
 }

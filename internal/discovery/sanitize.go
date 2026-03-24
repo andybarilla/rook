@@ -30,7 +30,34 @@ func SanitizeScript(content []byte) ([]byte, []ScriptChange) {
 		lines, changes = stripBackground(lines, changes)
 	}
 
+	// Rule 4: Collapse consecutive blank lines (only when changes were made)
+	if len(changes) > 0 {
+		lines = collapseBlankLines(lines)
+	}
+
 	return []byte(strings.Join(lines, "\n")), changes
+}
+
+func collapseBlankLines(lines []string) []string {
+	var result []string
+	prevBlank := false
+	for _, line := range lines {
+		blank := strings.TrimSpace(line) == ""
+		if blank && prevBlank {
+			continue
+		}
+		prevBlank = blank
+		result = append(result, line)
+	}
+	// Remove trailing blank lines
+	for len(result) > 0 && strings.TrimSpace(result[len(result)-1]) == "" {
+		result = result[:len(result)-1]
+	}
+	// Ensure trailing newline
+	if len(result) > 0 {
+		result = append(result, "")
+	}
+	return result
 }
 
 var keepAlivePatterns = []string{
@@ -122,10 +149,12 @@ func removeWaitLoops(lines []string, changes []ScriptChange) ([]string, []Script
 				}
 			}
 			if bodyEnd != -1 && onlySleep {
-				// Remove preceding contiguous comment and echo lines
+				// Remove preceding contiguous comment and wait-echo lines
 				for len(result) > 0 {
 					trimmed := strings.TrimSpace(result[len(result)-1])
-					if strings.HasPrefix(trimmed, "#") || strings.HasPrefix(trimmed, "echo ") {
+					isComment := strings.HasPrefix(trimmed, "#")
+					isWaitEcho := strings.HasPrefix(trimmed, "echo ") && strings.Contains(strings.ToLower(trimmed), "wait")
+					if isComment || isWaitEcho {
 						result = result[:len(result)-1]
 					} else {
 						break
