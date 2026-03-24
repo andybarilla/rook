@@ -67,3 +67,72 @@ func TestRewrite_URLWithEmptyHost(t *testing.T) {
 		t.Error("expected error for URL with empty host and no port")
 	}
 }
+
+func TestRewrite_HostPort(t *testing.T) {
+	result, err := envgen.Rewrite("localhost:5432", "postgres")
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := "{{.Host.postgres}}:{{.Port.postgres}}"
+	if result != expected {
+		t.Errorf("got %q, want %q", result, expected)
+	}
+}
+
+func TestRewrite_HostPortWithIP(t *testing.T) {
+	result, err := envgen.Rewrite("127.0.0.1:6379", "redis")
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := "{{.Host.redis}}:{{.Port.redis}}"
+	if result != expected {
+		t.Errorf("got %q, want %q", result, expected)
+	}
+}
+
+func TestRewrite_BareHost(t *testing.T) {
+	result, err := envgen.Rewrite("localhost", "app")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result != "{{.Host.app}}" {
+		t.Errorf("got %q", result)
+	}
+}
+
+func TestRewrite_BareIP(t *testing.T) {
+	result, err := envgen.Rewrite("127.0.0.1", "app")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result != "{{.Host.app}}" {
+		t.Errorf("got %q", result)
+	}
+}
+
+func TestRewrite_BareZeroIP(t *testing.T) {
+	result, err := envgen.Rewrite("0.0.0.0", "app")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result != "{{.Host.app}}" {
+		t.Errorf("got %q", result)
+	}
+}
+
+func TestRewrite_BarePort(t *testing.T) {
+	result, err := envgen.Rewrite("5432", "postgres")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result != "{{.Port.postgres}}" {
+		t.Errorf("got %q", result)
+	}
+}
+
+func TestRewrite_Unrecognized(t *testing.T) {
+	_, err := envgen.Rewrite("some_random_string", "app")
+	if err == nil {
+		t.Error("expected error for unrecognized value")
+	}
+}
