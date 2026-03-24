@@ -18,10 +18,9 @@ download() {
 }
 
 fetch_tag() {
-    tmpfile=$(mktemp)
-    download "https://api.github.com/repos/$REPO/releases/latest" "$tmpfile"
-    grep '"tag_name"' "$tmpfile" | cut -d'"' -f4
-    rm -f "$tmpfile"
+    tagfile="$1/release.json"
+    download "https://api.github.com/repos/$REPO/releases/latest" "$tagfile"
+    grep '"tag_name"' "$tagfile" | cut -d'"' -f4
 }
 
 install_binary() {
@@ -37,10 +36,12 @@ install_binary() {
 
     echo "Installing $name $tag for $os/$arch..."
 
-    download "$url" "$tmpdir/${name}.tar.gz"
-    tar -xzf "$tmpdir/${name}.tar.gz" -C "$tmpdir"
-    chmod +x "$tmpdir/$name"
-    mv "$tmpdir/$name" "$INSTALL_DIR/$name"
+    extract_dir="$tmpdir/${name}"
+    mkdir -p "$extract_dir"
+    download "$url" "$extract_dir/${name}.tar.gz"
+    tar -xzf "$extract_dir/${name}.tar.gz" -C "$extract_dir"
+    chmod +x "$extract_dir/$name"
+    mv "$extract_dir/$name" "$INSTALL_DIR/$name"
 
     echo "Installed $name to $INSTALL_DIR/$name"
 }
@@ -61,7 +62,10 @@ main() {
         *) echo "Unsupported architecture: $arch"; exit 1 ;;
     esac
 
-    tag=$(fetch_tag)
+    tmpdir=$(mktemp -d)
+    trap 'rm -rf "$tmpdir"' EXIT
+
+    tag=$(fetch_tag "$tmpdir")
     if [ -z "$tag" ]; then
         echo "Error: could not determine latest release"
         exit 1
@@ -71,15 +75,14 @@ main() {
 
     mkdir -p "$INSTALL_DIR"
 
-    tmpdir=$(mktemp -d)
-    trap 'rm -rf "$tmpdir"' EXIT
-
     install_binary "rook" "$version" "$tag" "$os" "$arch" "$tmpdir"
 
     # GUI install: prompt if interactive, or honor ROOK_GUI env var
     install_gui=false
     if [ "${ROOK_GUI:-}" = "1" ]; then
         install_gui=true
+    elif [ -n "${ROOK_GUI:-}" ]; then
+        install_gui=false
     elif [ -t 0 ]; then
         printf "Would you also like to install rook-gui? [y/N] "
         read -r answer
