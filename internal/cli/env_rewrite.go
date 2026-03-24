@@ -69,11 +69,6 @@ func runEnvRewrite(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("%q not found in any service's env_file", varName)
 	}
 
-	rewritten, err := envgen.Rewrite(matches[0].value, serviceName)
-	if err != nil {
-		return err
-	}
-
 	entry, regErr := cctx.registry.Get(ws.Name)
 	if regErr != nil {
 		return regErr
@@ -85,6 +80,10 @@ func runEnvRewrite(cmd *cobra.Command, args []string) error {
 	}
 
 	for _, m := range matches {
+		rewritten, err := envgen.Rewrite(m.value, serviceName)
+		if err != nil {
+			return err
+		}
 		svc := manifest.Services[m.svcName]
 		if svc.Environment == nil {
 			svc.Environment = make(map[string]string)

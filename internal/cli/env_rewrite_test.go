@@ -128,6 +128,26 @@ func TestEnvRewriteCmd_ErrorOnNoEnvFile(t *testing.T) {
 	}
 }
 
+func TestEnvRewriteCmd_ErrorOnUnrecognizedValue(t *testing.T) {
+	setupEnvRewriteWorkspace(t,
+		"MY_VAR=some_opaque_string\n",
+		&workspace.Manifest{
+			Name: "testws",
+			Type: workspace.TypeSingle,
+			Services: map[string]workspace.Service{
+				"app":      {Command: "node server.js", EnvFile: ".env"},
+				"postgres": {Image: "postgres:16", Ports: []int{5432}},
+			},
+		},
+	)
+
+	cmd := newEnvCmd()
+	cmd.SetArgs([]string{"rewrite", "MY_VAR", "postgres", "testws"})
+	if err := cmd.Execute(); err == nil {
+		t.Error("expected error for unrecognized value")
+	}
+}
+
 func TestEnvRewriteCmd_Idempotent(t *testing.T) {
 	wsDir, _ := setupEnvRewriteWorkspace(t,
 		"DATABASE_URL=postgres://user:pass@localhost:5432/mydb\n",
