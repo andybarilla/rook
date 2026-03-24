@@ -33,7 +33,7 @@ Add after the existing `release` job. The job needs `release` to complete first 
           - runner: macos-13
             os: darwin
             arch: amd64
-          - runner: macos-latest
+          - runner: macos-15
             os: darwin
             arch: arm64
           - runner: windows-latest
