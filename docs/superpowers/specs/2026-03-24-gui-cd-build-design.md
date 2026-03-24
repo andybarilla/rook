@@ -18,7 +18,7 @@ Runs after the `release` job (needs the GitHub Release to exist). Matrix across 
 
 | Runner | OS label | Arch | Platform deps |
 |--------|----------|------|---------------|
-| `ubuntu-latest` | `linux` | `amd64` | `libgtk-3-dev`, `libwebkit2gtk-4.0-dev` |
+| `ubuntu-latest` | `linux` | `amd64` | `libgtk-3-dev`, `libwebkit2gtk-4.1-dev` |
 | `macos-13` | `darwin` | `amd64` | none (WebKit built-in) |
 | `macos-latest` | `darwin` | `arm64` | none (WebKit built-in) |
 | `windows-latest` | `windows` | `amd64` | none (WebView2 bundled by Wails) |
@@ -30,14 +30,14 @@ Note: `macos-latest` resolves to Apple Silicon (arm64) runners. `macos-13` is ne
 1. `actions/checkout@v4`
 2. `actions/setup-go@v5` (go 1.22)
 3. `actions/setup-node@v4` (for frontend build)
-4. Install platform deps (Linux only): `sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev`
-5. Install Wails CLI: `go install github.com/wailsapp/wails/v2/cmd/wails@v2.9.2`
-6. `wails build -production -ldflags "-s -w"` from the repository root (where `wails.json` lives)
+4. Install platform deps (Linux only): `sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev`
+5. Install Wails CLI: `go install github.com/wailsapp/wails/v2/cmd/wails@v2.11.0`
+6. `wails build -production -tags webkit2_41 -ldflags "-s -w"` from the repository root (where `wails.json` lives). The `-tags webkit2_41` is needed on Linux for webkit2gtk 4.1 compatibility; it is harmless on other platforms.
 7. Built binary is at `build/bin/rook-gui` (`build/bin/rook-gui.exe` on Windows)
 8. Archive the binary:
    - Linux/macOS: `tar czf rook-gui_<version>_<os>_<arch>.tar.gz -C build/bin rook-gui`
    - Windows: zip `rook-gui_<version>_windows_<arch>.zip` containing `rook-gui.exe`
-9. Upload archive to the release via `gh release upload`
+9. Upload archive to the release via `gh release upload` (requires `GITHUB_TOKEN` / `GH_TOKEN` env var)
 
 **Version extraction:** Strip `v` prefix from the git tag (e.g., `v0.1.0` -> `0.1.0`), matching goreleaser convention.
 
@@ -74,6 +74,7 @@ After installing the CLI:
 
 - No `linux/arm64` GUI build (no ARM Linux GitHub runners available by default)
 - No Windows support in the install script (matches existing behavior — Windows users download zip manually)
+- No macOS code signing or notarization (Gatekeeper will warn on first launch; standard for unsigned dev tools)
 
 ## What Changes
 
