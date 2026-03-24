@@ -118,6 +118,8 @@ func newInitCmd() *cobra.Command {
 					if err != nil {
 						continue
 					}
+					// Sanitize devcontainer-specific patterns
+					content, scriptChanges := discovery.SanitizeScript(content)
 					if err := os.WriteFile(destPath, content, 0755); err != nil {
 						continue
 					}
@@ -128,7 +130,14 @@ func newInitCmd() *cobra.Command {
 					result.Services[name] = svc
 
 					fmt.Printf("  Copied %s to .rook/scripts/%s\n", rel, scriptName)
-					warns.add("Review .rook/scripts/%s and adjust for rook (e.g., remove devcontainer-specific wait loops)", scriptName)
+					if len(scriptChanges) > 0 {
+						for _, c := range scriptChanges {
+							fmt.Printf("  Sanitized .rook/scripts/%s: %s\n", scriptName, c.Description)
+						}
+						warns.add("Verify .rook/scripts/%s â devcontainer patterns were automatically removed", scriptName)
+					} else {
+						warns.add("Review .rook/scripts/%s and adjust for rook (e.g., remove devcontainer-specific wait loops)", scriptName)
+					}
 				}
 				wsName := filepath.Base(dir)
 				m := &workspace.Manifest{

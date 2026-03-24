@@ -121,13 +121,14 @@ sleep infinity
 		t.Errorf("expected script to be copied to .rook/scripts/start.sh, got error: %v", err)
 	}
 
-	// Verify script content was copied correctly
+	// Verify script content was sanitized (sleep infinity removed)
 	copiedContent, err := os.ReadFile(scriptPath)
 	if err != nil {
 		t.Fatalf("failed to read copied script: %v", err)
 	}
-	if string(copiedContent) != scriptContent {
-		t.Errorf("script content mismatch: got %q, want %q", string(copiedContent), scriptContent)
+	expectedContent := "#!/bin/sh\necho \"Starting devcontainer...\"\n"
+	if string(copiedContent) != expectedContent {
+		t.Errorf("script content mismatch: got %q, want %q", string(copiedContent), expectedContent)
 	}
 
 	// Verify .rook/.gitignore also exists (it should be created regardless)
