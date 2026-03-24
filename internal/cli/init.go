@@ -134,7 +134,7 @@ func newInitCmd() *cobra.Command {
 						for _, c := range scriptChanges {
 							fmt.Printf("  Sanitized .rook/scripts/%s: %s\n", scriptName, c.Description)
 						}
-						warns.add("Verify .rook/scripts/%s â devcontainer patterns were automatically removed", scriptName)
+						warns.add("Verify .rook/scripts/%s — devcontainer patterns were automatically removed", scriptName)
 					} else {
 						warns.add("Review .rook/scripts/%s and adjust for rook (e.g., remove devcontainer-specific wait loops)", scriptName)
 					}
