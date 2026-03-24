@@ -22,7 +22,13 @@ func SanitizeScript(content []byte) ([]byte, []ScriptChange) {
 	lines, changes = removeWaitLoops(lines, changes)
 
 	// Rule 2: Remove keep-alive commands
-	lines, changes, _ = removeKeepAlive(lines, changes)
+	var removedKeepAlive bool
+	lines, changes, removedKeepAlive = removeKeepAlive(lines, changes)
+
+	// Rule 3: Strip background operators when keep-alive was removed
+	if removedKeepAlive {
+		lines, changes = stripBackground(lines, changes)
+	}
 
 	return []byte(strings.Join(lines, "\n")), changes
 }
@@ -65,6 +71,31 @@ func removeKeepAlive(lines []string, changes []ScriptChange) ([]string, []Script
 		result = append(result, line)
 	}
 	return result, changes, removed
+}
+
+func stripBackground(lines []string, changes []ScriptChange) ([]string, []ScriptChange) {
+	var result []string
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		// Strip trailing & from commands
+		if strings.HasSuffix(trimmed, " &") && !strings.HasPrefix(trimmed, "#") {
+			cmd := strings.TrimSuffix(trimmed, " &")
+			indent := line[:len(line)-len(strings.TrimLeft(line, " \t"))]
+			result = append(result, indent+cmd)
+			changes = append(changes, ScriptChange{
+				Description: "Removed background operator from '" + cmd + "'",
+			})
+			continue
+		}
+		// Clean "in the background" from comments
+		if strings.HasPrefix(trimmed, "#") && strings.Contains(trimmed, "in the background") {
+			cleaned := strings.Replace(line, " in the background", "", 1)
+			result = append(result, cleaned)
+			continue
+		}
+		result = append(result, line)
+	}
+	return result, changes
 }
 
 // removeWaitLoops removes while loops whose body is only sleep commands,
