@@ -29,7 +29,7 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
   return (
     <div
       ref={ref}
-      className="fixed bg-rook-card border border-rook-border rounded-md shadow-lg py-1 z-50"
+      className="fixed bg-rook-card border border-rook-border shadow-lg py-1 z-50"
       style={{ left: x, top: y }}
     >
       {items.map((item, i) => (

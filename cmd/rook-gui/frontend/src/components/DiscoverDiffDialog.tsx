@@ -47,7 +47,7 @@ export function DiscoverDiffDialog({ open, diff, onApply, onCancel }: DiscoverDi
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/50" onClick={onCancel} />
-      <div className="relative bg-rook-card border border-rook-border rounded-lg p-4 max-w-md w-full mx-4 shadow-xl">
+      <div className="relative bg-rook-card border border-rook-border p-4 max-w-md w-full mx-4 shadow-xl">
         <h3 className="text-sm font-semibold text-rook-text mb-3">Re-scan Results</h3>
 
         {diff.newServices.length > 0 && (
@@ -60,7 +60,7 @@ export function DiscoverDiffDialog({ open, diff, onApply, onCancel }: DiscoverDi
                     type="checkbox"
                     checked={selectedNew.has(svc.name)}
                     onChange={() => toggleNew(svc.name)}
-                    className="rounded border-rook-border"
+                    className="border-rook-border"
                   />
                   <span className="font-medium">{svc.name}</span>
                   <span className="text-rook-muted">{svc.image || `build: ${svc.build}`}</span>
@@ -80,7 +80,7 @@ export function DiscoverDiffDialog({ open, diff, onApply, onCancel }: DiscoverDi
                     type="checkbox"
                     checked={selectedRemoved.has(svc.name)}
                     onChange={() => toggleRemoved(svc.name)}
-                    className="rounded border-rook-border"
+                    className="border-rook-border"
                   />
                   <span className="font-medium">{svc.name}</span>
                   <span className="text-rook-muted">({svc.reason})</span>
@@ -93,14 +93,14 @@ export function DiscoverDiffDialog({ open, diff, onApply, onCancel }: DiscoverDi
         <div className="flex justify-end gap-2 mt-4">
           <button
             onClick={onCancel}
-            className="px-3 py-1.5 text-xs rounded bg-rook-bg border border-rook-border text-rook-text-secondary hover:bg-rook-border/50"
+            className="px-3 py-1.5 text-xs bg-rook-bg border border-rook-border text-rook-text-secondary hover:bg-rook-border/50"
           >
             Cancel
           </button>
           <button
             onClick={() => onApply(Array.from(selectedNew), Array.from(selectedRemoved))}
             disabled={!canApply}
-            className="px-3 py-1.5 text-xs rounded bg-rook-active hover:bg-rook-active-hover text-white disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-3 py-1.5 text-xs bg-rook-active hover:bg-rook-active-hover text-white disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Apply Changes
           </button>

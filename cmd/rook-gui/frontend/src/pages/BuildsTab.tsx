@@ -54,7 +54,7 @@ export function BuildsTab({ workspaceName }: BuildsTabProps) {
         {result.services.map(svc => (
           <div
             key={svc.name}
-            className="bg-rook-card rounded-md px-3 py-2.5 flex justify-between items-center"
+            className="bg-rook-card px-3 py-2.5 flex justify-between items-center"
           >
             <div className="flex items-center gap-2">
               <StatusIcon status={svc.status} />

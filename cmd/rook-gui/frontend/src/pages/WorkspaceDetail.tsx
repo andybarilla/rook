@@ -121,7 +121,7 @@ export function WorkspaceDetail({ name }: WorkspaceDetailProps) {
           <button
             onClick={handleRescan}
             disabled={rescanning}
-            className="text-[11px] text-rook-muted hover:text-rook-text border border-rook-border px-2 py-1 rounded disabled:opacity-50"
+            className="text-[11px] text-rook-muted hover:text-rook-text border border-rook-border px-2 py-1 disabled:opacity-50"
           >
             {rescanning ? 'Scanning...' : 'Re-scan'}
           </button>
@@ -129,12 +129,12 @@ export function WorkspaceDetail({ name }: WorkspaceDetailProps) {
             onChange={(p) => handleStart(p)} />
           {hasRunning ? (
             <button onClick={() => window.go.api.WorkspaceAPI.StopWorkspace(name).then(refresh)}
-              className="bg-rook-error text-white px-3 py-1 rounded text-[11px]">Stop All</button>
+              className="bg-rook-error text-white px-3 py-1 text-[11px]">Stop All</button>
           ) : (
             <button
               onClick={() => handleStart(activeProfile)}
               disabled={starting}
-              className="bg-rook-active text-black px-3 py-1 rounded text-[11px] font-semibold disabled:opacity-50"
+              className="bg-rook-active text-black px-3 py-1 text-[11px] font-semibold disabled:opacity-50"
             >
               {starting ? 'Starting...' : 'Start'}
             </button>

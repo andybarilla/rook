@@ -29,19 +29,19 @@ export function ConfirmDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/50" onClick={onCancel} />
-      <div className="relative bg-rook-card border border-rook-border rounded-lg p-4 max-w-md w-full mx-4 shadow-xl">
+      <div className="relative bg-rook-card border border-rook-border p-4 max-w-md w-full mx-4 shadow-xl">
         <h3 className="text-sm font-semibold text-rook-text mb-2">{title}</h3>
         <p className="text-xs text-rook-muted mb-4">{message}</p>
         <div className="flex justify-end gap-2">
           <button
             onClick={onCancel}
-            className="px-3 py-1.5 text-xs rounded bg-rook-bg border border-rook-border text-rook-text-secondary hover:bg-rook-border/50"
+            className="px-3 py-1.5 text-xs bg-rook-bg border border-rook-border text-rook-text-secondary hover:bg-rook-border/50"
           >
             {cancelLabel}
           </button>
           <button
             onClick={onConfirm}
-            className={`px-3 py-1.5 text-xs rounded ${confirmBtnClass}`}
+            className={`px-3 py-1.5 text-xs ${confirmBtnClass}`}
           >
             {confirmLabel}
           </button>

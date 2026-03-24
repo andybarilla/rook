@@ -50,7 +50,7 @@ export function Sidebar({ workspaces, selected, onSelect, onAddWorkspace, onResc
               key={ws.name}
               onClick={() => onSelect(ws.name)}
               onContextMenu={(e) => handleContextMenu(e, ws.name)}
-              className={`w-full text-left rounded-md p-2.5 border-l-[3px] transition-colors ${borderColors[status]} ${isSelected ? 'bg-rook-input' : 'bg-transparent hover:bg-rook-input/50'} ${status === 'running' ? 'shadow-rook-glow-active' : status === 'partial' ? 'shadow-rook-glow-attention' : ''}`}
+              className={`w-full text-left p-2.5 border-l-[3px] transition-colors ${borderColors[status]} ${isSelected ? 'bg-rook-input' : 'bg-transparent hover:bg-rook-input/50'} ${status === 'running' ? 'shadow-rook-glow-active' : status === 'partial' ? 'shadow-rook-glow-attention' : ''}`}
             >
               <div className="text-rook-text font-semibold text-sm">{ws.name}</div>
               <div className="flex items-center gap-1 mt-0.5">
@@ -65,7 +65,7 @@ export function Sidebar({ workspaces, selected, onSelect, onAddWorkspace, onResc
       </div>
       <button
         onClick={onAddWorkspace}
-        className="border border-dashed border-rook-border rounded-md p-2.5 text-center text-rook-muted text-sm hover:border-rook-muted transition-colors"
+        className="border border-dashed border-rook-border p-2.5 text-center text-rook-muted text-sm hover:border-rook-muted transition-colors"
       >
         + Add Workspace
       </button>

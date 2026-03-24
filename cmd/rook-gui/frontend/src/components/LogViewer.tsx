@@ -6,7 +6,7 @@ interface LogViewerProps {
   services: string[]
 }
 
-const SERVICE_COLORS = ['text-rook-active', 'text-rook-active', 'text-rook-active', 'text-rook-active', 'text-rook-active', 'text-rook-active']
+const SERVICE_COLORS = ['text-rook-active', 'text-rook-attention', 'text-rook-text', 'text-rook-text-secondary', 'text-rook-active', 'text-rook-attention']
 
 export function LogViewer({ workspaceName, services }: LogViewerProps) {
   const [activeTab, setActiveTab] = useState<string>('')
@@ -61,7 +61,7 @@ export function LogViewer({ workspaceName, services }: LogViewerProps) {
       </div>
       <div className="px-4 py-1.5 border-b border-rook-border">
         <input type="text" placeholder="Filter logs..." value={filter} onChange={e => setFilter(e.target.value)}
-          className="w-full bg-rook-input text-rook-text-secondary border border-rook-border rounded px-2 py-1 text-xs" />
+          className="w-full bg-rook-input text-rook-text-secondary border border-rook-border px-2 py-1 text-xs" />
       </div>
       <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-auto px-4 py-2 font-mono text-[9px] leading-relaxed bg-rook-input">
         {filteredLines.map((l, i) => (
@@ -73,7 +73,7 @@ export function LogViewer({ workspaceName, services }: LogViewerProps) {
       </div>
       {!autoScroll && (
         <button onClick={() => { setAutoScroll(true); scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight }) }}
-          className="absolute bottom-4 right-4 bg-rook-active text-white text-xs px-3 py-1 rounded">
+          className="absolute bottom-4 right-4 bg-rook-active text-white text-xs px-3 py-1">
           Jump to bottom
         </button>
       )}

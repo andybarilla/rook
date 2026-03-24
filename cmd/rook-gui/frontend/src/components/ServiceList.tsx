@@ -14,7 +14,7 @@ export function ServiceList({ services, onStart, onStop, onRestart }: ServiceLis
   return (
     <div className="space-y-1.5">
       {services.map((svc) => (
-        <div key={svc.name} className={`bg-rook-card rounded-md px-3 py-2.5 flex justify-between items-center ${svc.status === 'running' || svc.status === 'starting' ? 'shadow-rook-glow-active' : ''}`}>
+        <div key={svc.name} className={`bg-rook-card px-3 py-2.5 flex justify-between items-center ${svc.status === 'running' || svc.status === 'starting' ? 'shadow-rook-glow-active' : ''}`}>
           <div className="flex items-center gap-2">
             <StatusDot status={svc.status} size="md" />
             {svc.hasBuild && svc.buildStatus && (
