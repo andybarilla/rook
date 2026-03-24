@@ -26,3 +26,79 @@ jobs:
           args: release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  gui:
+    needs: release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            os: linux
+            arch: amd64
+          - runner: macos-13
+            os: darwin
+            arch: amd64
+          - runner: macos-15
+            os: darwin
+            arch: arm64
+          - runner: windows-latest
+            os: windows
+            arch: amd64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Linux deps
+        if: matrix.os == 'linux'
+        run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
+
+      - name: Install Wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.11.0
+
+      - name: Build GUI
+        run: wails build -production -tags webkit2_41 -ldflags "-s -w"
+
+      - name: Archive (unix)
+        if: matrix.os != 'windows'
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          tar czf "rook-gui_${VERSION}_${{ matrix.os }}_${{ matrix.arch }}.tar.gz" -C build/bin rook-gui
+
+      - name: Archive (windows)
+        if: matrix.os == 'windows'
+        shell: pwsh
+        run: |
+          $VERSION = "${{ github.ref_name }}".TrimStart("v")
+          Compress-Archive -Path "build/bin/rook-gui.exe" -DestinationPath "rook-gui_${VERSION}_windows_${{ matrix.arch }}.zip"
+
+      - name: Upload to release
+        shell: bash
+        run: gh release upload --clobber "${{ github.ref_name }}" rook-gui_*
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  gui-checksums:
+    needs: gui
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Download GUI archives
+        run: gh release download "${{ github.ref_name }}" --repo "${{ github.repository }}" --pattern "rook-gui_*.tar.gz" --pattern "rook-gui_*.zip" --dir artifacts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate checksums
+        run: cd artifacts && sha256sum rook-gui_* > checksums-gui.txt
+
+      - name: Upload checksums
+        run: gh release upload --clobber "${{ github.ref_name }}" --repo "${{ github.repository }}" artifacts/checksums-gui.txt
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
