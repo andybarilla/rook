@@ -168,7 +168,6 @@ func TestEnvRewriteCmd_Idempotent(t *testing.T) {
 		},
 	)
 
-	// Run twice
 	for i := 0; i < 2; i++ {
 		cmd := newEnvCmd()
 		cmd.SetArgs([]string{"rewrite", "DATABASE_URL", "postgres", "testws"})
@@ -184,5 +183,48 @@ func TestEnvRewriteCmd_Idempotent(t *testing.T) {
 	expected := "postgres://user:pass@{{.Host.postgres}}:{{.Port.postgres}}/mydb"
 	if updated.Services["app"].Environment["DATABASE_URL"] != expected {
 		t.Errorf("got %q, want %q", updated.Services["app"].Environment["DATABASE_URL"], expected)
+	}
+}
+
+func TestEnvRewriteCmd_MultipleServicesWithEnvFile(t *testing.T) {
+	wsDir, _ := setupEnvRewriteWorkspace(t,
+		"DATABASE_URL=postgres://user:pass@localhost:5432/mydb\n",
+		&workspace.Manifest{
+			Name: "testws",
+			Type: workspace.TypeSingle,
+			Services: map[string]workspace.Service{
+				"app": {
+					Command: "node server.js",
+					Ports:   []int{3000},
+					EnvFile: ".env",
+				},
+				"worker": {
+					Command: "node worker.js",
+					EnvFile: ".env",
+				},
+				"postgres": {
+					Image: "postgres:16",
+					Ports: []int{5432},
+				},
+			},
+		},
+	)
+
+	cmd := newEnvCmd()
+	cmd.SetArgs([]string{"rewrite", "DATABASE_URL", "postgres", "testws"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+
+	updated, err := workspace.ParseManifest(filepath.Join(wsDir, "rook.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := "postgres://user:pass@{{.Host.postgres}}:{{.Port.postgres}}/mydb"
+	for _, svcName := range []string{"app", "worker"} {
+		got := updated.Services[svcName].Environment["DATABASE_URL"]
+		if got != expected {
+			t.Errorf("%s: got %q, want %q", svcName, got, expected)
+		}
 	}
 }
