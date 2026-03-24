@@ -17,22 +17,20 @@ rook env rewrite <VAR_NAME> <SERVICE_NAME> [workspace]
 ## Behavior
 
 1. Resolve the workspace (from arg or cwd).
-2. Find all services whose `env_file` contains `VAR_NAME`.
-3. If no services have it, error.
-4. If `SERVICE_NAME` doesn't exist in the workspace, error.
+2. Validate `SERVICE_NAME` exists in the workspace; error if not.
+3. Find all services whose `env_file` contains `VAR_NAME`. The `env_file` path is resolved relative to the workspace root directory.
+4. If no services have it, error.
 5. Read the var's value from the `.env` file.
-6. If the target service has multiple ports, prompt the user to pick which one.
-7. Detect the value type and rewrite:
-   - **URL** (contains `://`): parse with `net/url`, replace host and port in the original string
-   - **Host:Port** (matches `hostname:digits`): replace both components
-   - **Bare host** (localhost, 127.0.0.1, 0.0.0.0, IP addresses): replace with `{{.Host.service}}`
-   - **Bare port** (numeric string): replace with `{{.Port.service}}`
-   - If no host or port is detected, error with the raw value shown.
-8. For each service whose `env_file` contains the variable, add the rewritten value to `svc.Environment[VAR_NAME]` in the manifest.
-9. Write the updated manifest back to `rook.yaml`.
-10. Print what was done, e.g.: `app: DATABASE_URL = postgres://user:pass@{{.Host.postgres}}:{{.Port.postgres}}/db`
+6. Detect the value type and rewrite (see Value Detection below).
+7. For each service whose `env_file` contains the variable, set `svc.Environment[VAR_NAME]` to the rewritten value in the manifest. Initialize the map if nil. Overwrites silently if the key already exists.
+8. Write the updated manifest back to `rook.yaml`.
+9. Print what was done, e.g.: `app: DATABASE_URL = postgres://user:pass@{{.Host.postgres}}:{{.Port.postgres}}/db`
+
+The command is idempotent — running it twice with the same arguments produces the same result.
 
 ## Value Detection & Rewriting
+
+The rewrite function is pure: `Rewrite(value string, serviceName string) (string, error)`. It produces template tags, not resolved values.
 
 Three cases, checked in order:
 
@@ -57,26 +55,27 @@ localhost:5432 → {{.Host.postgres}}:{{.Port.postgres}}
 
 ### Bare value
 
-- Matches a hostname pattern (localhost, 127.0.0.1, 0.0.0.0, IP address): replace with `{{.Host.service}}`
+- Matches a hostname pattern (localhost, 127.0.0.1, 0.0.0.0, or any IPv4 address): replace with `{{.Host.service}}`
 - Is a numeric string: replace with `{{.Port.service}}`
 
-## Multi-Port Disambiguation
-
-When the target service exposes multiple ports, prompt interactively:
-
-```
-Service "app" exposes multiple ports: 8080, 3000
-Which port does API_URL use?
-  [1] 8080
-  [2] 3000
->
-```
-
-Single-port services skip the prompt.
+Note: Docker-compose service names used as hostnames (e.g., `postgres`, `db`) are not detected as bare hosts — the user should use the URL or host:port forms for those cases, which will match on the port component.
 
 ## Where the Rewritten Value Goes
 
 The rewritten value is added to the `environment` map of every service in `rook.yaml` whose `env_file` contains the variable. At runtime, inline environment values override env_file values, so the template-resolved value takes precedence while the original `.env` stays untouched.
+
+## CLI Restructuring
+
+The existing `rook env [workspace]` command becomes a parent command with two children:
+
+- `rook env [workspace]` — still works as before (default action prints resolved env vars, using Cobra's `RunE` on the parent)
+- `rook env rewrite <VAR_NAME> <SERVICE_NAME> [workspace]` — new subcommand
+
+No breaking change to existing usage.
+
+## YAML Formatting
+
+`WriteManifest` uses `yaml.Marshal` which rewrites the entire file. This may lose comments and custom formatting from hand-edited `rook.yaml` files. This is an existing limitation. A future improvement could use `yaml.Node` for targeted edits, but that's out of scope for this feature.
 
 ## Error Cases
 
@@ -91,6 +90,7 @@ The rewritten value is added to the `environment` map of every service in `rook.
 
 - New file: `internal/cli/env_rewrite.go` — command definition
 - New file: `internal/envgen/rewrite.go` — value detection and rewriting logic (pure function, testable)
-- Modify `internal/cli/env.go` — restructure as parent command with `env` (print) and `env rewrite` as subcommands
+- Modify `internal/cli/env.go` — add `rewrite` subcommand while keeping existing behavior as default
 - Uses existing: `envgen.ParseEnvFile()`, `workspace.ParseManifest()`, `workspace.WriteManifest()`
-- The rewrite logic is a pure function: `Rewrite(value string, serviceName string, port int) (string, error)` — takes the raw value and returns the rewritten string. All detection logic lives here.
+- The rewrite logic is a pure function: `Rewrite(value string, serviceName string) (string, error)` — takes the raw value and returns the rewritten string with template tags. All detection logic lives here.
+- Initialize `svc.Environment` map before writing if nil.
