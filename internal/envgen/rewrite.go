@@ -19,21 +19,19 @@ func Rewrite(value string, serviceName string) (string, error) {
 		return rewriteURL(value, hostTag, portTag)
 	}
 
-	// Host:Port — split on last colon, validate port side is numeric
-	if host, port, ok := splitHostPort(value); ok {
-		_ = host // validated by splitHostPort
-		_ = port
+	// Host:Port
+	if _, _, ok := splitHostPort(value); ok {
 		return hostTag + ":" + portTag, nil
-	}
-
-	// Bare port (numeric string)
-	if _, err := strconv.Atoi(value); err == nil {
-		return portTag, nil
 	}
 
 	// Bare host (localhost or IPv4)
 	if isKnownHost(value) {
 		return hostTag, nil
+	}
+
+	// Bare port (numeric string)
+	if _, err := strconv.Atoi(value); err == nil {
+		return portTag, nil
 	}
 
 	return "", fmt.Errorf("cannot detect host or port in value %q", value)
