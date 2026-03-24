@@ -9,36 +9,40 @@ import (
 )
 
 func newEnvCmd() *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "env [workspace]",
 		Short: "Print generated environment variables",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			cctx, err := newCLIContext()
-			if err != nil {
-				return err
-			}
-
-			ws, err := cctx.resolveAndLoadWorkspace(args, os.Stdin)
-			if err != nil {
-				return err
-			}
-
-			portMap := make(map[string]int)
-			for name := range ws.Services {
-				if result := cctx.portAlloc.Get(ws.Name, name); result.OK {
-					portMap[name] = result.Port
-				}
-			}
-			for name, svc := range ws.Services {
-				resolved, err := envgen.ResolveTemplates(svc.Environment, portMap)
-				if err != nil {
-					return err
-				}
-				for k, v := range resolved {
-					fmt.Printf("%s.%s: %s=%s\n", ws.Name, name, k, v)
-				}
-			}
-			return nil
-		},
+		RunE:  runEnvPrint,
 	}
+	cmd.AddCommand(newEnvRewriteCmd())
+	return cmd
+}
+
+func runEnvPrint(cmd *cobra.Command, args []string) error {
+	cctx, err := newCLIContext()
+	if err != nil {
+		return err
+	}
+
+	ws, err := cctx.resolveAndLoadWorkspace(args, os.Stdin)
+	if err != nil {
+		return err
+	}
+
+	portMap := make(map[string]int)
+	for name := range ws.Services {
+		if result := cctx.portAlloc.Get(ws.Name, name); result.OK {
+			portMap[name] = result.Port
+		}
+	}
+	for name, svc := range ws.Services {
+		resolved, err := envgen.ResolveTemplates(svc.Environment, portMap)
+		if err != nil {
+			return err
+		}
+		for k, v := range resolved {
+			fmt.Printf("%s.%s: %s=%s\n", ws.Name, name, k, v)
+		}
+	}
+	return nil
 }
