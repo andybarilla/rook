@@ -36,7 +36,7 @@ jobs:
           - runner: ubuntu-24.04
             os: linux
             arch: amd64
-          - runner: macos-13
+          - runner: macos-15-intel
             os: darwin
             arch: amd64
           - runner: macos-15
@@ -69,6 +69,8 @@ jobs:
 
       - name: Build GUI binary
         run: go build -tags "production,webkit2_41" -ldflags "-s -w" -o build/bin/rook-gui${{ matrix.os == 'windows' && '.exe' || '' }} ./cmd/rook-gui
+        env:
+          CGO_LDFLAGS: ${{ matrix.os == 'darwin' && '-framework UniformTypeIdentifiers' || '' }}
 
       - name: Archive (unix)
         if: matrix.os != 'windows'
