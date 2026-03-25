@@ -92,21 +92,8 @@ main() {
 
     install_binary "rook" "$version" "$tag" "$os" "$arch" "$tmpdir"
 
-    # GUI install: prompt if interactive, or honor ROOK_GUI env var
-    install_gui=false
-    if [ "${ROOK_GUI:-}" = "1" ]; then
-        install_gui=true
-    elif [ -n "${ROOK_GUI:-}" ]; then
-        install_gui=false
-    elif [ -t 0 ]; then
-        printf "Would you also like to install rook-gui? [y/N] "
-        read -r answer
-        case "$answer" in
-            [yY]|[yY][eE][sS]) install_gui=true ;;
-        esac
-    fi
-
-    if [ "$install_gui" = true ]; then
+    # GUI install: on by default, set ROOK_NO_GUI=1 to skip
+    if [ "${ROOK_NO_GUI:-}" != "1" ]; then
         install_binary "rook-gui" "$version" "$tag" "$os" "$arch" "$tmpdir"
 
         if [ "$os" = "linux" ]; then
