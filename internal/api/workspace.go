@@ -336,6 +336,13 @@ func (w *WorkspaceAPI) StartWorkspace(name, profile string, forceBuild bool) err
 		return err
 	}
 	w.activeProfiles[name] = profile
+
+	statuses, _ := w.orch.Status(*ws)
+	for svcName, status := range statuses {
+		if status == runner.StatusRunning {
+			w.startLogStream(name, svcName)
+		}
+	}
 	return nil
 }
 
@@ -345,6 +352,7 @@ func (w *WorkspaceAPI) StopWorkspace(name string) error {
 	if err != nil {
 		return err
 	}
+	w.stopAllLogStreams(name)
 	if err := w.orch.Down(context.Background(), *ws); err != nil {
 		return err
 	}
@@ -363,6 +371,7 @@ func (w *WorkspaceAPI) StartService(ws, svc string) error {
 		return err
 	}
 	w.emitter.Emit("service:status", StatusEvent{Workspace: ws, Service: svc, Status: runner.StatusRunning})
+	w.startLogStream(ws, svc)
 	return nil
 }
 
@@ -372,6 +381,7 @@ func (w *WorkspaceAPI) StopService(ws, svc string) error {
 	if err != nil {
 		return err
 	}
+	w.StopLogStream(ws, svc)
 	if err := w.orch.StopService(context.Background(), *wks, svc); err != nil {
 		return err
 	}
@@ -385,11 +395,13 @@ func (w *WorkspaceAPI) RestartService(ws, svc string) error {
 	if err != nil {
 		return err
 	}
+	w.StopLogStream(ws, svc)
 	w.emitter.Emit("service:status", StatusEvent{Workspace: ws, Service: svc, Status: runner.StatusStarting})
 	if err := w.orch.RestartService(context.Background(), *wks, svc); err != nil {
 		return err
 	}
 	w.emitter.Emit("service:status", StatusEvent{Workspace: ws, Service: svc, Status: runner.StatusRunning})
+	w.startLogStream(ws, svc)
 	return nil
 }
 
