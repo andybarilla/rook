@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"embed"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -62,6 +63,12 @@ func main() {
 		},
 		OnStartup: func(ctx context.Context) {
 			wsAPI.SetEmitter(&wailsEmitter{ctx: ctx})
+			// Reconnect already-running services and start log streaming
+			for _, entry := range reg.List() {
+				if err := wsAPI.ReconnectWorkspace(entry.Name); err != nil {
+				fmt.Printf("reconnect %s: %v\n", entry.Name, err)
+			}
+			}
 		},
 		Bind: []interface{}{
 			wsAPI,

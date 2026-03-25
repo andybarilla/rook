@@ -1,9 +1,12 @@
 package api_test
 
 import (
+	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/andybarilla/rook/internal/api"
 	"github.com/andybarilla/rook/internal/discovery"
@@ -519,6 +522,55 @@ services:
 	err := a.ApplyDiscovery("myproject", []string{"nonexistent"}, []string{})
 	if err == nil {
 		t.Error("expected error for nonexistent service name")
+	}
+}
+
+func TestStartLogStream_BuffersLines(t *testing.T) {
+	a := newTestAPI()
+	r := io.NopCloser(strings.NewReader("line one\nline two\nline three\n"))
+	a.StreamFromReader("ws", "svc", r)
+
+	time.Sleep(100 * time.Millisecond)
+
+	logs, err := a.GetLogs("ws", "svc", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(logs) != 3 {
+		t.Fatalf("expected 3 log lines, got %d", len(logs))
+	}
+	if logs[0].Line != "line one" {
+		t.Fatalf("expected 'line one', got %q", logs[0].Line)
+	}
+	if logs[2].Line != "line three" {
+		t.Fatalf("expected 'line three', got %q", logs[2].Line)
+	}
+}
+
+func TestStopLogStream_CancelsReader(t *testing.T) {
+	a := newTestAPI()
+	pr, pw := io.Pipe()
+	a.StreamFromReader("ws", "svc", pr)
+
+	pw.Write([]byte("hello\n"))
+	time.Sleep(50 * time.Millisecond)
+
+	a.StopLogStream("ws", "svc")
+	time.Sleep(50 * time.Millisecond)
+
+	pw.Close()
+
+	logs, _ := a.GetLogs("ws", "svc", 10)
+	if len(logs) != 1 {
+		t.Fatalf("expected 1 log line, got %d", len(logs))
+	}
+}
+
+func TestReconnectWorkspace_ErrorsWithNoRegistry(t *testing.T) {
+	a := newTestAPI()
+	err := a.ReconnectWorkspace("nonexistent")
+	if err == nil {
+		t.Fatal("expected error for unregistered workspace")
 	}
 }
 

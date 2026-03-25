@@ -1,11 +1,15 @@
 package api
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
+	"sync"
 
 	"gopkg.in/yaml.v3"
 
@@ -31,6 +35,8 @@ type WorkspaceAPI struct {
 	activeProfiles map[string]string
 	settingsPath   string
 	portsPath      string // path to ports.json
+	logMu          sync.Mutex
+	logCancels     map[string]context.CancelFunc
 }
 
 // NewWorkspaceAPI creates a new WorkspaceAPI with the given dependencies.
@@ -43,6 +49,7 @@ func NewWorkspaceAPI(reg registry.Registry, alloc ports.PortAllocator, orch *orc
 		logBuffer:      NewLogBuffer(10000),
 		emitter:        NoopEmitter{},
 		activeProfiles: make(map[string]string),
+		logCancels:     make(map[string]context.CancelFunc),
 	}
 }
 
@@ -57,6 +64,7 @@ func NewWorkspaceAPIWithSettings(reg registry.Registry, alloc ports.PortAllocato
 		emitter:        NoopEmitter{},
 		activeProfiles: make(map[string]string),
 		settingsPath:   settingsPath,
+		logCancels:     make(map[string]context.CancelFunc),
 	}
 }
 
@@ -72,6 +80,7 @@ func NewWorkspaceAPIFull(reg registry.Registry, alloc ports.PortAllocator, orch 
 		activeProfiles: make(map[string]string),
 		settingsPath:   settingsPath,
 		portsPath:      portsPath,
+		logCancels:     make(map[string]context.CancelFunc),
 	}
 }
 
@@ -88,6 +97,70 @@ func (w *WorkspaceAPI) BufferLog(ws, service, line string) {
 		Service:   service,
 		Line:      line,
 	})
+}
+
+func logKey(ws, svc string) string {
+	return ws + "/" + svc
+}
+
+// StreamFromReader starts a goroutine that reads lines from r and buffers them.
+func (w *WorkspaceAPI) StreamFromReader(ws, svc string, r io.ReadCloser) {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	w.logMu.Lock()
+	if existing, ok := w.logCancels[logKey(ws, svc)]; ok {
+		existing()
+	}
+	w.logCancels[logKey(ws, svc)] = cancel
+	w.logMu.Unlock()
+
+	go func() {
+		defer r.Close()
+		scanner := bufio.NewScanner(r)
+		for scanner.Scan() {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				w.BufferLog(ws, svc, scanner.Text())
+			}
+		}
+		w.logMu.Lock()
+		delete(w.logCancels, logKey(ws, svc))
+		w.logMu.Unlock()
+	}()
+}
+
+// startLogStream starts streaming logs for a service via the orchestrator.
+func (w *WorkspaceAPI) startLogStream(ws, svc string) {
+	reader, err := w.orch.StreamServiceLogs(ws, svc)
+	if err != nil {
+		return
+	}
+	w.StreamFromReader(ws, svc, reader)
+}
+
+// StopLogStream cancels an active log stream for a service.
+func (w *WorkspaceAPI) StopLogStream(ws, svc string) {
+	w.logMu.Lock()
+	if cancel, ok := w.logCancels[logKey(ws, svc)]; ok {
+		cancel()
+		delete(w.logCancels, logKey(ws, svc))
+	}
+	w.logMu.Unlock()
+}
+
+// stopAllLogStreams cancels all active log streams for a workspace.
+func (w *WorkspaceAPI) stopAllLogStreams(ws string) {
+	w.logMu.Lock()
+	prefix := ws + "/"
+	for key, cancel := range w.logCancels {
+		if strings.HasPrefix(key, prefix) {
+			cancel()
+			delete(w.logCancels, key)
+		}
+	}
+	w.logMu.Unlock()
 }
 
 // ListWorkspaces returns a summary of all registered workspaces.
@@ -264,6 +337,13 @@ func (w *WorkspaceAPI) StartWorkspace(name, profile string, forceBuild bool) err
 		return err
 	}
 	w.activeProfiles[name] = profile
+
+	statuses, _ := w.orch.Status(*ws)
+	for svcName, status := range statuses {
+		if status == runner.StatusRunning {
+			w.startLogStream(name, svcName)
+		}
+	}
 	return nil
 }
 
@@ -273,6 +353,7 @@ func (w *WorkspaceAPI) StopWorkspace(name string) error {
 	if err != nil {
 		return err
 	}
+	w.stopAllLogStreams(name)
 	if err := w.orch.Down(context.Background(), *ws); err != nil {
 		return err
 	}
@@ -291,6 +372,7 @@ func (w *WorkspaceAPI) StartService(ws, svc string) error {
 		return err
 	}
 	w.emitter.Emit("service:status", StatusEvent{Workspace: ws, Service: svc, Status: runner.StatusRunning})
+	w.startLogStream(ws, svc)
 	return nil
 }
 
@@ -300,6 +382,7 @@ func (w *WorkspaceAPI) StopService(ws, svc string) error {
 	if err != nil {
 		return err
 	}
+	w.StopLogStream(ws, svc)
 	if err := w.orch.StopService(context.Background(), *wks, svc); err != nil {
 		return err
 	}
@@ -313,11 +396,13 @@ func (w *WorkspaceAPI) RestartService(ws, svc string) error {
 	if err != nil {
 		return err
 	}
+	w.StopLogStream(ws, svc)
 	w.emitter.Emit("service:status", StatusEvent{Workspace: ws, Service: svc, Status: runner.StatusStarting})
 	if err := w.orch.RestartService(context.Background(), *wks, svc); err != nil {
 		return err
 	}
 	w.emitter.Emit("service:status", StatusEvent{Workspace: ws, Service: svc, Status: runner.StatusRunning})
+	w.startLogStream(ws, svc)
 	return nil
 }
 
@@ -595,6 +680,24 @@ func (w *WorkspaceAPI) ApplyDiscovery(name string, newServices []string, removed
 
 	w.emitter.Emit("workspace:changed", WorkspaceChangedEvent{Workspace: name})
 
+	return nil
+}
+
+// ReconnectWorkspace discovers already-running services and starts log streaming for them.
+func (w *WorkspaceAPI) ReconnectWorkspace(name string) error {
+	ws, err := w.loadWorkspace(name)
+	if err != nil {
+		return err
+	}
+	if err := w.orch.Reconnect(*ws); err != nil {
+		return err
+	}
+	statuses, _ := w.orch.Status(*ws)
+	for svcName, status := range statuses {
+		if status == runner.StatusRunning {
+			w.startLogStream(name, svcName)
+		}
+	}
 	return nil
 }
 
