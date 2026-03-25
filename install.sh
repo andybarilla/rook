@@ -46,6 +46,21 @@ install_binary() {
     echo "Installed $name to $INSTALL_DIR/$name"
 }
 
+install_desktop_entry() {
+    desktop_dir="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+    mkdir -p "$desktop_dir"
+    cat > "$desktop_dir/rook-gui.desktop" << DESKTOP
+[Desktop Entry]
+Name=Rook
+Comment=Local development workspace manager
+Exec=$INSTALL_DIR/rook-gui
+Type=Application
+Categories=Development;Utility;
+StartupNotify=true
+DESKTOP
+    echo "Installed desktop entry to $desktop_dir/rook-gui.desktop"
+}
+
 main() {
     os=$(uname -s | tr '[:upper:]' '[:lower:]')
     arch=$(uname -m)
@@ -93,6 +108,10 @@ main() {
 
     if [ "$install_gui" = true ]; then
         install_binary "rook-gui" "$version" "$tag" "$os" "$arch" "$tmpdir"
+
+        if [ "$os" = "linux" ]; then
+            install_desktop_entry
+        fi
     fi
 
     # Check PATH
