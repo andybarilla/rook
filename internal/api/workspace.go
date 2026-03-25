@@ -1,11 +1,14 @@
 package api
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
+	"sync"
 
 	"gopkg.in/yaml.v3"
 
@@ -31,6 +34,8 @@ type WorkspaceAPI struct {
 	activeProfiles map[string]string
 	settingsPath   string
 	portsPath      string // path to ports.json
+	logMu          sync.Mutex
+	logCancels     map[string]context.CancelFunc
 }
 
 // NewWorkspaceAPI creates a new WorkspaceAPI with the given dependencies.
@@ -43,6 +48,7 @@ func NewWorkspaceAPI(reg registry.Registry, alloc ports.PortAllocator, orch *orc
 		logBuffer:      NewLogBuffer(10000),
 		emitter:        NoopEmitter{},
 		activeProfiles: make(map[string]string),
+		logCancels:     make(map[string]context.CancelFunc),
 	}
 }
 
@@ -57,6 +63,7 @@ func NewWorkspaceAPIWithSettings(reg registry.Registry, alloc ports.PortAllocato
 		emitter:        NoopEmitter{},
 		activeProfiles: make(map[string]string),
 		settingsPath:   settingsPath,
+		logCancels:     make(map[string]context.CancelFunc),
 	}
 }
 
@@ -72,6 +79,7 @@ func NewWorkspaceAPIFull(reg registry.Registry, alloc ports.PortAllocator, orch 
 		activeProfiles: make(map[string]string),
 		settingsPath:   settingsPath,
 		portsPath:      portsPath,
+		logCancels:     make(map[string]context.CancelFunc),
 	}
 }
 
@@ -88,6 +96,70 @@ func (w *WorkspaceAPI) BufferLog(ws, service, line string) {
 		Service:   service,
 		Line:      line,
 	})
+}
+
+func logKey(ws, svc string) string {
+	return ws + "/" + svc
+}
+
+// StreamFromReader starts a goroutine that reads lines from r and buffers them.
+func (w *WorkspaceAPI) StreamFromReader(ws, svc string, r io.ReadCloser) {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	w.logMu.Lock()
+	if existing, ok := w.logCancels[logKey(ws, svc)]; ok {
+		existing()
+	}
+	w.logCancels[logKey(ws, svc)] = cancel
+	w.logMu.Unlock()
+
+	go func() {
+		defer r.Close()
+		scanner := bufio.NewScanner(r)
+		for scanner.Scan() {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				w.BufferLog(ws, svc, scanner.Text())
+			}
+		}
+		w.logMu.Lock()
+		delete(w.logCancels, logKey(ws, svc))
+		w.logMu.Unlock()
+	}()
+}
+
+// startLogStream starts streaming logs for a service via the orchestrator.
+func (w *WorkspaceAPI) startLogStream(ws, svc string) {
+	reader, err := w.orch.StreamServiceLogs(ws, svc)
+	if err != nil {
+		return
+	}
+	w.StreamFromReader(ws, svc, reader)
+}
+
+// StopLogStream cancels an active log stream for a service.
+func (w *WorkspaceAPI) StopLogStream(ws, svc string) {
+	w.logMu.Lock()
+	if cancel, ok := w.logCancels[logKey(ws, svc)]; ok {
+		cancel()
+		delete(w.logCancels, logKey(ws, svc))
+	}
+	w.logMu.Unlock()
+}
+
+// stopAllLogStreams cancels all active log streams for a workspace.
+func (w *WorkspaceAPI) stopAllLogStreams(ws string) {
+	w.logMu.Lock()
+	prefix := ws + "/"
+	for key, cancel := range w.logCancels {
+		if len(key) > len(prefix) && key[:len(prefix)] == prefix {
+			cancel()
+			delete(w.logCancels, key)
+		}
+	}
+	w.logMu.Unlock()
 }
 
 // ListWorkspaces returns a summary of all registered workspaces.
