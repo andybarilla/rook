@@ -682,6 +682,24 @@ func (w *WorkspaceAPI) ApplyDiscovery(name string, newServices []string, removed
 	return nil
 }
 
+// ReconnectWorkspace discovers already-running services and starts log streaming for them.
+func (w *WorkspaceAPI) ReconnectWorkspace(name string) error {
+	ws, err := w.loadWorkspace(name)
+	if err != nil {
+		return err
+	}
+	if err := w.orch.Reconnect(*ws); err != nil {
+		return err
+	}
+	statuses, _ := w.orch.Status(*ws)
+	for svcName, status := range statuses {
+		if status == runner.StatusRunning {
+			w.startLogStream(name, svcName)
+		}
+	}
+	return nil
+}
+
 // loadWorkspace reads the manifest from the registry path and converts to a Workspace.
 func (w *WorkspaceAPI) loadWorkspace(name string) (*workspace.Workspace, error) {
 	entry, err := w.registry.Get(name)

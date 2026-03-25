@@ -566,6 +566,14 @@ func TestStopLogStream_CancelsReader(t *testing.T) {
 	}
 }
 
+func TestReconnectWorkspace_ErrorsWithNoRegistry(t *testing.T) {
+	a := newTestAPI()
+	err := a.ReconnectWorkspace("nonexistent")
+	if err == nil {
+		t.Fatal("expected error for unregistered workspace")
+	}
+}
+
 func TestStartWorkspace_AcceptsForceBuild(t *testing.T) {
 	// Test that the signature accepts the forceBuild parameter
 	a := newTestAPI()
