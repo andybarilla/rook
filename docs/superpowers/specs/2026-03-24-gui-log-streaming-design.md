@@ -18,14 +18,14 @@ Add `cmdReadCloser` wrapper implementing `io.ReadCloser`. Holds the underlying r
 
 Add `StreamServiceLogs(wsName, serviceName string) (io.ReadCloser, error)`:
 - Looks up the handle from the internal handle map
-- Type-asserts the runner (`*runner.DockerRunner` or `*runner.ProcessRunner`)
-- Calls the appropriate `StreamLogs` method
-- For Docker, wraps result with `cmdReadCloser`
+- Branches on `handle.Type`:
+  - `"docker"`: type-assert `containerRunner` to `*runner.DockerRunner`, call `StreamLogs(handle)` which returns `(io.ReadCloser, *exec.Cmd, error)`, wrap with `cmdReadCloser`
+  - `"process"`: type-assert `processRunner` to `*runner.ProcessRunner`, call `StreamLogs(handle)` which returns `(io.ReadCloser, error)`, return directly
 - Returns `io.ReadCloser`
 
 ### api/workspace.go
 
-Add `logCancels map[string]context.CancelFunc` field (keyed by `"ws/svc"`).
+Add `logMu sync.Mutex` and `logCancels map[string]context.CancelFunc` field (keyed by `"ws/svc"`). Mutex protects concurrent access from streaming goroutines ending via EOF and new streams starting.
 
 Add `startLogStream(wsName, serviceName string)`:
 - Creates a cancellable context
@@ -41,7 +41,7 @@ Wire into lifecycle methods:
 - `StartService`: call `startLogStream` after successful start
 - `StartWorkspace`: call `startLogStream` for each service after `orch.Up`
 - `StopService` / `StopWorkspace`: call `stopLogStream`
-- New `ReconnectWorkspace(name string)`: calls `orch.Reconnect`, then `startLogStream` for each running service
+- New `ReconnectWorkspace(name string)`: calls `orch.Reconnect`, then calls `orch.Status(ws)` to discover which services are running, then calls `startLogStream` for each service with `StatusRunning`
 
 ## Data Flow
 
