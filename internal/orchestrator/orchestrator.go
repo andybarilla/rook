@@ -329,6 +329,43 @@ func (o *Orchestrator) Status(ws workspace.Workspace) (map[string]runner.Service
 	return result, nil
 }
 
+// StreamServiceLogs returns a streaming log reader for a running service.
+// Callers must Close() the returned reader when done.
+func (o *Orchestrator) StreamServiceLogs(wsName, serviceName string) (io.ReadCloser, error) {
+	o.mu.Lock()
+	handles, ok := o.handles[wsName]
+	if !ok {
+		o.mu.Unlock()
+		return nil, fmt.Errorf("no workspace %q in handles", wsName)
+	}
+	handle, ok := handles[serviceName]
+	o.mu.Unlock()
+	if !ok {
+		return nil, fmt.Errorf("no handle for service %q in workspace %q", serviceName, wsName)
+	}
+
+	switch handle.Type {
+	case "docker":
+		dr, ok := o.containerRunner.(*runner.DockerRunner)
+		if !ok {
+			return nil, fmt.Errorf("container runner does not support log streaming")
+		}
+		reader, cmd, err := dr.StreamLogs(handle)
+		if err != nil {
+			return nil, err
+		}
+		return runner.NewCmdReadCloser(reader, cmd), nil
+	case "process":
+		pr, ok := o.processRunner.(*runner.ProcessRunner)
+		if !ok {
+			return nil, fmt.Errorf("process runner does not support log streaming")
+		}
+		return pr.StreamLogs(handle)
+	default:
+		return nil, fmt.Errorf("unknown runner type %q for service %q", handle.Type, serviceName)
+	}
+}
+
 // Reconnect discovers already-running Docker containers and process services
 // for a workspace and populates the orchestrator's handle map so subsequent
 // operations (Up, Down, Status) are aware of them.

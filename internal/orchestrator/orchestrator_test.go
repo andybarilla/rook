@@ -389,6 +389,53 @@ func TestOrchestrator_Up_HealthyProcessPasses(t *testing.T) {
 	}
 }
 
+func TestOrchestrator_StreamServiceLogs_NoWorkspace(t *testing.T) {
+	mock := &mockRunner{}
+	orch := orchestrator.New(mock, mock, nil)
+	_, err := orch.StreamServiceLogs("nonexistent", "svc")
+	if err == nil {
+		t.Fatal("expected error for missing workspace")
+	}
+}
+
+func TestOrchestrator_StreamServiceLogs_NoHandle(t *testing.T) {
+	mock := &mockRunner{}
+	orch := orchestrator.New(mock, mock, nil)
+	ws := workspace.Workspace{
+		Name: "test", Root: t.TempDir(),
+		Services: map[string]workspace.Service{
+			"svc": {Command: "echo hi"},
+		},
+		Profiles: map[string][]string{"default": {"svc"}},
+	}
+	if err := orch.Up(context.Background(), ws, "default"); err != nil {
+		t.Fatal(err)
+	}
+	_, err := orch.StreamServiceLogs("test", "other")
+	if err == nil {
+		t.Fatal("expected error for missing handle")
+	}
+}
+
+func TestOrchestrator_StreamServiceLogs_UnsupportedRunner(t *testing.T) {
+	mock := &mockRunner{}
+	orch := orchestrator.New(mock, mock, nil)
+	ws := workspace.Workspace{
+		Name: "test", Root: t.TempDir(),
+		Services: map[string]workspace.Service{
+			"svc": {Command: "echo hi"},
+		},
+		Profiles: map[string][]string{"default": {"svc"}},
+	}
+	if err := orch.Up(context.Background(), ws, "default"); err != nil {
+		t.Fatal(err)
+	}
+	_, err := orch.StreamServiceLogs("test", "svc")
+	if err == nil {
+		t.Fatal("expected error for unsupported runner type")
+	}
+}
+
 func TestOrchestrator_Reconnect_SkipsDeadProcesses(t *testing.T) {
 	cmd := exec.Command("sleep", "60")
 	if err := cmd.Start(); err != nil {
