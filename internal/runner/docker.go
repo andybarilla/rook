@@ -328,7 +328,7 @@ func (r *DockerRunner) StreamLogs(handle RunHandle) (io.ReadCloser, *exec.Cmd, e
 	if !ok {
 		containerName = r.containerName(handle.ID)
 	}
-	cmd := exec.Command(ContainerRuntime, "logs", "-f", "--follow", containerName)
+	cmd := exec.Command(ContainerRuntime, "logs", "--follow", containerName)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return nil, nil, err

@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 
 	"gopkg.in/yaml.v3"
@@ -154,7 +155,7 @@ func (w *WorkspaceAPI) stopAllLogStreams(ws string) {
 	w.logMu.Lock()
 	prefix := ws + "/"
 	for key, cancel := range w.logCancels {
-		if len(key) > len(prefix) && key[:len(prefix)] == prefix {
+		if strings.HasPrefix(key, prefix) {
 			cancel()
 			delete(w.logCancels, key)
 		}
