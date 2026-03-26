@@ -108,7 +108,8 @@ export function WorkspaceDetail({ name }: WorkspaceDetailProps) {
   if (!detail) return <div className="p-4 text-rook-muted">Loading...</div>
 
   const hasRunning = detail.services.some(s => s.status === 'running' || s.status === 'starting')
-  const activeProfile = detail.activeProfile || detail.profiles[0] || 'all'
+  const profileNames = detail.profiles ? Object.keys(detail.profiles) : []
+  const activeProfile = detail.activeProfile || profileNames[0] || 'all'
 
   return (
     <div className="flex flex-col h-full">
@@ -125,7 +126,7 @@ export function WorkspaceDetail({ name }: WorkspaceDetailProps) {
           >
             {rescanning ? 'Scanning...' : 'Re-scan'}
           </button>
-          <ProfileSwitcher profiles={detail.profiles} active={detail.activeProfile}
+          <ProfileSwitcher profiles={profileNames} active={detail.activeProfile}
             onChange={(p) => handleStart(p)} />
           {hasRunning ? (
             <button onClick={() => window.go.api.WorkspaceAPI.StopWorkspace(name).then(refresh)}
