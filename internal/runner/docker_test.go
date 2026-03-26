@@ -336,6 +336,12 @@ func TestPrefixVolume(t *testing.T) {
 			volume:   "~/data:/data",
 			expected: "~/data:/data",
 		},
+		{
+			name:     "bare dot bind mount unchanged",
+			prefix:   "rook_myproject",
+			volume:   ".:/app:cached",
+			expected: ".:/app:cached",
+		},
 	}
 
 	for _, tt := range tests {
