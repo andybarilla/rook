@@ -4,7 +4,7 @@ builds:
   - main: ./cmd/rook
     binary: rook
     ldflags:
-      - -s -w
+      - -s -w -X github.com/andybarilla/rook/internal/cli.Version={{.Version}}
     goos:
       - linux
       - darwin
