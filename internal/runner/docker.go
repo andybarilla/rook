@@ -168,7 +168,7 @@ func (r *DockerRunner) Start(ctx context.Context, name string, svc workspace.Ser
 	}
 
 	for _, vol := range svc.Volumes {
-		args = append(args, "-v", vol)
+		args = append(args, "-v", PrefixVolume(r.prefix, vol))
 	}
 
 	args = append(args, imageTag)
@@ -356,6 +356,21 @@ func RemoveNetwork(name string) {
 	if err := exec.Command(ContainerRuntime, "network", "rm", name).Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: could not remove network %s: %v\n", name, err)
 	}
+}
+
+// PrefixVolume prefixes a named volume with the workspace prefix (e.g. "rook_myproject_pgdata:/data").
+// Bind mounts (paths starting with /, ./, ../, ~/) are returned unchanged.
+// Bare strings without a colon are returned unchanged.
+func PrefixVolume(prefix, vol string) string {
+	parts := strings.SplitN(vol, ":", 2)
+	if len(parts) < 2 {
+		return vol
+	}
+	src := parts[0]
+	if strings.HasPrefix(src, "/") || strings.HasPrefix(src, "./") || strings.HasPrefix(src, "..") || strings.HasPrefix(src, "~") {
+		return vol
+	}
+	return prefix + "_" + src + ":" + parts[1]
 }
 
 // RemoveVolumes removes named volumes by name. It is a no-op for nil or empty slices.

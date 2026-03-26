@@ -239,3 +239,111 @@ func TestRemoveVolumes_Empty(t *testing.T) {
 	runner.RemoveVolumes(nil)
 	runner.RemoveVolumes([]string{})
 }
+
+func TestDockerRunner_StartPrefixesNamedVolumes(t *testing.T) {
+	if !dockerAvailable() {
+		t.Skip("docker not available")
+	}
+
+	runtime := runner.ContainerRuntime
+	prefix := "rook_testprefix"
+	r := runner.NewDockerRunner(prefix)
+
+	containerName := prefix + "_volsvc"
+	expectedVolume := prefix + "_mydata"
+
+	// Clean up from any previous run
+	exec.Command(runtime, "rm", "-f", containerName).Run()
+	exec.Command(runtime, "volume", "rm", "-f", expectedVolume).Run()
+
+	svc := workspace.Service{
+		Image:   "alpine:latest",
+		Ports:   []int{8080},
+		Volumes: []string{"mydata:/data"},
+	}
+	ports := runner.PortMap{"volsvc": 18090}
+	handle, err := r.Start(context.Background(), "volsvc", svc, ports, "")
+	if err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+	defer func() {
+		r.Stop(handle)
+		exec.Command(runtime, "volume", "rm", "-f", expectedVolume).Run()
+	}()
+
+	// The container should have the prefixed volume
+	vols, err := runner.ContainerVolumes(containerName)
+	if err != nil {
+		t.Fatalf("ContainerVolumes failed: %v", err)
+	}
+	found := false
+	for _, v := range vols {
+		if v == expectedVolume {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("expected volume %q, got %v", expectedVolume, vols)
+	}
+}
+
+func TestPrefixVolume(t *testing.T) {
+	tests := []struct {
+		name     string
+		prefix   string
+		volume   string
+		expected string
+	}{
+		{
+			name:     "named volume gets prefixed",
+			prefix:   "rook_myproject",
+			volume:   "pgdata:/var/lib/postgresql/data",
+			expected: "rook_myproject_pgdata:/var/lib/postgresql/data",
+		},
+		{
+			name:     "relative bind mount unchanged",
+			prefix:   "rook_myproject",
+			volume:   "./data:/var/lib/postgresql/data",
+			expected: "./data:/var/lib/postgresql/data",
+		},
+		{
+			name:     "absolute bind mount unchanged",
+			prefix:   "rook_myproject",
+			volume:   "/tmp/data:/data",
+			expected: "/tmp/data:/data",
+		},
+		{
+			name:     "parent-relative bind mount unchanged",
+			prefix:   "rook_myproject",
+			volume:   "../data:/data",
+			expected: "../data:/data",
+		},
+		{
+			name:     "named volume with options",
+			prefix:   "rook_myproject",
+			volume:   "pgdata:/var/lib/postgresql/data:rw",
+			expected: "rook_myproject_pgdata:/var/lib/postgresql/data:rw",
+		},
+		{
+			name:     "bare volume no colon",
+			prefix:   "rook_myproject",
+			volume:   "pgdata",
+			expected: "pgdata",
+		},
+		{
+			name:     "home dir bind mount unchanged",
+			prefix:   "rook_myproject",
+			volume:   "~/data:/data",
+			expected: "~/data:/data",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := runner.PrefixVolume(tt.prefix, tt.volume)
+			if got != tt.expected {
+				t.Errorf("PrefixVolume(%q, %q) = %q, want %q", tt.prefix, tt.volume, got, tt.expected)
+			}
+		})
+	}
+}
