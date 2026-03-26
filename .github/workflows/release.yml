@@ -68,7 +68,9 @@ jobs:
         run: cd cmd/rook-gui/frontend && npx vite build
 
       - name: Build GUI binary
-        run: go build -tags "production,webkit2_41" -ldflags "-s -w" -o build/bin/rook-gui${{ matrix.os == 'windows' && '.exe' || '' }} ./cmd/rook-gui
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          go build -tags "production,webkit2_41" -ldflags "-s -w -X github.com/andybarilla/rook/internal/cli.Version=${VERSION}" -o build/bin/rook-gui${{ matrix.os == 'windows' && '.exe' || '' }} ./cmd/rook-gui
         env:
           CGO_LDFLAGS: ${{ matrix.os == 'darwin' && '-framework UniformTypeIdentifiers' || '' }}
 
