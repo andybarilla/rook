@@ -23,7 +23,7 @@ export interface WorkspaceDetail {
   name: string
   path: string
   services: ServiceInfo[]
-  profiles: string[]
+  profiles?: Record<string, string[]>
   groups?: Record<string, string[]>
   activeProfile?: string
 }
