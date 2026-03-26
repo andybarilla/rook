@@ -47,7 +47,7 @@ function AppContent() {
         onRemove={(name) => setRemoveTarget(name)}
       />
       <main className="flex-1 overflow-auto">
-        {selected === null ? <Dashboard workspaces={workspaces} /> : <WorkspaceDetail name={selected} />}
+        {selected === null ? <Dashboard workspaces={workspaces} /> : <WorkspaceDetail key={selected} name={selected} />}
       </main>
       {showWizard && <DiscoveryWizard onClose={() => setShowWizard(false)} onComplete={() => refresh()} />}
 

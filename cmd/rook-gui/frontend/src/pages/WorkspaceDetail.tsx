@@ -28,8 +28,12 @@ export function WorkspaceDetail({ name }: WorkspaceDetailProps) {
   const [showDiscoverDialog, setShowDiscoverDialog] = useState(false)
   const [rescanning, setRescanning] = useState(false)
 
+  const [error, setError] = useState<string | null>(null)
+
   const refresh = useCallback(() => {
-    window.go.api.WorkspaceAPI.GetWorkspace(name).then(setDetail).catch(console.error)
+    window.go.api.WorkspaceAPI.GetWorkspace(name)
+      .then((d) => { setDetail(d); setError(null) })
+      .catch((e) => { console.error(e); setError(String(e)) })
   }, [name])
 
   useEffect(() => {
@@ -105,6 +109,7 @@ export function WorkspaceDetail({ name }: WorkspaceDetailProps) {
     }
   }
 
+  if (error) return <div className="p-4 text-rook-error">{error}</div>
   if (!detail) return <div className="p-4 text-rook-muted">Loading...</div>
 
   const hasRunning = detail.services.some(s => s.status === 'running' || s.status === 'starting')
