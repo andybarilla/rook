@@ -359,7 +359,7 @@ func RemoveNetwork(name string) {
 }
 
 // PrefixVolume prefixes a named volume with the workspace prefix (e.g. "rook_myproject_pgdata:/data").
-// Bind mounts (paths starting with /, ./, ../, ~/) are returned unchanged.
+// Bind mounts (paths starting with /, ./, ../, ~/, or bare ".") are returned unchanged.
 // Bare strings without a colon are returned unchanged.
 func PrefixVolume(prefix, vol string) string {
 	parts := strings.SplitN(vol, ":", 2)
@@ -367,7 +367,7 @@ func PrefixVolume(prefix, vol string) string {
 		return vol
 	}
 	src := parts[0]
-	if strings.HasPrefix(src, "/") || strings.HasPrefix(src, "./") || strings.HasPrefix(src, "..") || strings.HasPrefix(src, "~") {
+	if src == "." || strings.HasPrefix(src, "/") || strings.HasPrefix(src, "./") || strings.HasPrefix(src, "..") || strings.HasPrefix(src, "~") {
 		return vol
 	}
 	return prefix + "_" + src + ":" + parts[1]
