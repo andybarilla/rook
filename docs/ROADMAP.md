@@ -16,7 +16,7 @@
 
 ### GUI
 
-- [ ] **Visual manifest editor** — Replace the Settings tab placeholder with a real manifest editor
+- [x] **Visual manifest editor** — Replace the Settings tab placeholder with a real manifest editor
 - [ ] **System tray** — Minimize to tray, show workspace status (blocked on Wails v3)
 
 ### Infrastructure
