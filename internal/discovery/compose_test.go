@@ -449,6 +449,44 @@ func TestComposeDiscoverer_BuildFromDedup_DifferentDockerfile(t *testing.T) {
 	}
 }
 
+func TestComposeDiscoverer_DiscoverFile(t *testing.T) {
+	d := NewComposeDiscoverer()
+
+	t.Run("parses_specific_file_ignoring_others", func(t *testing.T) {
+		dir := t.TempDir()
+		// Write two compose files with different services
+		os.WriteFile(filepath.Join(dir, "docker-compose.yml"), []byte("services:\n  postgres:\n    image: postgres:16\n"), 0644)
+		os.WriteFile(filepath.Join(dir, "docker-compose.dev.yml"), []byte("services:\n  app:\n    image: node:22\n    ports:\n      - \"3000:3000\"\n"), 0644)
+
+		// DiscoverFile should parse only the specified file
+		result, err := d.DiscoverFile(dir, filepath.Join(dir, "docker-compose.dev.yml"))
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if _, ok := result.Services["app"]; !ok {
+			t.Error("expected app service from docker-compose.dev.yml")
+		}
+		if _, ok := result.Services["postgres"]; ok {
+			t.Error("did not expect postgres from docker-compose.yml")
+		}
+	})
+
+	t.Run("resolves_paths_relative_to_project_root", func(t *testing.T) {
+		dir := t.TempDir()
+		os.MkdirAll(filepath.Join(dir, ".devcontainer"), 0755)
+		os.WriteFile(filepath.Join(dir, ".devcontainer", "docker-compose.yml"), []byte("services:\n  app:\n    build:\n      context: ..\n"), 0644)
+
+		result, err := d.DiscoverFile(dir, filepath.Join(dir, ".devcontainer", "docker-compose.yml"))
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		svc := result.Services["app"]
+		if svc.Build != "." {
+			t.Errorf("expected build context resolved to '.', got %q", svc.Build)
+		}
+	})
+}
+
 func TestComposeDiscoverer_BuildFromDedup_SameDockerfile(t *testing.T) {
 	dir := t.TempDir()
 	compose := `services:
