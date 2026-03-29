@@ -8,6 +8,7 @@
   "frontend:dev:serverUrl": "auto",
   "wailsjsdir": "./frontend/src",
   "tags": "webkit2_41",
+  "icon": "../../build",
   "author": {
     "name": "Andy Barilla"
   }

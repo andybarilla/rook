@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 1024 1024" width="1024" height="1024" xmlns="http://www.w3.org/2000/svg">
+  <rect x="0" y="0" width="1024" height="1024" rx="220" ry="220" fill="#ff2d78"/>
+  <text x="512" y="525" text-anchor="middle" dominant-baseline="central"
+        font-family="'JetBrains Mono', monospace" font-weight="700" font-size="480"
+        fill="#000000">[R]</text>
+</svg>
