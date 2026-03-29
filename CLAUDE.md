@@ -41,7 +41,10 @@ go test ./internal/X/   # Test a single package
 ## CLI Usage
 
 ```bash
-rook init <path>              # Register workspace (auto-discovers from docker-compose)
+rook init <path>              # Initialize workspace (interactive discovery)
+rook init <path> --non-interactive  # Legacy non-interactive init
+rook init <path> --force      # Re-init, overwriting existing rook.yaml
+rook init <path> --add        # Add services to existing workspace
 rook up [workspace] [profile] # Start services (foreground with log streaming)
 rook up -d                    # Start detached
 rook up --build               # Force rebuild of services with Dockerfiles

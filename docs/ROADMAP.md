@@ -13,6 +13,7 @@
 
 - [x] **CLI command tests** — Integration tests for `down`, `restart`, `logs`, `env`, `list`, `status`, `ports` commands
 - [x] **Process service status** — `rook status` reports actual state for process services via PID file tracking
+- [ ] **Smart init** — Interactive multi-source discovery, local service helpers, LLM-assisted Dockerfile analysis
 
 ### GUI
 
