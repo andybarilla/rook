@@ -99,7 +99,6 @@ rook list                     # List registered workspaces
 
 - `rook status` for process services (currently shows "unknown" without a daemon)
 - CLI command tests for `down`, `restart`, `logs`, `env`, `list`, `status`, `ports`
-- GUI visual manifest editor (Settings tab is a placeholder)
 - GUI system tray (waiting for Wails v3)
 - File watching / live reload
 - `rookd` daemon for headless/remote management

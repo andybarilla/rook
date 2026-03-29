@@ -16,6 +16,8 @@ export function DiscoverWorkspace(arg1:string):Promise<api.DiscoverDiff>;
 
 export function GetEnv(arg1:string):Promise<Record<string, Array<api.EnvVar>>>;
 
+export function GetManifest(arg1:string):Promise<workspace.Manifest>;
+
 export function GetLogs(arg1:string,arg2:string,arg3:number):Promise<Array<api.LogLine>>;
 
 export function GetPorts():Promise<Array<ports.PortEntry>>;

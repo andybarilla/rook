@@ -305,6 +305,20 @@ func (w *WorkspaceAPI) RemoveWorkspace(name string) error {
 	return nil
 }
 
+// GetManifest reads and returns the raw manifest for editing.
+func (w *WorkspaceAPI) GetManifest(name string) (*Manifest, error) {
+	entry, err := w.registry.Get(name)
+	if err != nil {
+		return nil, err
+	}
+	manifestPath := filepath.Join(entry.Path, "rook.yaml")
+	m, err := workspace.ParseManifest(manifestPath)
+	if err != nil {
+		return nil, fmt.Errorf("loading manifest for %q: %w", name, err)
+	}
+	return m, nil
+}
+
 // SaveManifest writes a manifest to the workspace's rook.yaml file.
 func (w *WorkspaceAPI) SaveManifest(name string, manifest *Manifest) error {
 	entry, err := w.registry.Get(name)
@@ -312,7 +326,11 @@ func (w *WorkspaceAPI) SaveManifest(name string, manifest *Manifest) error {
 		return err
 	}
 	manifestPath := filepath.Join(entry.Path, "rook.yaml")
-	return workspace.WriteManifest(manifestPath, manifest)
+	if err := workspace.WriteManifest(manifestPath, manifest); err != nil {
+		return err
+	}
+	w.emitter.Emit("workspace:changed", WorkspaceChangedEvent{Workspace: name})
+	return nil
 }
 
 // StartWorkspace starts all services for the given profile.
