@@ -12,7 +12,7 @@
 ### CLI
 
 - [x] **CLI command tests** — Integration tests for `down`, `restart`, `logs`, `env`, `list`, `status`, `ports` commands
-- [ ] **Process service status** — `rook status` reports actual state for process services (currently shows "unknown" without a daemon)
+- [x] **Process service status** — `rook status` reports actual state for process services via PID file tracking
 
 ### GUI
 
