@@ -56,7 +56,7 @@ func (d *ComposeDiscoverer) Detect(dir string) bool {
 	return false
 }
 
-// Discover parses the Docker Compose file and returns discovered services.
+// Discover parses the first matching Docker Compose file and returns discovered services.
 func (d *ComposeDiscoverer) Discover(dir string) (*DiscoveryResult, error) {
 	var path string
 	for _, name := range composeFileNames {
@@ -69,6 +69,13 @@ func (d *ComposeDiscoverer) Discover(dir string) (*DiscoveryResult, error) {
 	if path == "" {
 		return nil, fmt.Errorf("no compose file found")
 	}
+	return d.DiscoverFile(dir, path)
+}
+
+// DiscoverFile parses a specific Docker Compose file and returns discovered services.
+// dir is the project root; composePath is the absolute path to the compose file.
+func (d *ComposeDiscoverer) DiscoverFile(dir, composePath string) (*DiscoveryResult, error) {
+	path := composePath
 
 	// Compose file dir — paths in the file are relative to this
 	composeDir := filepath.Dir(path)
