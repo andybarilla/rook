@@ -333,7 +333,7 @@ func (w *WorkspaceAPI) StartWorkspace(name, profile string, forceBuild bool) err
 		}
 	}
 
-	if err := w.orch.Up(context.Background(), *ws, profile); err != nil {
+	if _, err := w.orch.Up(context.Background(), *ws, profile); err != nil {
 		return err
 	}
 	w.activeProfiles[name] = profile
