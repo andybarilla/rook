@@ -105,6 +105,7 @@ declare global {
           GetPorts(): Promise<PortEntry[]>
           GetEnv(workspace: string): Promise<Record<string, any[]>>
           GetLogs(workspace: string, service: string, lines: number): Promise<LogLine[]>
+          GetManifest(name: string): Promise<any>
           PreviewManifest(manifest: any): Promise<string>
           SaveManifest(name: string, manifest: any): Promise<void>
           GetSettings(): Promise<Settings>

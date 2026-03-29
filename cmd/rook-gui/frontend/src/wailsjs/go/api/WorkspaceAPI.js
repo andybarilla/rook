@@ -26,6 +26,10 @@ export function GetEnv(arg1) {
   return window['go']['api']['WorkspaceAPI']['GetEnv'](arg1);
 }
 
+export function GetManifest(arg1) {
+  return window['go']['api']['WorkspaceAPI']['GetManifest'](arg1);
+}
+
 export function GetLogs(arg1, arg2, arg3) {
   return window['go']['api']['WorkspaceAPI']['GetLogs'](arg1, arg2, arg3);
 }

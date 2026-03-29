@@ -574,6 +574,146 @@ func TestReconnectWorkspace_ErrorsWithNoRegistry(t *testing.T) {
 	}
 }
 
+func TestGetManifest_ReturnsFullManifest(t *testing.T) {
+	dir := t.TempDir()
+	registryPath := filepath.Join(dir, "workspaces.json")
+
+	reg, err := registry.NewFileRegistry(registryPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wsDir := filepath.Join(dir, "myproject")
+	os.MkdirAll(wsDir, 0755)
+
+	manifest := &workspace.Manifest{
+		Name: "myproject",
+		Type: workspace.TypeMulti,
+		Services: map[string]workspace.Service{
+			"web": {
+				Command:    "npm start",
+				Ports:      []int{3000},
+				DependsOn:  []string{"db"},
+				EnvFile:    ".env",
+				WorkingDir: "/app",
+				Environment: map[string]string{
+					"DB_URL": "postgres://{{.Host.db}}:{{.Port.db}}/app",
+				},
+			},
+			"db": {
+				Image:   "postgres:16",
+				Volumes: []string{"pg-data:/var/lib/postgresql/data"},
+				Healthcheck: "pg_isready -U app",
+			},
+		},
+		Groups: map[string][]string{
+			"infra": {"db"},
+		},
+		Profiles: map[string][]string{
+			"default": {"*"},
+		},
+	}
+	manifestData, _ := yaml.Marshal(manifest)
+	os.WriteFile(filepath.Join(wsDir, "rook.yaml"), manifestData, 0644)
+
+	reg.Register("myproject", wsDir)
+
+	alloc := &stubPortAlloc{}
+	orch := orchestrator.New(nil, nil, nil)
+	a := api.NewWorkspaceAPI(reg, alloc, orch, nil)
+
+	got, err := a.GetManifest("myproject")
+	if err != nil {
+		t.Fatalf("GetManifest failed: %v", err)
+	}
+
+	if got.Name != "myproject" {
+		t.Errorf("expected name 'myproject', got %q", got.Name)
+	}
+	if len(got.Services) != 2 {
+		t.Errorf("expected 2 services, got %d", len(got.Services))
+	}
+	web := got.Services["web"]
+	if web.Command != "npm start" {
+		t.Errorf("expected command 'npm start', got %q", web.Command)
+	}
+	if web.EnvFile != ".env" {
+		t.Errorf("expected env_file '.env', got %q", web.EnvFile)
+	}
+	if web.WorkingDir != "/app" {
+		t.Errorf("expected working_dir '/app', got %q", web.WorkingDir)
+	}
+	db := got.Services["db"]
+	if len(db.Volumes) != 1 {
+		t.Errorf("expected 1 volume, got %d", len(db.Volumes))
+	}
+	if len(got.Groups) != 1 {
+		t.Errorf("expected 1 group, got %d", len(got.Groups))
+	}
+	if len(got.Profiles) != 1 {
+		t.Errorf("expected 1 profile, got %d", len(got.Profiles))
+	}
+}
+
+func TestGetManifest_SaveManifest_RoundTrip(t *testing.T) {
+	dir := t.TempDir()
+	registryPath := filepath.Join(dir, "workspaces.json")
+
+	reg, err := registry.NewFileRegistry(registryPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wsDir := filepath.Join(dir, "myproject")
+	os.MkdirAll(wsDir, 0755)
+
+	original := &workspace.Manifest{
+		Name: "myproject",
+		Type: workspace.TypeSingle,
+		Services: map[string]workspace.Service{
+			"app": {Command: "go run .", Ports: []int{8080}},
+		},
+	}
+	manifestData, _ := yaml.Marshal(original)
+	os.WriteFile(filepath.Join(wsDir, "rook.yaml"), manifestData, 0644)
+
+	reg.Register("myproject", wsDir)
+
+	alloc := &stubPortAlloc{}
+	orch := orchestrator.New(nil, nil, nil)
+	a := api.NewWorkspaceAPI(reg, alloc, orch, nil)
+
+	// Get, modify, save, get again
+	got, err := a.GetManifest("myproject")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	svc := got.Services["app"]
+	svc.Ports = []int{8080, 9090}
+	got.Services["app"] = svc
+	got.Services["db"] = workspace.Service{Image: "postgres:16"}
+
+	if err := a.SaveManifest("myproject", got); err != nil {
+		t.Fatalf("SaveManifest failed: %v", err)
+	}
+
+	got2, err := a.GetManifest("myproject")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(got2.Services) != 2 {
+		t.Errorf("expected 2 services after save, got %d", len(got2.Services))
+	}
+	if len(got2.Services["app"].Ports) != 2 {
+		t.Errorf("expected 2 ports, got %d", len(got2.Services["app"].Ports))
+	}
+	if got2.Services["db"].Image != "postgres:16" {
+		t.Errorf("expected db image 'postgres:16', got %q", got2.Services["db"].Image)
+	}
+}
+
 func TestStartWorkspace_AcceptsForceBuild(t *testing.T) {
 	// Test that the signature accepts the forceBuild parameter
 	a := newTestAPI()
