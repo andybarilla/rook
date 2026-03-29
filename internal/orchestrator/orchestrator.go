@@ -15,6 +15,13 @@ import (
 	"github.com/andybarilla/rook/internal/workspace"
 )
 
+// UpResult contains the result of an Up operation.
+type UpResult struct {
+	Started []string // Services that were started
+	Skipped []string // Services already running (skipped)
+	Stopped []string // Services stopped (profile switch)
+}
+
 // Orchestrator manages the lifecycle of workspace services, handling
 // dependency ordering, port allocation, and incremental profile switching.
 type Orchestrator struct {
@@ -37,15 +44,17 @@ func New(containerRunner, processRunner runner.Runner, portAllocator ports.PortA
 
 // Up starts the services for the given profile, performing incremental
 // profile switching by only starting new services and stopping removed ones.
-func (o *Orchestrator) Up(ctx context.Context, ws workspace.Workspace, profileName string) error {
+func (o *Orchestrator) Up(ctx context.Context, ws workspace.Workspace, profileName string) (UpResult, error) {
+	result := UpResult{}
+
 	services, err := profile.Resolve(ws, profileName)
 	if err != nil {
-		return fmt.Errorf("resolving profile: %w", err)
+		return result, fmt.Errorf("resolving profile: %w", err)
 	}
 
 	order, err := TopoSort(ws.Services, services)
 	if err != nil {
-		return fmt.Errorf("sorting dependencies: %w", err)
+		return result, fmt.Errorf("sorting dependencies: %w", err)
 	}
 
 	portMap := make(runner.PortMap)
@@ -56,13 +65,13 @@ func (o *Orchestrator) Up(ctx context.Context, ws workspace.Workspace, profileNa
 				if svc.PinPort > 0 {
 					port, err := o.portAllocator.AllocatePinned(ws.Name, name, svc.PinPort)
 					if err != nil {
-						return fmt.Errorf("pinning port for %s: %w", name, err)
+						return result, fmt.Errorf("pinning port for %s: %w", name, err)
 					}
 					portMap[name] = port
 				} else {
 					port, err := o.portAllocator.Allocate(ws.Name, name)
 					if err != nil {
-						return fmt.Errorf("allocating port for %s: %w", name, err)
+						return result, fmt.Errorf("allocating port for %s: %w", name, err)
 					}
 					portMap[name] = port
 				}
@@ -99,6 +108,7 @@ func (o *Orchestrator) Up(ctx context.Context, ws workspace.Workspace, profileNa
 			o.mu.Lock()
 			delete(o.handles[ws.Name], name)
 			o.mu.Unlock()
+			result.Stopped = append(result.Stopped, name)
 		}
 	}
 
@@ -108,6 +118,7 @@ func (o *Orchestrator) Up(ctx context.Context, ws workspace.Workspace, profileNa
 		_, alreadyRunning := o.handles[ws.Name][name]
 		o.mu.Unlock()
 		if alreadyRunning {
+			result.Skipped = append(result.Skipped, name)
 			continue
 		}
 
@@ -121,7 +132,7 @@ func (o *Orchestrator) Up(ctx context.Context, ws workspace.Workspace, profileNa
 
 		handle, err := r.Start(ctx, name, svc, portMap, ws.Root)
 		if err != nil {
-			return fmt.Errorf("starting %s: %w", name, err)
+			return result, fmt.Errorf("starting %s: %w", name, err)
 		}
 
 		o.mu.Lock()
@@ -145,7 +156,7 @@ func (o *Orchestrator) Up(ctx context.Context, ws workspace.Workspace, profileNa
 				}
 				logReader.Close()
 			}
-			return fmt.Errorf("service %s crashed immediately after starting%s", name, lastLogs)
+			return result, fmt.Errorf("service %s crashed immediately after starting%s", name, lastLogs)
 		}
 
 		// Wait for health check if defined
@@ -155,14 +166,16 @@ func (o *Orchestrator) Up(ctx context.Context, ws workspace.Workspace, profileNa
 				hctx, hcancel := context.WithTimeout(ctx, cfg.Timeout)
 				if waitErr := health.WaitUntilHealthy(hctx, check, cfg.Interval); waitErr != nil {
 					hcancel()
-					return fmt.Errorf("health check failed for %s: %w", name, waitErr)
+					return result, fmt.Errorf("health check failed for %s: %w", name, waitErr)
 				}
 				hcancel()
 			}
 		}
+
+		result.Started = append(result.Started, name)
 	}
 
-	return nil
+	return result, nil
 }
 
 // Down stops all services in the given workspace.

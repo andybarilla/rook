@@ -55,7 +55,8 @@ func TestOrchestrator_Up(t *testing.T) {
 		Profiles: map[string][]string{"default": {"postgres", "app"}},
 	}
 	orch := orchestrator.New(mock, mock, nil)
-	if err := orch.Up(context.Background(), ws, "default"); err != nil {
+	result, err := orch.Up(context.Background(), ws, "default")
+	if err != nil {
 		t.Fatal(err)
 	}
 	if len(mock.started) != 2 {
@@ -63,6 +64,12 @@ func TestOrchestrator_Up(t *testing.T) {
 	}
 	if mock.started[0] != "postgres" {
 		t.Errorf("expected postgres first, got %s", mock.started[0])
+	}
+	if len(result.Started) != 2 {
+		t.Errorf("expected 2 started, got %d", len(result.Started))
+	}
+	if len(result.Skipped) != 0 {
+		t.Errorf("expected 0 skipped, got %d", len(result.Skipped))
 	}
 }
 
@@ -77,12 +84,12 @@ func TestOrchestrator_Up_WithPorts(t *testing.T) {
 	}
 	orch := orchestrator.New(mock, mock, alloc)
 	orch.Up(context.Background(), ws, "default")
-	result := alloc.Get("test", "app")
-	if !result.OK {
+	allocResult := alloc.Get("test", "app")
+	if !allocResult.OK {
 		t.Fatal("expected port allocated")
 	}
-	if result.Port == 0 {
-		t.Errorf("expected non-zero port, got %d", result.Port)
+	if allocResult.Port == 0 {
+		t.Errorf("expected non-zero port, got %d", allocResult.Port)
 	}
 }
 
@@ -103,9 +110,15 @@ func TestOrchestrator_IncrementalProfileSwitch(t *testing.T) {
 		t.Fatalf("expected 2, got %d", len(mock.started))
 	}
 	mock.started = nil
-	orch.Up(context.Background(), ws, "full")
+	result, _ := orch.Up(context.Background(), ws, "full")
 	if len(mock.started) != 1 || mock.started[0] != "redis" {
 		t.Errorf("expected only redis to start, got %v", mock.started)
+	}
+	if len(result.Started) != 1 || result.Started[0] != "redis" {
+		t.Errorf("expected redis in result.Started, got %v", result.Started)
+	}
+	if len(result.Skipped) != 2 {
+		t.Errorf("expected 2 skipped (postgres, app), got %d", len(result.Skipped))
 	}
 }
 
@@ -194,7 +207,7 @@ func TestOrchestrator_Up_WaitsForHealthCheck(t *testing.T) {
 		Profiles: map[string][]string{"default": {"postgres", "app"}},
 	}
 	orch := orchestrator.New(mock, mock, nil)
-	err := orch.Up(context.Background(), ws, "default")
+	_, err := orch.Up(context.Background(), ws, "default")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -218,6 +231,48 @@ func TestOrchestrator_Down(t *testing.T) {
 	orch.Down(context.Background(), ws)
 	if len(mock.stopped) != 2 {
 		t.Fatalf("expected 2 stopped, got %d", len(mock.stopped))
+	}
+}
+
+func TestOrchestrator_Up_SkipsRunning(t *testing.T) {
+	mock := &mockRunner{}
+	ws := workspace.Workspace{
+		Name: "test", Root: t.TempDir(),
+		Services: map[string]workspace.Service{
+			"postgres": {Image: "postgres:16"},
+			"app":      {Command: "air", DependsOn: []string{"postgres"}},
+		},
+		Profiles: map[string][]string{"default": {"postgres", "app"}},
+	}
+	orch := orchestrator.New(mock, mock, nil)
+
+	// First Up: should start both
+	result1, err := orch.Up(context.Background(), ws, "default")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result1.Started) != 2 {
+		t.Errorf("expected 2 started on first Up, got %d", len(result1.Started))
+	}
+	if len(result1.Skipped) != 0 {
+		t.Errorf("expected 0 skipped on first Up, got %d", len(result1.Skipped))
+	}
+
+	mock.started = nil
+
+	// Second Up: should skip both
+	result2, err := orch.Up(context.Background(), ws, "default")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result2.Started) != 0 {
+		t.Errorf("expected 0 started on second Up, got %d", len(result2.Started))
+	}
+	if len(result2.Skipped) != 2 {
+		t.Errorf("expected 2 skipped on second Up, got %d", len(result2.Skipped))
+	}
+	if len(mock.started) != 0 {
+		t.Errorf("mock should have 0 starts on second Up, got %d", len(mock.started))
 	}
 }
 
@@ -336,7 +391,7 @@ func TestOrchestrator_Up_DetectsProcessCrash(t *testing.T) {
 		Profiles: map[string][]string{"default": {"worker"}},
 	}
 	orch := orchestrator.New(crash, crash, nil)
-	err := orch.Up(context.Background(), ws, "default")
+	_, err := orch.Up(context.Background(), ws, "default")
 	if err == nil {
 		t.Fatal("expected error for crashed process")
 	}
@@ -361,7 +416,7 @@ func TestOrchestrator_Up_DetectsContainerCrash(t *testing.T) {
 		Profiles: map[string][]string{"default": {"db"}},
 	}
 	orch := orchestrator.New(crash, crash, nil)
-	err := orch.Up(context.Background(), ws, "default")
+	_, err := orch.Up(context.Background(), ws, "default")
 	if err == nil {
 		t.Fatal("expected error for crashed container")
 	}
@@ -383,7 +438,7 @@ func TestOrchestrator_Up_HealthyProcessPasses(t *testing.T) {
 		Profiles: map[string][]string{"default": {"worker"}},
 	}
 	orch := orchestrator.New(mock, mock, nil)
-	err := orch.Up(context.Background(), ws, "default")
+	_, err := orch.Up(context.Background(), ws, "default")
 	if err != nil {
 		t.Fatalf("healthy process should not error: %v", err)
 	}
@@ -408,7 +463,7 @@ func TestOrchestrator_StreamServiceLogs_NoHandle(t *testing.T) {
 		},
 		Profiles: map[string][]string{"default": {"svc"}},
 	}
-	if err := orch.Up(context.Background(), ws, "default"); err != nil {
+	if _, err := orch.Up(context.Background(), ws, "default"); err != nil {
 		t.Fatal(err)
 	}
 	_, err := orch.StreamServiceLogs("test", "other")
@@ -427,7 +482,7 @@ func TestOrchestrator_StreamServiceLogs_UnsupportedRunner(t *testing.T) {
 		},
 		Profiles: map[string][]string{"default": {"svc"}},
 	}
-	if err := orch.Up(context.Background(), ws, "default"); err != nil {
+	if _, err := orch.Up(context.Background(), ws, "default"); err != nil {
 		t.Fatal(err)
 	}
 	_, err := orch.StreamServiceLogs("test", "svc")

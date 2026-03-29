@@ -306,8 +306,20 @@ func newUpCmd() *cobra.Command {
 				warns.add("reconnect failed: %v", err)
 			}
 			fmt.Printf("Starting %s (profile: %s)...\n", wsName, profileName)
-			if err := orch.Up(ctx, *ws, profileName); err != nil {
+			result, err := orch.Up(ctx, *ws, profileName)
+			if err != nil {
 				return err
+			}
+
+			// Report results
+			if len(result.Skipped) > 0 {
+				fmt.Printf("Already running: %s\n", strings.Join(result.Skipped, ", "))
+			}
+			if len(result.Started) > 0 {
+				fmt.Printf("Started: %s\n", strings.Join(result.Started, ", "))
+			}
+			if len(result.Stopped) > 0 {
+				fmt.Printf("Stopped: %s\n", strings.Join(result.Stopped, ", "))
 			}
 
 			// Update build cache for all services with build contexts

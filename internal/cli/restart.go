@@ -55,7 +55,7 @@ func newRestartCmd() *cobra.Command {
 				profile = "default"
 			}
 			fmt.Printf("Restarting %s (profile: %s)...\n", wsName, profile)
-			if err := orch.Up(context.Background(), *ws, profile); err != nil {
+			if _, err := orch.Up(context.Background(), *ws, profile); err != nil {
 				return err
 			}
 			fmt.Println("Restarted.")
